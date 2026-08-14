@@ -1,0 +1,268 @@
+.impact-home {
+  min-height: 100vh;
+  background: var(--color-bg-light);
+}
+
+/* ── Header ── */
+.impact-home__header {
+  padding: 48px 0 40px;
+}
+
+.impact-home__header-inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.impact-home__avatar {
+  width: 64px;
+  height: 60px;
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  background: rgba(240,145,37,0.2);
+  border: 2px solid rgba(240,145,37,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.impact-home__name {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.impact-home__loc {
+  font-size: 14px;
+  color: rgba(255,255,255,0.55);
+}
+
+/* ── Stats row ── */
+.impact-home__stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: -24px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 2;
+}
+
+.impact-home__stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.impact-home__stat-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.impact-home__stat-num {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-text-dark);
+  letter-spacing: -0.02em;
+}
+
+.impact-home__stat-label {
+  font-size: 12px;
+  color: var(--color-text-muted-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Sections ── */
+.impact-home__section {
+  margin-bottom: 48px;
+}
+
+.impact-home__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.impact-home__section-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+
+.impact-home__section-count {
+  font-size: 13px;
+  color: var(--color-text-muted-dark);
+}
+
+.impact-home__see-all {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+  transition: opacity var(--transition);
+}
+.impact-home__see-all:hover { opacity: 0.7; }
+
+/* ── Map placeholder ── */
+.impact-home__map-placeholder {
+  background: #f0f7f4;
+  border: 1.5px dashed rgba(45,106,79,0.25);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--color-text-muted-dark);
+}
+
+.impact-home__map-placeholder p {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-earth);
+}
+
+.impact-home__map-placeholder span {
+  font-size: 13px;
+}
+
+/* ── Entries ── */
+.impact-home__loading {
+  text-align: center;
+  padding: 32px;
+  color: var(--color-text-muted-dark);
+}
+
+.impact-home__entries {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.impact-home__entry-card {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.impact-home__entry-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.impact-home__entry-id {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted-dark);
+}
+
+.impact-home__entry-project {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-dark);
+}
+
+.impact-home__entry-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--color-text-muted-dark);
+}
+
+.impact-home__entry-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.impact-home__tx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--color-accent);
+}
+
+/* ── Platform stats ── */
+.impact-home__platform {
+  padding: 48px 0;
+  margin-bottom: 48px;
+}
+
+.impact-home__platform-inner {
+  text-align: center;
+}
+
+.impact-home__platform-stats {
+  display: flex;
+  justify-content: center;
+  gap: 64px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.impact-home__platform-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.impact-home__platform-stat span:last-child {
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+}
+
+/* ── CTA ── */
+.impact-home__cta {
+  text-align: center;
+  padding-bottom: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.impact-home__cta h2 {
+  font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+  font-weight: 800;
+  color: var(--color-text-dark);
+  letter-spacing: -0.02em;
+}
+
+.impact-home__cta p {
+  font-size: 15px;
+  color: var(--color-text-muted-dark);
+  max-width: 440px;
+}
+
+.impact-home__cta-btns {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .impact-home__stats-row { grid-template-columns: 1fr; }
+  .impact-home__platform-stats { gap: 32px; }
+}
+@media (max-width: 480px) {
+  .impact-home__header { padding: 20px 16px 16px; }
+  .impact-home__feed { padding: 16px; }
+  .impact-home__platform-stats { flex-direction: column; gap: 20px; align-items: flex-start; }
+}

@@ -1,0 +1,200 @@
+.project-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+
+/* ── Pentagon image area ── */
+.project-card__image {
+  position: relative;
+  background: #e8f0ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px 24px;
+  min-height: 200px;
+}
+
+.project-card__pentagon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.project-card__pentagon {
+  width: 180px;
+  height: 170px;
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  background: rgba(45, 106, 79, 0.12);
+  border: 2px dashed rgba(45, 106, 79, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 40px 20px 50px;
+}
+
+.project-card__pentagon-icon {
+  font-size: 22px;
+  opacity: 0.5;
+}
+
+.project-card__pentagon-label {
+  font-size: 11px;
+  color: var(--color-earth);
+  opacity: 0.7;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.project-card__element-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+
+.project-card__verified-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+/* ── Body ── */
+.project-card__body {
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.project-card__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-dark);
+  line-height: 1.3;
+}
+
+.project-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted-dark);
+  flex-wrap: wrap;
+}
+
+.project-card__dot {
+  opacity: 0.4;
+}
+
+.project-card__partner {
+  opacity: 0.8;
+}
+
+/* ── Stats row ── */
+.project-card__stats {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #f7f3ee;
+  border-radius: var(--radius-sm);
+  padding: 10px 0;
+  margin: 2px 0;
+}
+
+.project-card__stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.project-card__stat-num {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.project-card__stat-label {
+  font-size: 10px;
+  color: var(--color-text-muted-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.project-card__stat-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(0,0,0,0.1);
+}
+
+/* ── Progress ── */
+.project-card__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-card__progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.project-card__progress-pct {
+  font-weight: 700;
+  color: var(--color-earth);
+}
+
+.project-card__progress-count {
+  color: var(--color-text-muted-dark);
+}
+
+/* ── Footer ── */
+.project-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.project-card__price-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.project-card__price {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text-dark);
+}
+
+.project-card__price-label {
+  font-size: 12px;
+  color: var(--color-text-muted-dark);
+}
+
+.project-card__ledger-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.project-card__ledger-link:hover {
+  opacity: 0.75;
+}

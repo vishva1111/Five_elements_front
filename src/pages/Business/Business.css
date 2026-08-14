@@ -1,0 +1,276 @@
+.business-page {
+  min-height: 100vh;
+  background: var(--color-bg-light);
+}
+
+/* ── Header ── */
+.business-page__header {
+  padding: 48px 0 40px;
+}
+
+.business-page__title {
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+
+.business-page__sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ── Body ── */
+.business-page__body {
+  padding-top: 32px;
+  padding-bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ── Stats grid ── */
+.business-page__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.business-page__stat-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.business-page__stat-icon {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.business-page__stat-num {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-text-dark);
+  letter-spacing: -0.02em;
+}
+
+.business-page__stat-unit {
+  font-size: 13px;
+  color: var(--color-text-muted-dark);
+  margin-left: 4px;
+}
+
+.business-page__stat-label {
+  font-size: 12px;
+  color: var(--color-text-muted-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+/* ── Alert ── */
+.business-page__alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff8ee;
+  border: 1px solid rgba(240,145,37,0.25);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--color-text-dark);
+}
+
+.business-page__alert a {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ── Quick links ── */
+.business-page__links-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.business-page__link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 12px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-dark);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.business-page__link-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+.business-page__link-emoji {
+  font-size: 28px;
+}
+
+/* ── Section ── */
+.business-page__section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.business-page__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.business-page__section-header h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+
+.business-page__see-all {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+/* ── Table ── */
+.business-page__table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(0,0,0,0.06);
+  background: #fff;
+}
+
+.business-page__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.business-page__table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted-dark);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: #fafafa;
+}
+
+.business-page__table td {
+  padding: 12px 14px;
+  color: var(--color-text-dark);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+.business-page__table tr:last-child td { border-bottom: none; }
+
+.business-page__table code {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--color-accent);
+}
+
+/* ── Form fields ── */
+.business-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 560px;
+}
+
+.business-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.business-page__field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-dark);
+}
+
+.business-page__input,
+.business-page__select,
+.business-page__textarea {
+  padding: 11px 14px;
+  border: 1.5px solid rgba(0,0,0,0.12);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-text-dark);
+  background: #fff;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.business-page__input:focus,
+.business-page__select:focus,
+.business-page__textarea:focus {
+  border-color: var(--color-earth);
+}
+
+.business-page__textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* ── Two-col layout ── */
+.business-page__two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* ── Progress bar ── */
+.business-page__progress-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.business-page__progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--color-text-dark);
+}
+
+.business-page__progress-bar {
+  height: 8px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.business-page__progress-fill {
+  height: 100%;
+  background: var(--color-earth);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .business-page__stats-grid,
+  .business-page__links-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .business-page__stats-grid,
+  .business-page__links-grid,
+  .business-page__two-col { grid-template-columns: 1fr; }
+}

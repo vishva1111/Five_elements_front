@@ -1,0 +1,61 @@
+.element-filter {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.element-filter::-webkit-scrollbar {
+  display: none;
+}
+
+.element-filter__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 24px 12px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  transition: all var(--transition);
+  position: relative;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.element-filter__item:hover:not(:disabled) {
+  background: rgba(0,0,0,0.03);
+}
+
+.element-filter__item--active {
+  border-bottom-color: var(--color-earth);
+  background: rgba(45,106,79,0.04);
+}
+
+.element-filter__item--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.element-filter__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-dark);
+}
+
+.element-filter__item--active .element-filter__label {
+  color: var(--color-earth);
+}
+
+.element-filter__active-dot {
+  display: none;
+}
+
+/* Coming soon badge inside filter */
+.element-filter__item .badge-coming-soon {
+  font-size: 10px;
+  padding: 2px 6px;
+}

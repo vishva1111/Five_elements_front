@@ -1,0 +1,173 @@
+/* ── Signup Modal (S11) ──────────────────────────────────────────────────── */
+.smodal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17,33,33,0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.smodal-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 32px 32px;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  box-shadow: 0 8px 40px rgba(17,33,33,0.18);
+}
+
+/* Close button */
+.smodal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #F5F0EC;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 13px;
+  color: #6B7B6E;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+.smodal-close:hover {
+  background: #EAE3DA;
+}
+
+/* Badge */
+.smodal-badge {
+  display: inline-block;
+  background: #EAF3DE;
+  color: #2B5341;
+  border: 0.5px solid #AACBA7;
+  border-radius: 9999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* Heading */
+.smodal-h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #112121;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  line-height: 1.3;
+}
+
+.smodal-sub {
+  font-size: 13px;
+  color: #6B7B6E;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+/* Form */
+.smodal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.smodal-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B7B6E;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.smodal-input {
+  height: 44px;
+  border: 1px solid #AACBA7;
+  border-radius: 9px;
+  padding: 0 13px;
+  font-size: 14px;
+  color: #112121;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.smodal-input:focus {
+  border-color: #2B5341;
+  box-shadow: 0 0 0 3px rgba(43,83,65,0.1);
+}
+
+.smodal-input:disabled {
+  background: #F5F0EC;
+  color: #9AA79C;
+}
+
+/* Error */
+.smodal-error {
+  background: #FEF0E3;
+  border: 0.5px solid #F5C27A;
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 12.5px;
+  color: #8B3A00;
+  line-height: 1.4;
+}
+
+/* Submit button */
+.smodal-btn {
+  height: 46px;
+  background: #F09125;
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  margin-top: 4px;
+  font-family: inherit;
+}
+
+.smodal-btn:hover:not(:disabled) {
+  background: #d97d1a;
+}
+
+.smodal-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Toggle */
+.smodal-toggle {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #6B7B6E;
+}
+
+.smodal-toggle button {
+  background: none;
+  border: none;
+  color: #185FA5;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 0;
+  text-decoration: underline;
+}

@@ -1,0 +1,181 @@
+/* ── Confirmation page (S6) ──────────────────────────────────────────────── */
+.conf-page {
+  min-height: 100vh;
+  background: #F5F0EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.conf-card {
+  background: #fff;
+  border: 0.5px solid #EAE3DA;
+  border-radius: 20px;
+  padding: 40px 36px 36px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 4px 24px rgba(17,33,33,0.07);
+  text-align: center;
+}
+
+/* Icon */
+.conf-card__icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+/* Badge */
+.conf-badge {
+  display: inline-block;
+  background: #EAF3DE;
+  color: #2B5341;
+  border: 0.5px solid #AACBA7;
+  border-radius: 9999px;
+  padding: 4px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+/* Heading */
+.conf-h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #112121;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+
+.conf-sub {
+  font-size: 14px;
+  color: #6B7B6E;
+  line-height: 1.55;
+  margin: 0 0 24px;
+}
+
+/* Stats strip */
+.conf-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  background: #F5F0EC;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.conf-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.conf-stat__num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2B5341;
+  margin-bottom: 4px;
+}
+
+.conf-stat__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9AA79C;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.conf-stat__divider {
+  width: 1px;
+  height: 36px;
+  background: #EAE3DA;
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+/* What happens next */
+.conf-next {
+  background: #F5F0EC;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.conf-next__title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #9AA79C;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+
+.conf-next__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conf-next__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.conf-next__step-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.conf-next__step-label {
+  font-size: 13px;
+  color: #3a453c;
+  line-height: 1.4;
+}
+
+/* CTAs */
+.conf-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conf-btn {
+  height: 48px;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.conf-btn:hover {
+  opacity: 0.88;
+}
+
+.conf-btn--primary {
+  background: #2B5341;
+  color: #fff;
+}
+
+.conf-btn--ghost {
+  background: #fff;
+  color: #2B5341;
+  border: 1.5px solid #AACBA7;
+}
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .conf-card { padding: 28px 18px 24px; border-radius: 16px; }
+  .conf-h1 { font-size: 20px; }
+  .conf-stats { padding: 12px 14px; }
+  .conf-stat__num { font-size: 17px; }
+}
