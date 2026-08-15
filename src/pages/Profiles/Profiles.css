@@ -27,54 +27,80 @@
 
 /* ── Body ── */
 .profiles__body {
-  padding-top: 32px;
-  padding-bottom: 64px;
+  padding-top: 40px;
+  padding-bottom: 100px;
+}
+
+.profiles__body .grid-3 {
+  margin-bottom: 24px;
 }
 
 /* ── Filters ── */
 .profiles__filters {
   display: flex;
   gap: 8px;
+  margin-top: 8px;
   margin-bottom: 28px;
   flex-wrap: wrap;
 }
 
 /* ── Card ── */
 .profiles__card {
-  display: flex;
-  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
 }
 
+.profiles__card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 8px 32px rgba(0,0,0,0.06);
+  transform: translateY(-2px);
+}
+
+/* ── Card top — dark hero ── */
 .profiles__card-top {
-  padding: 28px 20px 20px;
+  background: linear-gradient(160deg, #112121 0%, #1A3330 60%, #2B5341 100%);
+  padding: 32px 20px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  background: var(--color-bg-dark);
+  gap: 14px;
+  position: relative;
 }
 
-.profiles__avatar {
-  width: 56px;
-  height: 53px;
-  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
-  background: rgba(240,145,37,0.2);
-  border: 2px solid rgba(240,145,37,0.4);
-  display: flex;
+/* ── Type badge ── */
+.profiles__type-badge {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--color-accent);
-  letter-spacing: 0.02em;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
+.profiles__type-badge--org {
+  background: rgba(240,145,37,0.15);
+  color: #F09125;
+  border: 1px solid rgba(240,145,37,0.3);
+}
+
+.profiles__type-badge--ind {
+  background: rgba(170,203,167,0.15);
+  color: #AACBA7;
+  border: 1px solid rgba(170,203,167,0.3);
+}
+
+/* ── Card body ── */
 .profiles__card-body {
-  padding: 20px;
+  padding: 20px 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
 }
 
@@ -82,21 +108,25 @@
   font-size: 16px;
   font-weight: 700;
   color: var(--color-text-dark);
+  line-height: 1.3;
 }
 
 .profiles__location {
   font-size: 13px;
   color: var(--color-text-muted-dark);
-  margin-top: -4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* ── Stats ── */
 .profiles__stats {
   display: flex;
-  gap: 16px;
-  padding: 12px 0;
-  border-top: 1px solid rgba(0,0,0,0.06);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  align-items: center;
+  gap: 0;
+  padding: 14px 0 0;
+  margin-top: 4px;
+  border-top: 1px solid rgba(0,0,0,0.07);
 }
 
 .profiles__stat {
@@ -104,6 +134,14 @@
   align-items: center;
   gap: 8px;
   flex: 1;
+}
+
+.profiles__stat-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(0,0,0,0.08);
+  margin: 0 12px;
+  flex-shrink: 0;
 }
 
 .profiles__stat div {
@@ -116,19 +154,14 @@
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text-dark);
+  line-height: 1.2;
 }
 
 .profiles__stat span {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-muted-dark);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.profiles__view-btn {
-  width: 100%;
-  justify-content: center;
-  margin-top: 4px;
+  letter-spacing: 0.05em;
 }
 
 /* ── Empty ── */
@@ -137,7 +170,8 @@
   padding: 64px 24px;
   color: var(--color-text-muted-dark);
 }
-/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+/* ── Responsive ── */
 @media (max-width: 640px) {
   .profiles__header { padding: 24px 0 20px; }
   .profiles__body { padding-top: 20px; padding-bottom: 40px; }

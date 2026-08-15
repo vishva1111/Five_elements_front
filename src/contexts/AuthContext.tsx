@@ -32,26 +32,44 @@ const AuthContext = createContext<AuthContextValue>({
 
 // ── Role → home route map ─────────────────────────────────────────────────────
 export const ROLE_HOME: Record<UserRole, string> = {
-  individual: '/impact',
+  individual: '/submit-project/details',
   business:   '/business',
   partner:    '/partner',
   admin:      '/admin',
 }
 
 // ── Helper: fetch profile row ─────────────────────────────────────────────────
+// profiles.id is a text slug; auth_id links to auth.users.id (UUID).
+// Try auth_id first, fall back to id for legacy/test users whose UUID is stored as id.
 async function fetchProfile(userId: string): Promise<{ role: UserRole; displayName: string; isFirstLogin: boolean } | null> {
-  const { data, error } = await supabase
+  // Try auth_id column first
+  const { data: byAuthId } = await supabase
+    .from('profiles')
+    .select('role, display_name, is_first_login')
+    .eq('auth_id', userId)
+    .maybeSingle()
+
+  if (byAuthId) {
+    return {
+      role:         (byAuthId.role as UserRole) || 'individual',
+      displayName:  byAuthId.display_name || '',
+      isFirstLogin: byAuthId.is_first_login ?? false,
+    }
+  }
+
+  // Fallback: some profiles (test users) have UUID stored as id
+  const { data: byId } = await supabase
     .from('profiles')
     .select('role, display_name, is_first_login')
     .eq('id', userId)
-    .single()
+    .maybeSingle()
 
-  if (error || !data) return null
+  if (!byId) return null
 
   return {
-    role:         (data.role as UserRole) || 'individual',
-    displayName:  data.display_name || '',
-    isFirstLogin: data.is_first_login ?? false,
+    role:         (byId.role as UserRole) || 'individual',
+    displayName:  byId.display_name || '',
+    isFirstLogin: byId.is_first_login ?? false,
   }
 }
 

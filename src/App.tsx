@@ -47,11 +47,13 @@ import SubmitProjectDetails from './pages/SubmitProject/SubmitProjectDetails'
 import AddPartner           from './pages/SubmitProject/AddPartner'
 import AddEvidence          from './pages/SubmitProject/AddEvidence'
 import ReviewSubmit         from './pages/SubmitProject/ReviewSubmit'
+import BusinessProgramme   from './pages/SubmitProject/BusinessProgramme'
 
 // ── Partner zone (P1–P10) ─────────────────────────────────────────────────────
 import PartnerOnboarding    from './pages/Partner/PartnerOnboarding'
 import PartnerDashboard     from './pages/Partner/PartnerDashboard'
 import ProjectRegistration  from './pages/Partner/ProjectRegistration'
+import LinkedSubmissions    from './pages/Partner/LinkedSubmissions'
 import FieldCapture         from './pages/Partner/FieldCapture'
 import SyncQueue            from './pages/Partner/SyncQueue'
 import EvidenceVault        from './pages/Partner/EvidenceVault'
@@ -65,6 +67,7 @@ import ApprovalQueue        from './pages/Admin/ApprovalQueue'
 import EvidenceReview       from './pages/Admin/EvidenceReview'
 import PartnerManagement    from './pages/Admin/PartnerManagement'
 import UsersAndTenants      from './pages/Admin/UsersAndTenants'
+import SubmissionQueue      from './pages/Admin/SubmissionQueue'
 import ProjectsOversight    from './pages/Admin/ProjectsOversight'
 import DataQuality          from './pages/Admin/DataQuality'
 import LedgerAdmin          from './pages/Admin/LedgerAdmin'
@@ -85,6 +88,9 @@ export default function App(): React.JSX.Element {
           <Route path="/login" element={<Login />} />
           <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
 
+          {/* ── Business info (public — for unauthenticated business users) ── */}
+          <Route path="/business-info" element={<IndividualLanding />} />
+
           {/* ── Individual flow (public pages) ── */}
           <Route path="/individual" element={<IndividualLanding />} />
           <Route path="/quick-estimate" element={<QuickEstimator />} />
@@ -102,7 +108,8 @@ export default function App(): React.JSX.Element {
           <Route path="/submit-project/details"  element={<ProtectedRoute><SubmitProjectDetails /></ProtectedRoute>} />
           <Route path="/submit-project/partner"  element={<ProtectedRoute><AddPartner /></ProtectedRoute>} />
           <Route path="/submit-project/evidence" element={<ProtectedRoute><AddEvidence /></ProtectedRoute>} />
-          <Route path="/submit-project/review"   element={<ProtectedRoute><ReviewSubmit /></ProtectedRoute>} />
+          <Route path="/submit-project/review"      element={<ProtectedRoute><ReviewSubmit /></ProtectedRoute>} />
+          <Route path="/submit-project/programme"   element={<ProtectedRoute><BusinessProgramme /></ProtectedRoute>} />
           {/* Redirect bare /submit-project to first step */}
           <Route path="/submit-project" element={<ProtectedRoute><SubmitProjectDetails /></ProtectedRoute>} />
 
@@ -141,15 +148,17 @@ export default function App(): React.JSX.Element {
           <Route path="/partner/submissions" element={<ProtectedRoute allowedRoles={['partner']}><SubmissionTracker /></ProtectedRoute>} />
           <Route path="/partner/funders"    element={<ProtectedRoute allowedRoles={['partner']}><FundersView /></ProtectedRoute>} />
           <Route path="/partner/team"       element={<ProtectedRoute allowedRoles={['partner']}><PartnerTeam /></ProtectedRoute>} />
-          <Route path="/partner/settings"   element={<ProtectedRoute allowedRoles={['partner']}><PartnerSettings /></ProtectedRoute>} />
+          <Route path="/partner/settings"          element={<ProtectedRoute allowedRoles={['partner']}><PartnerSettings /></ProtectedRoute>} />
+          <Route path="/partner/linked-submissions" element={<ProtectedRoute allowedRoles={['partner']}><LinkedSubmissions /></ProtectedRoute>} />
           {/* Redirect bare /partner to dashboard */}
           <Route path="/partner" element={<ProtectedRoute allowedRoles={['partner']}><PartnerDashboard /></ProtectedRoute>} />
 
           {/* ── Super Admin zone (A1–A10, protected — admin role only) ── */}
-          <Route path="/admin"              element={<ProtectedRoute allowedRoles={['admin']}><ApprovalQueue /></ProtectedRoute>} />
-          <Route path="/admin/evidence"     element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
-          <Route path="/admin/evidence/:id" element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
-          <Route path="/admin/partners"     element={<ProtectedRoute allowedRoles={['admin']}><PartnerManagement /></ProtectedRoute>} />
+          <Route path="/admin"                  element={<ProtectedRoute allowedRoles={['admin']}><ApprovalQueue /></ProtectedRoute>} />
+          <Route path="/admin/submissions"      element={<ProtectedRoute allowedRoles={['admin']}><SubmissionQueue /></ProtectedRoute>} />
+          <Route path="/admin/evidence"         element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
+          <Route path="/admin/evidence/:id"     element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
+          <Route path="/admin/partners"         element={<ProtectedRoute allowedRoles={['admin']}><PartnerManagement /></ProtectedRoute>} />
           <Route path="/admin/users"        element={<ProtectedRoute allowedRoles={['admin']}><UsersAndTenants /></ProtectedRoute>} />
           <Route path="/admin/projects"     element={<ProtectedRoute allowedRoles={['admin']}><ProjectsOversight /></ProtectedRoute>} />
           <Route path="/admin/data-quality" element={<ProtectedRoute allowedRoles={['admin']}><DataQuality /></ProtectedRoute>} />

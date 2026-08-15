@@ -115,17 +115,7 @@ export default function Login() {
           <Link to="/" className="login-card__back">Back to home</Link>
         </div>
 
-        <div className="login-card__paths">
-          <p className="login-card__paths-label">New here? Choose a path</p>
-          <div className="login-card__paths-grid">
-            <Link to="/individual" className="login-card__path-btn login-card__path-btn--ind">
-              🌱 For individuals
-            </Link>
-            <Link to="/business/settings" className="login-card__path-btn login-card__path-btn--biz">
-              📊 For businesses
-            </Link>
-          </div>
-        </div>
+        
       </div>
     </div>
   )

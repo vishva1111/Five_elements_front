@@ -582,3 +582,57 @@
   .sp-review-row { flex-direction: column; gap: 2px; }
   .sp-review-row__label { min-width: unset; }
 }
+
+/* ── Spin keyframe (upload spinner) ─────────────────────────────────────── */
+@keyframes fe-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Nav row aliases (used in C3 AddEvidence, C4 ReviewSubmit) ───────────── */
+.sp-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 20px 0 32px;
+  flex-wrap: wrap;
+}
+
+.sp-btn-back {
+  height: 46px;
+  padding: 0 22px;
+  border-radius: 10px;
+  border: 1px solid #D8CFC6;
+  background: #FFFFFF;
+  color: #112121;
+  font-family: Inter, sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sp-btn-back:hover {
+  background: #F5F0EC;
+}
+
+.sp-btn-continue {
+  height: 46px;
+  padding: 0 26px;
+  border-radius: 10px;
+  border: none;
+  background: #F09125;
+  color: #112121;
+  font-family: Inter, sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sp-btn-continue:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.sp-btn-continue:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

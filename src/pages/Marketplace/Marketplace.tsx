@@ -281,13 +281,13 @@ export default function Marketplace() {
       {/* ── HEADER ── */}
       <div className="mp__header">
         <div className="mp__header-left">
-          <div className="mp__logo-row">
+          <Link to="/" className="mp__logo-row" style={{ textDecoration: 'none', color: 'inherit' }}>
             <svg width="26" height="27" viewBox="0 0 40 42" aria-hidden="true">
               <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill="#112121" stroke="#2B5341" strokeWidth="1.5" strokeLinejoin="round" />
               <path d="M20 12 L22.3 18.6 L29.2 18.6 L23.6 22.7 L25.9 29.3 L20 25.2 L14.1 29.3 L16.4 22.7 L10.8 18.6 L17.7 18.6 Z" fill="none" stroke="#F09125" strokeWidth="1.4" strokeLinejoin="round" />
             </svg>
             <span className="mp__logo-text">five elements <strong>CARM</strong></span>
-          </div>
+          </Link>
           <h1 className="mp__title">Fund a real project</h1>
         </div>
         <p className="mp__sub">

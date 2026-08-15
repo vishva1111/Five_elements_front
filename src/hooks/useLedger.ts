@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { fetchLedgerEntries, fetchPlatformStats } from '../services/api'
 import type { LedgerEntry } from '../types'
 
@@ -20,13 +20,25 @@ export function useLedger(params: LedgerParams = {}) {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
 
+  // Debounce search so we don't re-fetch on every keystroke
+  const [debouncedSearch, setDebouncedSearch] = useState(params.search || '')
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setDebouncedSearch(params.search || '')
+    }, 300)
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [params.search])
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
     Promise.all([
-      fetchLedgerEntries(params),
+      fetchLedgerEntries({ ...params, search: debouncedSearch }),
       fetchPlatformStats(),
     ])
       .then(([entriesData, statsData]) => {
@@ -43,7 +55,7 @@ export function useLedger(params: LedgerParams = {}) {
       })
 
     return () => { cancelled = true }
-  }, [params.search])
+  }, [debouncedSearch])
 
   return { entries, stats, loading, error }
 }

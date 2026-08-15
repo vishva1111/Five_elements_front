@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { fetchProjects, fetchPlatformStats } from '../../services/api'
+import type { Project } from '../../types'
 import './Landing.css'
 
 // ── Pentagon helper ────────────────────────────────────────────────────────────
@@ -85,6 +87,20 @@ export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const rafRef = useRef<number | null>(null)
 
+  // Real data from API
+  const [featuredProjects, setFeaturedProjects] = useState<Project[]>([])
+  const [platformStats, setPlatformStats] = useState({ treesFunded: 48213, tCO2eVerified: 1024, projectsActive: 6 })
+
+  useEffect(() => {
+    fetchProjects({ sort: 'newest' }).then(res => {
+      setFeaturedProjects(res.data.slice(0, 3))
+    }).catch(() => {/* keep empty, cards won't render */})
+
+    fetchPlatformStats().then(stats => {
+      setPlatformStats(stats)
+    }).catch(() => {/* keep defaults */})
+  }, [])
+
   // Animated counters
   useEffect(() => {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -116,9 +132,9 @@ export default function Landing() {
   }))
 
   const counters = [
-    { value: fmt(48213 * t),          label: 'trees funded' },
-    { value: fmt(1024 * t) + ' tCO₂e', label: 'verified on the ledger' },
-    { value: fmt(6 * t),              label: 'projects active' },
+    { value: fmt(platformStats.treesFunded * t),            label: 'trees funded' },
+    { value: fmt(platformStats.tCO2eVerified * t) + ' tCO₂e', label: 'verified on the ledger' },
+    { value: fmt(platformStats.projectsActive * t),         label: 'projects active' },
   ]
 
   const steps = [
@@ -143,13 +159,13 @@ export default function Landing() {
       {/* ── NAV WRAPPER (position:relative so mobile menu anchors to it) ── */}
       <div className="l0-nav-wrap">
         <nav className="l0-nav">
-          <div className="l0-nav__brand">
+          <Link to="/" className="l0-nav__brand">
             <NavLogo />
             <span className="l0-nav__name">five elements <strong>CARM</strong></span>
-          </div>
+          </Link>
           <div className="l0-nav__right">
             <div className="l0-nav__links">
-              <Link to="/marketplace">Projects</Link>
+              <Link to="/projects">Projects</Link>
               <a href="#how">How it works</a>
               <Link to="/ledger">Ledger</Link>
               <Link to="/profiles">Explore profiles</Link>
@@ -173,7 +189,7 @@ export default function Landing() {
         {/* ── MOBILE MENU ── */}
         {mobileMenuOpen && (
           <div className="l0-mobile-menu">
-            <Link to="/marketplace" onClick={() => setMobileMenuOpen(false)}>Projects</Link>
+            <Link to="/projects" onClick={() => setMobileMenuOpen(false)}>Projects</Link>
             <a href="#how" onClick={() => setMobileMenuOpen(false)}>How it works</a>
             <Link to="/ledger" onClick={() => setMobileMenuOpen(false)}>Ledger</Link>
             <Link to="/profiles" onClick={() => setMobileMenuOpen(false)}>Explore profiles</Link>
@@ -346,32 +362,31 @@ export default function Landing() {
               <h2 className="l0-projects__h2">Real projects, in named places</h2>
               <p className="l0-projects__sub">Every project is run by a named partner and reports geo-tagged evidence. Nothing counts until it's approved on the ledger.</p>
             </div>
-            <Link to="/marketplace" className="l0-projects__all">Explore all projects →</Link>
+            <Link to="/projects" className="l0-projects__all">Explore all projects →</Link>
           </div>
           <div className="l0-proj-grid">
-            {[
-              { id: 'l0-proj-1', name: 'Sundarbans mangrove belt',  loc: 'West Bengal · Partner: Banni Trust',   trees: '18,240', co2: '312', ev: '142' },
-              { id: 'l0-proj-2', name: 'Aravalli dryland forest',   loc: 'Rajasthan · Partner: Marwar Greens',  trees: '11,860', co2: '198', ev: '96'  },
-              { id: 'l0-proj-3', name: 'Western Ghats shade canopy', loc: 'Kerala · Partner: Ghat Collective',  trees: '9,412',  co2: '151', ev: '88'  },
-            ].map(p => (
-              <div key={p.id} className="l0-proj-card">
-                <div className="l0-proj-card__img-slot" />
+            {featuredProjects.map(p => (
+              <Link key={p.id} to={`/projects/${p.slug || p.id}`} className="l0-proj-card" style={{ textDecoration: 'none', display: 'block', cursor: 'pointer' }}>
+                {p.coverImage
+                  ? <img src={p.coverImage} alt={p.name} className="l0-proj-card__img-slot" style={{ objectFit: 'cover', width: '100%' }} />
+                  : <div className="l0-proj-card__img-slot" />
+                }
                 <div className="l0-proj-card__body">
                   <div className="l0-proj-card__top">
                     <h3 className="l0-proj-card__h3">{p.name}</h3>
-                    <span className="l0-proj-card__verified">✓ Verified</span>
+                    {p.verified && <span className="l0-proj-card__verified">✓ Verified</span>}
                   </div>
-                  <span className="l0-proj-card__loc">{p.loc}</span>
+                  <span className="l0-proj-card__loc">{p.location}{p.partner ? ` · Partner: ${p.partner}` : ''}</span>
                   <div className="l0-proj-card__stats">
-                    <span>{p.trees} trees</span>
+                    <span>{p.fundedTrees.toLocaleString('en-IN')} trees</span>
                     <span className="l0-proj-card__sep">|</span>
-                    <span>{p.co2} tCO₂e</span>
+                    <span>{p.tCO2e} tCO₂e</span>
                     <span className="l0-proj-card__sep">|</span>
-                    <span>{p.ev} evidence entries</span>
+                    <span>{p.evidenceCount} evidence entries</span>
                   </div>
-                  <Link to="/marketplace" className="l0-proj-card__link">View on the ledger →</Link>
+                  <span className="l0-proj-card__link">View project detail →</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -449,8 +464,8 @@ export default function Landing() {
           <h2 className="l0-cta-box__h2">Start your impact journey</h2>
           <p className="l0-cta-box__p">Two minutes to a credible estimate. No account, no signup wall — just a first honest number.</p>
           <div className="l0-cta-box__btns">
-            <Link to="/estimator" className="l0-btn l0-btn--orange">Start my impact</Link>
-            <Link to="/business"  className="l0-btn l0-btn--ghost">Explore for business</Link>
+            <Link to="/projects" className="l0-btn l0-btn--orange">Fund new project</Link>
+            <Link to="/submit-project/details" className="l0-btn l0-btn--ghost">Start with existing project</Link>
           </div>
         </div>
       </section>
@@ -460,10 +475,10 @@ export default function Landing() {
         <div className="l0-footer__inner">
           <div className="l0-footer__grid">
             <div className="l0-footer__brand-col">
-              <div className="l0-footer__brand">
+              <Link to="/" className="l0-footer__brand">
                 <NavLogo />
                 <span className="l0-nav__name">five elements <strong>CARM</strong></span>
-              </div>
+              </Link>
               <p className="l0-footer__tagline">Climate action, rooted in the elements of nature. Measure, fund, prove — on a public ledger anyone can check.</p>
               <div className="l0-footer__subscribe">
                 <input type="email" placeholder="Email for updates" className="l0-footer__email" />
@@ -472,7 +487,7 @@ export default function Landing() {
             </div>
             <div className="l0-footer__col">
               <span className="l0-footer__col-title">Platform</span>
-              <Link to="/marketplace">Projects</Link>
+              <Link to="/projects">Projects</Link>
               <Link to="/estimator">Quick estimator</Link>
               <a href="#">Public ledger</a>
               <Link to="/profiles">Explore profiles</Link>

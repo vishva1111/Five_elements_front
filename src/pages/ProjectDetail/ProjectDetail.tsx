@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useProject } from '../../hooks/useProjects'
+import Navbar from '../../components/layout/Navbar'
 import './ProjectDetail.css'
 
 // ── Pentagon geometry helper ──────────────────────────────────────────────────
@@ -73,6 +74,7 @@ export default function ProjectDetail() {
   if (loading) {
     return (
       <div className="pd">
+        <Navbar />
         <div className="pd-breadcrumb">
           <div className="pd-skel" style={{ height: 14, width: 260 }} />
         </div>
@@ -94,6 +96,7 @@ export default function ProjectDetail() {
   if (error || !project) {
     return (
       <div className="pd">
+        <Navbar />
         <div className="pd-cols" style={{ marginTop: 48 }}>
           <div className="pd-body" style={{ textAlign: 'center', padding: '48px 0' }}>
             <p style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 18, color: '#112121', marginBottom: 16 }}>
@@ -161,6 +164,7 @@ export default function ProjectDetail() {
 
   return (
     <div className="pd">
+      <Navbar />
 
       {/* Breadcrumb */}
       <div className="pd-breadcrumb">

@@ -10,7 +10,7 @@ const NAV_LINKS = [
   { label: 'Explore profiles', to: '/profiles' },
 ]
 
-export default function Navbar({ dark = false }) {
+export default function Navbar({ dark = true }) {
   const [open, setOpen] = useState(false)
   const location = useLocation()
 

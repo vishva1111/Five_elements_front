@@ -141,17 +141,52 @@ export async function fetchProjectCategories(): Promise<{ categories: string[] }
 
 // ── Ledger ────────────────────────────────────────────────────────────────────
 
+interface LedgerRow {
+  id: string
+  date: string
+  project: string
+  funder: string
+  trees: number
+  t_co2e: number
+  verified: boolean
+  tx_hash: string
+}
+
 export async function fetchLedgerEntries(params: { search?: string; limit?: number; offset?: number } = {}): Promise<{ data: LedgerEntry[]; count: number }> {
   const qs: Record<string, string> = {
     select: 'id,date,project,funder,trees,t_co2e,verified,tx_hash',
     order:  'created_at.desc',
-    limit:  String(params.limit || 50),
+    limit:  String(params.limit || 200),  // fetch more so client-side search works across all entries
   }
   if (params.offset) qs['offset'] = String(params.offset)
-  if (params.search) qs['or'] = `project.ilike.%${params.search}%,funder.ilike.%${params.search}%`
 
-  const rows = await sbFetch<LedgerEntry[]>('ledger_entries', qs)
-  return { data: rows, count: rows.length }
+  const rows = await sbFetch<LedgerRow[]>('ledger_entries', qs)
+
+  // Map snake_case DB fields to camelCase LedgerEntry type
+  const mapped: LedgerEntry[] = rows.map(r => ({
+    id:       r.id,
+    date:     r.date,
+    project:  r.project,
+    funder:   r.funder,
+    trees:    r.trees,
+    tCO2e:    r.t_co2e,
+    verified: r.verified,
+    txHash:   r.tx_hash,
+  }))
+
+  // Client-side search: filter by project, funder, or entry ID
+  const filtered = params.search
+    ? mapped.filter(r => {
+        const q = params.search!.toLowerCase()
+        return (
+          (r.project || '').toLowerCase().includes(q) ||
+          (r.funder  || '').toLowerCase().includes(q) ||
+          (r.id      || '').toLowerCase().includes(q)
+        )
+      })
+    : mapped
+
+  return { data: filtered, count: filtered.length }
 }
 
 export async function fetchPlatformStats(): Promise<{ treesFunded: number; tCO2eVerified: number; projectsActive: number }> {
@@ -165,14 +200,39 @@ export async function fetchPlatformStats(): Promise<{ treesFunded: number; tCO2e
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
 
+interface ProfileRow {
+  id: string
+  name: string
+  type: string
+  location: string
+  avatar: string
+  trees: number
+  t_co2e: string | number
+  created_at: string
+}
+
 export async function fetchProfiles(params: { type?: string } = {}): Promise<{ data: Profile[] }> {
   const qs: Record<string, string> = {
     select: 'id,name,type,location,avatar,trees,t_co2e,created_at',
     order:  'trees.desc',
+    // Only show profiles with trees > 0 (real users with actual impact)
+    trees:  'gt.0',
   }
   if (params.type && params.type !== 'All') qs['type'] = `eq.${params.type}`
-  const rows = await sbFetch<Profile[]>('profiles', qs)
-  return { data: rows }
+  const rows = await sbFetch<ProfileRow[]>('profiles', qs)
+
+  // Map snake_case t_co2e → camelCase tCO2e, and normalize type casing
+  const mapped: Profile[] = rows.map(r => ({
+    id:       r.id,
+    name:     r.name,
+    type:     (r.type?.toLowerCase() === 'business' ? 'organisation' : 'individual') as Profile['type'],
+    location: r.location,
+    avatar:   r.avatar || '',
+    trees:    r.trees,
+    tCO2e:    Number(r.t_co2e) || 0,
+  }))
+
+  return { data: mapped }
 }
 
 export async function fetchProfileRaw(id: string): Promise<Profile> {
