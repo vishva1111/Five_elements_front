@@ -383,7 +383,7 @@ export default function ProjectDetail() {
             <button
               className={`pd-cta-btn${ctaDisabled ? ' pd-cta-btn--disabled' : ''}`}
               disabled={ctaDisabled}
-              onClick={() => !ctaDisabled && window.location.assign(`/fund?project=${project.slug || project.id}`)}
+              onClick={() => !ctaDisabled && navigate(`/fund?project=${project.slug || project.id}`)}
             >
               {ctaLabel}
             </button>
