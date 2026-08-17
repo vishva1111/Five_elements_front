@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import Login from './pages/Auth/Login'
+import Signup from './pages/Auth/Signup'
 import Welcome from './pages/Auth/Welcome'
 
 // ── Core pages ───────────────────────────────────────────────────────────────
@@ -86,6 +87,7 @@ export default function App(): React.JSX.Element {
 
           {/* ── Auth ── */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
 
           {/* ── Business info (public — for unauthenticated business users) ── */}

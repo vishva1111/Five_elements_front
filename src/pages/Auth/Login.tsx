@@ -112,6 +112,8 @@ export default function Login() {
         <div className="login-card__footer">
           <a href="#" className="login-card__forgot">Forgot password?</a>
           <span className="login-card__divider">·</span>
+          <Link to="/signup" className="login-card__back">Create account</Link>
+          <span className="login-card__divider">·</span>
           <Link to="/" className="login-card__back">Back to home</Link>
         </div>
 

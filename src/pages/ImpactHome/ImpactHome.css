@@ -5,13 +5,16 @@
 
 /* ── Header ── */
 .impact-home__header {
-  padding: 48px 0 40px;
+  padding: 48px 0 56px;
 }
 
 .impact-home__header-inner {
   display: flex;
   align-items: center;
   gap: 24px;
+  padding: 0 24px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .impact-home__avatar {
@@ -47,10 +50,14 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  margin-top: -24px;
+  margin-top: -28px;
   margin-bottom: 40px;
   position: relative;
   z-index: 2;
+  padding: 0 24px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .impact-home__stat-card {
@@ -58,6 +65,7 @@
   align-items: center;
   gap: 16px;
   padding: 20px 24px;
+  border-radius: 16px;
 }
 
 .impact-home__stat-card > div {
@@ -262,7 +270,8 @@
   .impact-home__platform-stats { gap: 32px; }
 }
 @media (max-width: 480px) {
-  .impact-home__header { padding: 20px 16px 16px; }
-  .impact-home__feed { padding: 16px; }
+  .impact-home__header { padding: 28px 0 44px; }
+  .impact-home__header-inner { padding: 0 16px; }
+  .impact-home__stats-row { padding: 0 16px; }
   .impact-home__platform-stats { flex-direction: column; gap: 20px; align-items: flex-start; }
 }

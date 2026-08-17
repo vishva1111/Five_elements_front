@@ -267,7 +267,7 @@ export default function Landing() {
               <button type="button" className="l0-panel__btn" onClick={() => setPanel('workspace')}>Log in</button>
               <div className="l0-panel__footer">
                 <a href="#" className="l0-panel__forgot">Forgot password?</a>
-                <button type="button" className="l0-panel__back" onClick={() => setPanel('visitor')}>New here? Choose a path</button>
+                <Link to="/signup" className="l0-panel__back">New here? Sign up</Link>
               </div>
             </div>
           )}

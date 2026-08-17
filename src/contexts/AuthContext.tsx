@@ -17,7 +17,8 @@ interface AuthContextValue {
   user: AuthUser | null
   session: Session | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signIn:  (email: string, password: string) => Promise<{ error: string | null }>
+  signUp:  (fullName: string, email: string, password: string) => Promise<{ error: string | null; emailConfirmationRequired?: boolean }>
   signOut: () => Promise<void>
 }
 
@@ -26,7 +27,8 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   session: null,
   loading: true,
-  signIn: async () => ({ error: null }),
+  signIn:  async () => ({ error: null }),
+  signUp:  async () => ({ error: null }),
   signOut: async () => {},
 })
 
@@ -123,6 +125,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null }
   }
 
+  async function signUp(
+    fullName: string,
+    email: string,
+    password: string
+  ): Promise<{ error: string | null; emailConfirmationRequired?: boolean }> {
+    const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+    try {
+      const res = await fetch(`${BACKEND}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, email, password }),
+      })
+      const json = await res.json()
+      if (!res.ok) return { error: json.error || 'Signup failed.' }
+      return { error: null, emailConfirmationRequired: json.emailConfirmationRequired }
+    } catch {
+      // Fallback: call Supabase directly if backend is unreachable
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: fullName.trim() } },
+      })
+      if (error) return { error: error.message }
+      return { error: null, emailConfirmationRequired: !data.session }
+    }
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
     setUser(null)
@@ -130,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )
