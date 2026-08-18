@@ -276,6 +276,7 @@ export interface FundingPayload {
   poNumber?: string
   publicAttribution: boolean
   funderName?: string
+  userId?: string
 }
 
 export async function submitFunding(payload: FundingPayload): Promise<{ orderId: string; status: string }> {
@@ -510,34 +511,54 @@ export interface UserImpactData {
   stats: UserImpactStats
 }
 
+// ── individual_fundings row type ──────────────────────────────────────────────
+interface IndividualFundingRow {
+  id: string
+  user_id: string
+  project_id: string
+  trees_funded: number
+  amount_paid: number
+  funded_at: string
+  verification_status: string
+  public_attribution: boolean
+  funder_name: string | null
+  // joined project name (Supabase returns array for foreign table joins)
+  projects?: { name: string }[] | null
+}
+
 /**
- * Fetch all ledger entries for the currently logged-in user.
- * Matches on the `funder` column using the user's displayName.
+ * Fetch all funding records for the currently logged-in user.
+ * Queries individual_fundings by user_id (UUID) — reliable, not name-based.
+ * Joins project name from projects table.
  * Returns derived stats (trees, tCO2e, unique projects, funds invested).
  */
-export async function fetchUserImpact(funderName: string): Promise<UserImpactData> {
-  if (!funderName) return { entries: [], stats: { trees: 0, tCO2e: 0, projects: 0, fundsInvested: 0 } }
+export async function fetchUserImpact(userId: string): Promise<UserImpactData> {
+  if (!userId) return { entries: [], stats: { trees: 0, tCO2e: 0, projects: 0, fundsInvested: 0 } }
 
-  const rows = await sbFetch<LedgerRow[]>('ledger_entries', {
-    select: 'id,date,project,funder,trees,t_co2e,verified,tx_hash',
-    funder: `ilike.%${funderName}%`,
-    order:  'created_at.desc',
-    limit:  '200',
-  })
+  const { data, error } = await supabase
+    .from('individual_fundings')
+    .select('id,user_id,project_id,trees_funded,amount_paid,funded_at,verification_status,public_attribution,funder_name,projects(name)')
+    .eq('user_id', userId)
+    .order('funded_at', { ascending: false })
+    .limit(200)
+
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []) as IndividualFundingRow[]
 
   const entries: UserImpactEntry[] = rows.map(r => ({
     id:       r.id,
-    date:     r.date,
-    project:  r.project,
-    trees:    r.trees,
-    tCO2e:    r.t_co2e,
-    verified: r.verified,
-    txHash:   r.tx_hash,
+    date:     r.funded_at ? r.funded_at.split('T')[0] : '',
+    project:  r.projects?.[0]?.name ?? r.project_id,
+    trees:    r.trees_funded,
+    tCO2e:    Math.round(r.trees_funded * 0.017 * 10) / 10,
+    verified: r.verification_status === 'verified',
+    txHash:   '',
   }))
 
-  const uniqueProjects = new Set(entries.map(e => e.project)).size
-  const totalTrees     = entries.reduce((s, e) => s + (e.trees || 0), 0)
-  const totalTCO2e     = entries.reduce((s, e) => s + (e.tCO2e || 0), 0)
+  const uniqueProjects  = new Set(entries.map(e => e.project)).size
+  const totalTrees      = entries.reduce((s, e) => s + (e.trees || 0), 0)
+  const totalTCO2e      = entries.reduce((s, e) => s + (e.tCO2e || 0), 0)
+  const totalFunds      = rows.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0)
 
   return {
     entries,
@@ -545,7 +566,7 @@ export async function fetchUserImpact(funderName: string): Promise<UserImpactDat
       trees:         totalTrees,
       tCO2e:         Math.round(totalTCO2e * 10) / 10,
       projects:      uniqueProjects,
-      fundsInvested: 0, // no price data in ledger; extend later
+      fundsInvested: Math.round(totalFunds),
     },
   }
 }

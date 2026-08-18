@@ -64,7 +64,7 @@ export default function ImpactHome() {
     setDataError(null)
 
     Promise.all([
-      fetchUserImpact(user.displayName || user.email),
+      fetchUserImpact(user.id),
       fetchPlatformStats(),
     ])
       .then(([impact, plat]) => {

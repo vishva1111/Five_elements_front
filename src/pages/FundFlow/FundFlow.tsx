@@ -86,6 +86,7 @@ export default function FundFlow() {
         funderName: anon ? 'Anonymous' : (user.displayName || 'Funder'),
         paymentMethod: 'card',
         publicAttribution: !anon,
+        userId: user.id,
       })
       // S6: redirect to confirmation page with stats in query params
       const tco2e = (trees * 0.017).toFixed(2)

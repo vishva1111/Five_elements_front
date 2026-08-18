@@ -404,6 +404,7 @@ export default function ProjectDetail() {
         <button
           className={`pd-cta-btn pd-cta-btn--sm${ctaDisabled ? ' pd-cta-btn--disabled' : ''}`}
           disabled={ctaDisabled}
+          onClick={() => !ctaDisabled && navigate(`/fund?project=${project.slug || project.id}`)}
         >
           {ctaLabel}
         </button>
