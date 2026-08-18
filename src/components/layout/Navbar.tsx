@@ -42,7 +42,6 @@ export default function Navbar({ dark = true }) {
         {/* CTA */}
         <div className="navbar__cta">
           <Link to="/login" className="navbar__login">Log in</Link>
-          <Link to="/start" className="btn btn-primary btn-sm">Start</Link>
         </div>
 
         {/* Mobile toggle */}
@@ -61,7 +60,6 @@ export default function Navbar({ dark = true }) {
           ))}
           <div className="navbar__mobile-cta">
             <Link to="/login" className="btn btn-outline btn-sm" onClick={() => setOpen(false)}>Log in</Link>
-            <Link to="/start" className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>Start</Link>
           </div>
         </div>
       )}

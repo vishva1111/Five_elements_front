@@ -1,9 +1,8 @@
 import React, { useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '../../hooks/useProjects'
 import { submitFunding } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
-import SignupModal from '../../components/auth/SignupModal'
 import './FundFlow.css'
 
 // ── Pentagon preset icon ──────────────────────────────────────────────────────
@@ -53,9 +52,10 @@ export default function FundFlow() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isDeclined, setIsDeclined] = useState(false)
   const [isDone, setIsDone] = useState(false)
-  const [showSignup, setShowSignup] = useState(false)
 
-  // Footprint context — in production this would come from the estimator
+  const location = useLocation()
+
+  // Footprint context — passed via tco2e query param
   const hasFootprint = !!searchParams.get('tco2e')
   const footprintTco2e = searchParams.get('tco2e') || '1.6'
 
@@ -74,7 +74,7 @@ export default function FundFlow() {
   async function handleFund() {
     // S11: if not logged in, show inline signup modal first
     if (!user) {
-      setShowSignup(true)
+      navigate('/login', { state: { from: location.pathname + location.search } })
       return
     }
     setIsProcessing(true)
@@ -98,22 +98,6 @@ export default function FundFlow() {
     } finally {
       setIsProcessing(false)
     }
-  }
-
-  // ── S11: Inline signup modal ──────────────────────────────────────────────
-  if (showSignup) {
-    return (
-      <div className="ff">
-        <SignupModal
-          onSuccess={() => {
-            setShowSignup(false)
-            // Re-trigger payment now that user is authenticated
-            handleFund()
-          }}
-          onClose={() => setShowSignup(false)}
-        />
-      </div>
-    )
   }
 
   // ── Success state ─────────────────────────────────────────────────────────
@@ -207,7 +191,7 @@ export default function FundFlow() {
                     </div>
                     <div className="ff-footprint__info">
                       <span className="ff-footprint__num">{footprintTco2e} tCO₂e</span>
-                      <span className="ff-footprint__note">from your flight · via the estimator</span>
+                      <span className="ff-footprint__note">from your flight</span>
                     </div>
                   </div>
                 ) : (

@@ -79,10 +79,7 @@ const NavLogo = () => (
 )
 
 // ── Main component ─────────────────────────────────────────────────────────────
-type Panel = 'visitor' | 'login' | 'workspace'
-
 export default function Landing() {
-  const [panel, setPanel] = useState<Panel>('visitor')
   const [t, setT] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const rafRef = useRef<number | null>(null)
@@ -149,9 +146,6 @@ export default function Landing() {
     { name: 'Rahul Nair',             kind: 'Individual · Kochi',   stat: '96 trees · 1.3 tCO₂e',     avatar: avatarPenta('RN', '#2B5341'), href: '/profiles' },
   ]
 
-  const showChooser   = panel === 'visitor'
-  const showLogin     = panel === 'login'
-  const showWorkspace = panel === 'workspace'
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F0EC' }}>
@@ -171,8 +165,7 @@ export default function Landing() {
               <Link to="/profiles">Explore profiles</Link>
             </div>
             <div className="l0-nav__actions">
-              <button type="button" className="l0-nav__login" onClick={() => setPanel('login')}>Log in</button>
-              <button type="button" className="l0-nav__start">Start</button>
+              <Link to="/login" className="l0-nav__login">Log in</Link>
             </div>
             <button
               type="button"
@@ -194,8 +187,7 @@ export default function Landing() {
             <Link to="/ledger" onClick={() => setMobileMenuOpen(false)}>Ledger</Link>
             <Link to="/profiles" onClick={() => setMobileMenuOpen(false)}>Explore profiles</Link>
             <div className="l0-mobile-menu__actions">
-              <button type="button" className="l0-nav__login" onClick={() => { setPanel('login'); setMobileMenuOpen(false) }}>Log in</button>
-              <button type="button" className="l0-nav__start" onClick={() => setMobileMenuOpen(false)}>Start</button>
+              <Link to="/login" className="l0-nav__login" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
             </div>
           </div>
         )}
@@ -226,72 +218,26 @@ export default function Landing() {
       <section className="l0-chooser-section">
         <div className="l0-chooser-section__inner">
 
-          {showChooser && (
-            <>
-              <div className="l0-path-grid">
-                <Link to="/individual" className="l0-path-card l0-path-card--ind">
-                  <div style={{ width: 74, height: 72 }}>{pathPenta('#F09125', '#FEF0E3', '🌱')}</div>
-                  <div className="l0-path-card__body">
-                    <h2 className="l0-path-card__h2">For individuals</h2>
-                    <p className="l0-path-card__p">Measure your footprint, fund real projects, and watch your five-element impact grow.</p>
-                  </div>
-                  <span className="l0-path-card__cta l0-path-card__cta--orange">Start my impact →</span>
-                </Link>
-                <Link to="/business/settings" className="l0-path-card l0-path-card--biz">
-                  <div style={{ width: 74, height: 72 }}>{pathPenta('#185FA5', '#EAF2FA', '📊')}</div>
-                  <div className="l0-path-card__body">
-                    <h2 className="l0-path-card__h2">For businesses</h2>
-                    <p className="l0-path-card__p">Measure Scope 1–3, fund verified projects, and generate board-ready reports.</p>
-                  </div>
-                  <span className="l0-path-card__cta l0-path-card__cta--blue">Explore for business →</span>
-                </Link>
+          <div className="l0-path-grid">
+            <Link to="/individual" className="l0-path-card l0-path-card--ind">
+              <div style={{ width: 74, height: 72 }}>{pathPenta('#F09125', '#FEF0E3', '🌱')}</div>
+              <div className="l0-path-card__body">
+                <h2 className="l0-path-card__h2">For individuals</h2>
+                <p className="l0-path-card__p">Measure your footprint, fund real projects, and watch your five-element impact grow.</p>
               </div>
-              <p className="l0-chooser-hint">Just looking? Either path works without an account — and your choice isn't binding.</p>
-            </>
-          )}
+              <span className="l0-path-card__cta l0-path-card__cta--orange">Start my impact →</span>
+            </Link>
+            <Link to="/business/settings" className="l0-path-card l0-path-card--biz">
+              <div style={{ width: 74, height: 72 }}>{pathPenta('#185FA5', '#EAF2FA', '📊')}</div>
+              <div className="l0-path-card__body">
+                <h2 className="l0-path-card__h2">For businesses</h2>
+                <p className="l0-path-card__p">Measure Scope 1–3, fund verified projects, and generate board-ready reports.</p>
+              </div>
+              <span className="l0-path-card__cta l0-path-card__cta--blue">Explore for business →</span>
+            </Link>
+          </div>
+          <p className="l0-chooser-hint">Just looking? Either path works without an account — and your choice isn't binding.</p>
 
-          {showLogin && (
-            <div className="l0-panel">
-              <div>
-                <h2 className="l0-panel__h2">Welcome back</h2>
-                <p className="l0-panel__sub">Log in to continue where you left off.</p>
-              </div>
-              <label className="l0-panel__label">
-                <span>Email</span>
-                <input type="email" placeholder="you@example.com" className="l0-panel__input" />
-              </label>
-              <label className="l0-panel__label">
-                <span>Password</span>
-                <input type="password" placeholder="••••••••" className="l0-panel__input" />
-              </label>
-              <button type="button" className="l0-panel__btn" onClick={() => setPanel('workspace')}>Log in</button>
-              <div className="l0-panel__footer">
-                <a href="#" className="l0-panel__forgot">Forgot password?</a>
-                <Link to="/signup" className="l0-panel__back">New here? Sign up</Link>
-              </div>
-            </div>
-          )}
-
-          {showWorkspace && (
-            <div className="l0-panel l0-panel--wide">
-              <div style={{ textAlign: 'center' }}>
-                <h2 className="l0-panel__h2">Which workspace?</h2>
-                <p className="l0-panel__sub">You have both an individual and a business account. Pick one to enter — you can switch any time.</p>
-              </div>
-              <div className="l0-ws-grid">
-                <Link to="/impact" className="l0-ws-card l0-ws-card--ind">
-                  <div style={{ width: 52, height: 50 }}>{pathPenta('#F09125', '#FEF0E3', '🌱', 52)}</div>
-                  <span className="l0-ws-card__name">My impact</span>
-                  <span className="l0-ws-card__sub">Personal · Aditi</span>
-                </Link>
-                <Link to="/business" className="l0-ws-card l0-ws-card--biz">
-                  <div style={{ width: 52, height: 50 }}>{pathPenta('#185FA5', '#EAF2FA', '📊', 52)}</div>
-                  <span className="l0-ws-card__name">Meridian Mfg.</span>
-                  <span className="l0-ws-card__sub">Business · Head of Sustainability</span>
-                </Link>
-              </div>
-            </div>
-          )}
 
         </div>
       </section>
@@ -464,7 +410,7 @@ export default function Landing() {
           <h2 className="l0-cta-box__h2">Start your impact journey</h2>
           <p className="l0-cta-box__p">Two minutes to a credible estimate. No account, no signup wall — just a first honest number.</p>
           <div className="l0-cta-box__btns">
-            <Link to="/projects" className="l0-btn l0-btn--orange">Fund new project</Link>
+            <Link to="/projects" className="l0-btn l0-btn--orange">🌍 Fund new project</Link>
             <Link to="/submit-project/details" className="l0-btn l0-btn--ghost">Start with existing project</Link>
           </div>
         </div>
@@ -488,7 +434,6 @@ export default function Landing() {
             <div className="l0-footer__col">
               <span className="l0-footer__col-title">Platform</span>
               <Link to="/projects">Projects</Link>
-              <Link to="/estimator">Quick estimator</Link>
               <a href="#">Public ledger</a>
               <Link to="/profiles">Explore profiles</Link>
             </div>

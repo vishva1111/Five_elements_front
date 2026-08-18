@@ -140,7 +140,6 @@ export default function IndividualLanding() {
           </p>
           <div className="il__hero-btns">
             <Link to="/fund" className="il__btn-primary">🌍 Fund a project</Link>
-            <Link to="/quick-estimate" className="il__btn-outline">Calculate my footprint</Link>
           </div>
         </div>
 
@@ -255,7 +254,6 @@ export default function IndividualLanding() {
           </svg>
           <h2 className="il__footer-cta-h2">Start with your footprint</h2>
           <p className="il__footer-cta-sub">No account needed. No signup wall. Just an honest first number.</p>
-          <Link to="/quick-estimate" className="il__btn-primary">Calculate my footprint →</Link>
         </div>
       </section>
 

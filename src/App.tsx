@@ -17,7 +17,6 @@ import Profiles from './pages/Profiles/Profiles'
 
 // ── Individual flow ──────────────────────────────────────────────────────────
 import IndividualLanding from './pages/IndividualLanding/IndividualLanding'
-import QuickEstimator from './pages/QuickEstimator/QuickEstimator'
 import FundFlow from './pages/FundFlow/FundFlow'
 import ImpactHome from './pages/ImpactHome/ImpactHome'
 
@@ -95,9 +94,6 @@ export default function App(): React.JSX.Element {
 
           {/* ── Individual flow (public pages) ── */}
           <Route path="/individual" element={<IndividualLanding />} />
-          <Route path="/quick-estimate" element={<QuickEstimator />} />
-          <Route path="/estimator" element={<Navigate to="/quick-estimate" replace />} />
-          <Route path="/start"     element={<Navigate to="/quick-estimate" replace />} />
 
           {/* ── Individual flow (protected) ── */}
           <Route path="/fund" element={<ProtectedRoute allowedRoles={['individual']}><FundFlow /></ProtectedRoute>} />

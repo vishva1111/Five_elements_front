@@ -5,7 +5,6 @@ import './Footer.css'
 const FOOTER_LINKS = {
   Platform: [
     { label: 'Projects', to: '/projects' },
-    { label: 'Quick estimator', to: '/estimator' },
     { label: 'Public ledger', to: '/ledger' },
     { label: 'Explore profiles', to: '/profiles' },
   ],
@@ -46,7 +45,6 @@ export default function Footer() {
               Climate action, rooted in the elements of nature. Measure, fund, prove — on a public ledger anyone can check.
             </p>
             <div className="footer__cta-row">
-              <Link to="/start" className="btn btn-primary btn-sm">Start my impact</Link>
               <Link to="/business" className="btn btn-outline-white btn-sm">Explore for business</Link>
             </div>
           </div>

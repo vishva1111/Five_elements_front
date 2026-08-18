@@ -80,9 +80,9 @@ a:hover { color: #F09125; }
 
 .l0-nav__login {
   font-family: 'Inter', sans-serif;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 14px;
-  color: #F5F0EC;
+  color: #AACBA7;
   background: transparent;
   border: none;
   cursor: pointer;

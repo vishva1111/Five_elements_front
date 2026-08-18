@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchDashboard, type DashboardData, type DashboardProject } from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
 import './Dashboard.css'
 
 const NAV_ITEMS = [
@@ -96,10 +97,22 @@ function RadarChart({ treesFunded }: { treesFunded: number }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { signOut, user } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  async function handleLogout() {
+    await signOut()
+    navigate('/login')
+  }
+
+  const initials = user?.displayName
+    ? user.displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'U'
 
   const load = useCallback(async () => {
     try {
@@ -116,6 +129,7 @@ export default function Dashboard() {
 
   useEffect(() => { load() }, [load])
 
+  const isMobile  = typeof window !== 'undefined' && window.innerWidth <= 768
   const sidebarW  = collapsed ? '64px' : '240px'
   const labelDisp = collapsed ? 'none' : 'block'
 
@@ -131,8 +145,17 @@ export default function Dashboard() {
   return (
     <div className="db-shell">
 
+      {/* MOBILE OVERLAY */}
+      <div
+        className={`db-sidebar-overlay${mobileOpen ? ' db-sidebar-overlay--visible' : ''}`}
+        onClick={() => setMobileOpen(false)}
+      />
+
       {/* SIDEBAR */}
-      <aside className="db-sidebar" style={{ width: sidebarW }}>
+      <aside
+        className={`db-sidebar${mobileOpen ? ' db-sidebar--open' : ''}`}
+        style={{ width: sidebarW }}
+      >
         <div className="db-sidebar__logo">
           <svg width="26" height="27" viewBox="0 0 40 42" aria-hidden="true">
             <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill="none" stroke="#2B5341" strokeWidth="1.6" strokeLinejoin="round" />
@@ -158,12 +181,36 @@ export default function Dashboard() {
         </nav>
 
         <div className="db-sidebar__user">
-          <div className="db-sidebar__avatar">SC</div>
+          <div className="db-sidebar__avatar">{initials}</div>
           <div className="db-sidebar__user-info" style={{ display: labelDisp }}>
-            <div className="db-sidebar__user-name">Sarah Chen</div>
-            <div className="db-sidebar__user-org">Meridian Manufacturing</div>
+            <div className="db-sidebar__user-name">{user?.displayName || 'User'}</div>
+            <div className="db-sidebar__user-org">{user?.email || ''}</div>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowLogoutModal(true)}
+          className="db-nav db-nav--logout"
+          title="Sign out"
+        >
+          <span className="db-nav__icon">⏻</span>
+          <span className="db-nav__label" style={{ display: labelDisp }}>Sign out</span>
+        </button>
+
+        {/* Logout confirmation modal */}
+        {showLogoutModal && (
+          <div className="db-modal-overlay" onClick={() => setShowLogoutModal(false)}>
+            <div className="db-modal" onClick={e => e.stopPropagation()}>
+              <div className="db-modal__icon">⏻</div>
+              <h3 className="db-modal__title">Sign out?</h3>
+              <p className="db-modal__sub">You will be redirected to the login page.</p>
+              <div className="db-modal__actions">
+                <button type="button" className="db-modal__cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+                <button type="button" className="db-modal__confirm" onClick={handleLogout}>Sign out</button>
+              </div>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* MAIN */}
@@ -173,7 +220,13 @@ export default function Dashboard() {
           <button
             type="button"
             className="db-topbar__toggle"
-            onClick={() => setCollapsed(c => !c)}
+            onClick={() => {
+              if (window.innerWidth <= 768) {
+                setMobileOpen(o => !o)
+              } else {
+                setCollapsed(c => !c)
+              }
+            }}
             aria-label="Toggle sidebar"
           >☰</button>
           <div className="db-topbar__title-wrap">

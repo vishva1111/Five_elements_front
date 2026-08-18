@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import NotificationBell from '../../components/ui/NotificationBell'
+import { useAuth } from '../../contexts/AuthContext'
 import './Dashboard.css'
 
 const NAV_ITEMS = [
@@ -20,10 +21,22 @@ interface BusinessLayoutProps {
 
 export default function BusinessLayout({ children, title, subtitle }: BusinessLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { signOut, user } = useAuth()
 
   const sidebarW  = collapsed ? '64px' : '240px'
   const labelDisp = collapsed ? 'none' : 'block'
+
+  async function handleLogout() {
+    await signOut()
+    navigate('/login')
+  }
+
+  const initials = user?.displayName
+    ? user.displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'SC'
 
   return (
     <div className="db-shell">
@@ -59,12 +72,36 @@ export default function BusinessLayout({ children, title, subtitle }: BusinessLa
         </nav>
 
         <div className="db-sidebar__user">
-          <div className="db-sidebar__avatar">SC</div>
+          <div className="db-sidebar__avatar">{initials}</div>
           <div className="db-sidebar__user-info" style={{ display: labelDisp }}>
-            <div className="db-sidebar__user-name">Sarah Chen</div>
-            <div className="db-sidebar__user-org">Meridian Manufacturing</div>
+            <div className="db-sidebar__user-name">{user?.displayName || 'User'}</div>
+            <div className="db-sidebar__user-org">{user?.email || ''}</div>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowLogoutModal(true)}
+          className="db-nav db-nav--logout"
+          title="Sign out"
+        >
+          <span className="db-nav__icon">⏻</span>
+          <span className="db-nav__label" style={{ display: labelDisp }}>Sign out</span>
+        </button>
+
+        {/* Logout confirmation modal */}
+        {showLogoutModal && (
+          <div className="db-modal-overlay" onClick={() => setShowLogoutModal(false)}>
+            <div className="db-modal" onClick={e => e.stopPropagation()}>
+              <div className="db-modal__icon">⏻</div>
+              <h3 className="db-modal__title">Sign out?</h3>
+              <p className="db-modal__sub">You will be redirected to the login page.</p>
+              <div className="db-modal__actions">
+                <button type="button" className="db-modal__cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+                <button type="button" className="db-modal__confirm" onClick={handleLogout}>Sign out</button>
+              </div>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* MAIN */}
