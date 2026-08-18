@@ -1,90 +1,141 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
-import Navbar from '../../components/layout/Navbar'
-import Footer from '../../components/layout/Footer'
-import './Business.css'
-
-const SCOPE_SUMMARY = [
-  { label: 'Scope 1', value: '48.2 tCO₂e', desc: 'Direct emissions' },
-  { label: 'Scope 2', value: '62.1 tCO₂e', desc: 'Purchased electricity' },
-  { label: 'Scope 3', value: '104.0 tCO₂e', desc: 'Value chain' },
-  { label: 'Total', value: '214.3 tCO₂e', desc: 'Combined Scope 1–3' },
-]
+import { ArrowLeft, Download } from 'lucide-react'
+import BusinessLayout from './BusinessLayout'
+import { fetchReportDetail, type ReportDetailData } from '../../services/api'
+import './Dashboard.css'
+import './ReportDetail.css'
 
 export default function ReportDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
 
+  const [report, setReport] = useState<ReportDetailData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    setLoading(true)
+    setError(null)
+    fetchReportDetail(id)
+      .then(d => setReport(d.report))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  function handleDownloadPdf() {
+    window.print()
+  }
+
   return (
-    <div className="business-page">
-      <Navbar />
-      <div className="business-page__header dark-section">
-        <div className="container">
-          <Link
-            to="/business/reports"
-            style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}
-          >
-            <ArrowLeft size={14} /> Back to reports
-          </Link>
-          <p className="section-label" style={{ color: 'var(--color-accent)' }}>REPORT DETAIL</p>
-          <h1 className="business-page__title">{id || 'Report'}</h1>
-          <p className="business-page__sub">Meridian Manufacturing · Verified ledger data</p>
+    <BusinessLayout title="Report detail" subtitle={id || 'Report'}>
+      <Link to="/business/reports" className="rd-back">
+        <ArrowLeft size={14} /> Back to reports
+      </Link>
+
+      {loading && (
+        <div className="rd-loading">
+          <div className="db-skel rd-skel-header" />
+          <div className="db-skel rd-skel-card" />
+          <div className="db-skel rd-skel-card" />
         </div>
-      </div>
-      <div className="container business-page__body">
-        {/* Emissions summary */}
-        <div className="card" style={{ padding: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Emissions summary</h2>
-            <button
-              type="button"
-              onClick={() => navigate('/business/source-data')}
-              style={{ background: 'none', border: 'none', color: '#185FA5', fontWeight: 700, fontSize: 13, cursor: 'pointer', padding: 0 }}
-            >
-              View source records →
+      )}
+
+      {error && !loading && (
+        <div className="db-error-banner">⚠ {error}</div>
+      )}
+
+      {!loading && !error && report && (
+        <>
+          {/* Header */}
+          <div className="rd-header">
+            <div className="rd-header__label">📄 Report detail</div>
+            <h1 className="rd-header__title">{report.id}</h1>
+            <div className="rd-header__sub">
+              {report.orgName} · {report.framework} · {report.period}
+              {report.status === 'Published' ? (
+                <span className="rd-header__status">✓ {report.status}</span>
+              ) : (
+                <span className="rd-header__status rd-header__status--draft">{report.status}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Emissions summary */}
+          <div className="rd-card">
+            <div className="rd-card__head">
+              <h2 className="rd-card__title">Emissions summary</h2>
+              <button type="button" className="rd-card__link" onClick={() => navigate('/business/source-data')}>
+                View source records →
+              </button>
+            </div>
+            <div className="rd-scope-grid">
+              {report.scopeSummary.map(s => (
+                <div key={s.label} className={`rd-scope-card${s.label === 'Total' ? ' rd-scope-card--total' : ''}`}>
+                  <div className="rd-scope-card__label">{s.label}</div>
+                  <span className="rd-scope-card__num">{s.value}</span>
+                  <div className="rd-scope-card__desc">{s.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Funding summary */}
+          <div className="rd-card">
+            <div className="rd-card__head">
+              <h2 className="rd-card__title">Funding & offsets</h2>
+              <Link to="/ledger" className="rd-card__link">View on ledger →</Link>
+            </div>
+            <div className="rd-funding-grid">
+              <div>
+                <div className="rd-funding-stat__label">Trees funded</div>
+                <span className="rd-funding-stat__num">{report.funding.treesFundedFmt}</span>
+              </div>
+              <div>
+                <div className="rd-funding-stat__label">Verified ledger entries</div>
+                <span className="rd-funding-stat__num">{report.funding.verifiedLedgerEntries}</span>
+              </div>
+            </div>
+
+            {report.ledgerEntries.length > 0 && (
+              <div className="rd-ledger-table">
+                <div className="rd-ledger-head">
+                  <div className="rd-ledger-th">Date</div>
+                  <div className="rd-ledger-th">Project</div>
+                  <div className="rd-ledger-th">Trees</div>
+                  <div className="rd-ledger-th">tCO₂e</div>
+                  <div className="rd-ledger-th">Status</div>
+                </div>
+                {report.ledgerEntries.map(e => (
+                  <div key={e.id} className="rd-ledger-row">
+                    <div className="rd-ledger-td">{e.date}</div>
+                    <div className="rd-ledger-td">{e.project}</div>
+                    <div className="rd-ledger-td rd-ledger-td--num">{e.trees.toLocaleString('en-GB')}</div>
+                    <div className="rd-ledger-td rd-ledger-td--num">{e.tCO2e.toFixed(2)}</div>
+                    <div className="rd-ledger-td">
+                      <span className={`rd-ledger-status${e.verified ? ' rd-ledger-status--verified' : ''}`}>
+                        {e.verified ? '✓ Verified' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {report.ledgerEntries.length === 0 && (
+              <p className="rd-ledger-empty">No ledger entries found for this organisation yet.</p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="rd-actions no-print">
+            <button type="button" className="rd-btn rd-btn--primary" onClick={handleDownloadPdf}>
+              <Download size={15} /> Download PDF
             </button>
           </div>
-          <div className="business-page__stats-grid">
-            {SCOPE_SUMMARY.map(s => (
-              <div key={s.label} className="business-page__stat-card" style={{ background: '#f9f9f9', borderRadius: 8, padding: 16 }}>
-                <p className="business-page__stat-label">{s.label}</p>
-                <span className="business-page__stat-num" style={{ fontSize: 18 }}>{s.value}</span>
-                <p style={{ fontSize: 12, color: 'var(--color-text-muted-dark)', marginTop: 4 }}>{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Funding summary */}
-        <div className="card" style={{ padding: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Funding & offsets</h2>
-            <Link
-              to="/ledger"
-              style={{ color: '#185FA5', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}
-            >
-              View on ledger →
-            </Link>
-          </div>
-          <div className="business-page__two-col">
-            <div>
-              <p className="business-page__stat-label">Trees funded</p>
-              <span className="business-page__stat-num">12,400</span>
-            </div>
-            <div>
-              <p className="business-page__stat-label">Verified ledger entries</p>
-              <span className="business-page__stat-num">2</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className="btn btn-primary">Download PDF</button>
-          <button className="btn btn-outline">Share link</button>
-        </div>
-      </div>
-      <Footer />
-    </div>
+        </>
+      )}
+    </BusinessLayout>
   )
 }

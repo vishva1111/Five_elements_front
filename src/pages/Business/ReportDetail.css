@@ -1,0 +1,374 @@
+/* ── Report Detail page ──────────────────────────────────────────────────── */
+
+.rd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6B7B6E;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 14px;
+  transition: color 0.12s;
+}
+
+.rd-back:hover {
+  color: #112121;
+}
+
+/* Header card */
+.rd-header {
+  background: linear-gradient(135deg, #17281F 0%, #24382C 100%);
+  border-radius: 16px;
+  padding: 28px 30px;
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.rd-header__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #F09125;
+  margin-bottom: 10px;
+}
+
+.rd-header__title {
+  font-size: 30px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 8px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.01em;
+}
+
+.rd-header__sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.65);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rd-header__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.12);
+  border: 0.5px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  padding: 3px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.rd-header__status--draft {
+  background: rgba(240,145,37,0.18);
+  border-color: rgba(240,145,37,0.4);
+  color: #F09125;
+}
+
+/* Loading skeletons */
+.rd-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rd-skel-header {
+  height: 130px;
+  border-radius: 16px;
+}
+
+.rd-skel-card {
+  height: 160px;
+  border-radius: 16px;
+}
+
+/* Ledger entries table */
+.rd-ledger-table {
+  margin-top: 22px;
+  border-top: 0.5px solid #EAE3DA;
+  padding-top: 18px;
+}
+
+.rd-ledger-head,
+.rd-ledger-row {
+  display: grid;
+  grid-template-columns: 110px 1.6fr 90px 90px 120px;
+  gap: 10px;
+  align-items: center;
+}
+
+.rd-ledger-head {
+  padding: 0 4px 10px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6B7B6E;
+}
+
+.rd-ledger-row {
+  padding: 12px 4px;
+  border-top: 0.5px solid #F0EBE5;
+  font-size: 13px;
+  color: #112121;
+}
+
+.rd-ledger-td--num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+.rd-ledger-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B7B6E;
+}
+
+.rd-ledger-status--verified {
+  color: #2B5341;
+}
+
+.rd-ledger-empty {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #6B7B6E;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* Section card */
+.rd-card {
+  background: #fff;
+  border: 0.5px solid #AACBA7;
+  border-radius: 16px;
+  padding: 24px 26px;
+  margin-bottom: 18px;
+}
+
+.rd-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.rd-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #112121;
+  margin: 0;
+}
+
+.rd-card__link {
+  color: #185FA5;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: gap 0.12s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rd-card__link:hover {
+  gap: 7px;
+  text-decoration: underline;
+}
+
+/* Scope stats grid */
+.rd-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rd-scope-card {
+  background: #F5F0EC;
+  border: 0.5px solid #EAE3DA;
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.rd-scope-card--total {
+  background: #EAF3DE;
+  border-color: #AACBA7;
+}
+
+.rd-scope-card__label {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6B7B6E;
+  margin-bottom: 8px;
+}
+
+.rd-scope-card__num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 22px;
+  color: #112121;
+  line-height: 1;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.rd-scope-card__desc {
+  font-size: 12px;
+  color: #6B7B6E;
+}
+
+/* Funding two-col */
+.rd-funding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.rd-funding-stat__label {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6B7B6E;
+  margin-bottom: 8px;
+}
+
+.rd-funding-stat__num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 26px;
+  color: #112121;
+  display: block;
+}
+
+/* Actions */
+.rd-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rd-btn {
+  border-radius: 9999px;
+  padding: 11px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rd-btn--primary {
+  background: #2B5341;
+  color: #fff;
+  border: none;
+}
+
+.rd-btn--primary:hover {
+  background: #1e3d2f;
+  transform: translateY(-1px);
+}
+
+.rd-btn--outline {
+  background: #fff;
+  color: #112121;
+  border: 1.5px solid #AACBA7;
+}
+
+.rd-btn--outline:hover {
+  background: #F5F0EC;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .rd-scope-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .rd-header {
+    padding: 22px 20px;
+  }
+
+  .rd-header__title {
+    font-size: 22px;
+  }
+
+  .rd-card {
+    padding: 18px 18px;
+  }
+
+  .rd-scope-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .rd-funding-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .rd-actions {
+    flex-direction: column;
+  }
+
+  .rd-btn {
+    justify-content: center;
+  }
+}
+
+/* ── Print styles (Download PDF via window.print) ───────────────────────── */
+@media print {
+  .db-sidebar,
+  .db-topbar,
+  .rd-back,
+  .no-print {
+    display: none !important;
+  }
+
+  .db-main {
+    width: 100% !important;
+  }
+
+  .db-content {
+    padding: 0 !important;
+  }
+
+  .rd-header {
+    background: #17281F !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .rd-card {
+    break-inside: avoid;
+    border: 1px solid #ccc;
+  }
+
+  .rd-ledger-row {
+    break-inside: avoid;
+  }
+}

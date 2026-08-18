@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import BusinessLayout from './BusinessLayout'
 import { fetchTeam, inviteTeamMember, removeTeamMember, type TeamMember } from '../../services/api'
+import './Dashboard.css'
+import './Team.css'
 
-const thStyle: React.CSSProperties = {
-  textAlign: 'left', padding: '10px 12px', color: '#9AA79C',
-  fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em',
+function initialsOf(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 }
-const tdStyle: React.CSSProperties = { padding: '12px 12px', fontSize: 13 }
-const inputStyle: React.CSSProperties = {
-  border: '1px solid #EEE7DE', borderRadius: 6, padding: '9px 12px',
-  fontSize: 13, color: '#112121', fontFamily: 'inherit', outline: 'none', background: '#fff', flex: 1,
+
+function RolePill({ role }: { role: string }) {
+  const key = role.toLowerCase()
+  const cls =
+    key === 'admin'  ? 'tm-role-pill--admin'  :
+    key === 'editor' ? 'tm-role-pill--editor' :
+    'tm-role-pill--viewer'
+  return <span className={`tm-role-pill ${cls}`}>{role}</span>
 }
 
 export default function Team() {
@@ -51,63 +62,83 @@ export default function Team() {
     }
   }
 
+  const adminCount  = members.filter(m => m.role.toLowerCase() === 'admin').length
+  const editorCount = members.filter(m => m.role.toLowerCase() === 'editor').length
+  const viewerCount = members.filter(m => m.role.toLowerCase() === 'viewer').length
+
   return (
     <BusinessLayout title="Team" subtitle="Manage who has access to your organisation's account.">
       {loading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[1, 2, 3].map(i => <div key={i} className="db-skel" style={{ height: 48, borderRadius: 8 }} />)}
+        <div className="tm-loading">
+          {[1, 2, 3].map(i => <div key={i} className="db-skel tm-skel-row" />)}
         </div>
       )}
+
       {error && <div className="db-error-banner">⚠ {error}</div>}
 
-      {!loading && (
+      {!loading && !error && (
         <>
-          <div style={{ overflowX: 'auto', marginBottom: 24 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #EEE7DE' }}>
-                  <th style={thStyle}>Name</th>
-                  <th style={thStyle}>Email</th>
-                  <th style={thStyle}>Role</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.length === 0 && (
-                  <tr>
-                    <td colSpan={4} style={{ ...tdStyle, color: '#9AA79C', textAlign: 'center', padding: 32 }}>
-                      No team members yet. Invite someone below.
-                    </td>
-                  </tr>
-                )}
-                {members.map(m => (
-                  <tr key={m.id} style={{ borderBottom: '1px solid #F5F0EC' }}>
-                    <td style={{ ...tdStyle, fontWeight: 600, color: '#112121' }}>{m.name}</td>
-                    <td style={{ ...tdStyle, color: '#6B7B6E' }}>{m.email}</td>
-                    <td style={tdStyle}>
-                      <span className="db-element-badge">{m.role}</span>
-                    </td>
-                    <td style={tdStyle}>
-                      <button
-                        className="db-link"
-                        style={{ color: '#C0392B', fontSize: 12 }}
-                        onClick={() => handleRemove(m.id)}
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Summary strip */}
+          <div className="tm-summary-strip">
+            <div className="tm-stat-card">
+              <div className="tm-stat-card__label">Total members</div>
+              <span className="tm-stat-card__num">{members.length}</span>
+            </div>
+            <div className="tm-stat-card">
+              <div className="tm-stat-card__label">Admins</div>
+              <span className="tm-stat-card__num">{adminCount}</span>
+            </div>
+            <div className="tm-stat-card">
+              <div className="tm-stat-card__label">Editors</div>
+              <span className="tm-stat-card__num">{editorCount}</span>
+            </div>
+            <div className="tm-stat-card">
+              <div className="tm-stat-card__label">Viewers</div>
+              <span className="tm-stat-card__num">{viewerCount}</span>
+            </div>
           </div>
 
-          <div style={{ background: '#fff', border: '1px solid #EEE7DE', borderRadius: 10, padding: 24, maxWidth: 520 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: '#112121' }}>Invite a team member</h2>
-            <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', gap: 10 }}>
+          {/* Table */}
+          <div className="tm-table-wrap">
+            <div className="tm-table-scroll">
+              <div className="tm-table-head">
+                <div className="tm-th">Name</div>
+                <div className="tm-th">Email</div>
+                <div className="tm-th">Role</div>
+                <div className="tm-th"></div>
+              </div>
+
+              {members.length === 0 && (
+                <div className="tm-empty-row">No team members yet. Invite someone below.</div>
+              )}
+
+              {members.map(m => (
+                <div key={m.id} className="tm-table-row">
+                  <div className="tm-td tm-member-name">
+                    <span className="tm-avatar">{initialsOf(m.name)}</span>
+                    {m.name}
+                  </div>
+                  <div className="tm-td tm-td--email">{m.email}</div>
+                  <div className="tm-td">
+                    <RolePill role={m.role} />
+                  </div>
+                  <div className="tm-td">
+                    <button type="button" className="tm-remove-link" onClick={() => handleRemove(m.id)}>
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Invite card */}
+          <div className="tm-invite-card">
+            <h2 className="tm-invite-title">Invite a team member</h2>
+            <form onSubmit={handleInvite} className="tm-invite-form">
+              <div className="tm-invite-row">
                 <input
-                  style={inputStyle}
+                  className="tm-invite-input"
                   type="email"
                   placeholder="colleague@company.com"
                   value={email}
@@ -115,7 +146,7 @@ export default function Team() {
                   required
                 />
                 <select
-                  style={{ ...inputStyle, flex: 'none', width: 110 }}
+                  className="tm-invite-select"
                   value={role}
                   onChange={e => setRole(e.target.value)}
                 >
@@ -124,7 +155,7 @@ export default function Team() {
                   <option>Viewer</option>
                 </select>
               </div>
-              <button type="submit" className="db-cta-btn" style={{ alignSelf: 'flex-start' }} disabled={inviting}>
+              <button type="submit" className="tm-invite-btn" disabled={inviting}>
                 {inviting ? 'Sending…' : 'Send invite'}
               </button>
             </form>

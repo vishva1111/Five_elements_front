@@ -1,0 +1,298 @@
+/* ── Team page ────────────────────────────────────────────────────────────── */
+
+/* Summary strip */
+.tm-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.tm-stat-card {
+  background: #F5F0EC;
+  border: 0.5px solid #AACBA7;
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.tm-stat-card__label {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6B7B6E;
+  margin-bottom: 8px;
+}
+
+.tm-stat-card__num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 24px;
+  color: #112121;
+  line-height: 1;
+  display: block;
+}
+
+/* Table */
+.tm-table-wrap {
+  background: #fff;
+  border: 0.5px solid #AACBA7;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.tm-table-scroll {
+  max-height: calc(100vh - 480px);
+  min-height: 180px;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+}
+
+.tm-table-head {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-columns: 1.6fr 2fr 1fr 90px;
+  gap: 10px;
+  background: #F5F0EC;
+  padding: 12px 20px;
+  z-index: 1;
+}
+
+.tm-th {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6B7B6E;
+}
+
+.tm-table-row {
+  display: grid;
+  grid-template-columns: 1.6fr 2fr 1fr 90px;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 20px;
+  border-top: 0.5px solid #F0EBE5;
+  transition: background 0.12s;
+}
+
+.tm-table-row:hover {
+  background: #FAF7F3;
+}
+
+.tm-td {
+  font-size: 13.5px;
+  color: #112121;
+}
+
+.tm-member-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.tm-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #2B5341;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.tm-td--email {
+  color: #6B7B6E;
+}
+
+.tm-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 9999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.tm-role-pill--admin {
+  background: #EAF3DE;
+  color: #2B5341;
+  border: 0.5px solid #AACBA7;
+}
+
+.tm-role-pill--editor {
+  background: #FCEFDC;
+  color: #8B5A00;
+  border: 0.5px solid #F0D6A8;
+}
+
+.tm-role-pill--viewer {
+  background: #EEF3F8;
+  color: #185FA5;
+  border: 0.5px solid #C7DCEE;
+}
+
+.tm-remove-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #C0392B;
+  font-weight: 700;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 0;
+  transition: opacity 0.12s;
+}
+
+.tm-remove-link:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.tm-empty-row {
+  padding: 40px 20px;
+  text-align: center;
+  color: #9AA79C;
+  font-size: 13.5px;
+}
+
+/* Invite card */
+.tm-invite-card {
+  background: #fff;
+  border: 0.5px solid #AACBA7;
+  border-radius: 16px;
+  padding: 24px 26px;
+  max-width: 560px;
+}
+
+.tm-invite-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #112121;
+  margin: 0 0 16px;
+}
+
+.tm-invite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tm-invite-row {
+  display: flex;
+  gap: 10px;
+}
+
+.tm-invite-input {
+  flex: 1;
+  border: 1px solid #EAE3DA;
+  border-radius: 9999px;
+  padding: 11px 18px;
+  font-size: 13.5px;
+  color: #112121;
+  font-family: inherit;
+  outline: none;
+  background: #F5F0EC;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.tm-invite-input:focus {
+  border-color: #AACBA7;
+  background: #fff;
+}
+
+.tm-invite-select {
+  flex: none;
+  width: 120px;
+  border: 1px solid #EAE3DA;
+  border-radius: 9999px;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  color: #112121;
+  font-family: inherit;
+  outline: none;
+  background: #F5F0EC;
+  cursor: pointer;
+}
+
+.tm-invite-btn {
+  align-self: flex-start;
+  background: #2B5341;
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  padding: 11px 26px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.tm-invite-btn:hover:not(:disabled) {
+  background: #1e3d2f;
+  transform: translateY(-1px);
+}
+
+.tm-invite-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Loading skeletons */
+.tm-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.tm-skel-row {
+  height: 52px;
+  border-radius: 10px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .tm-summary-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .tm-table-head {
+    display: none;
+  }
+
+  .tm-table-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .tm-td--email::before {
+    content: 'Email: ';
+    color: #9AA79C;
+    font-weight: 700;
+  }
+
+  .tm-invite-row {
+    flex-direction: column;
+  }
+
+  .tm-invite-select {
+    width: 100%;
+  }
+}

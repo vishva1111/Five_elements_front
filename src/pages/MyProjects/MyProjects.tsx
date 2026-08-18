@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import Navbar from '../../components/layout/Navbar'
-import Footer from '../../components/layout/Footer'
+import IndividualLayout from '../ImpactHome/IndividualLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import './MyProjects.css'
 
@@ -66,20 +65,14 @@ export default function MyProjects() {
   }, [session])
 
   return (
-    <div className="mp-page">
-      <Navbar />
-
-      <div className="mp-header">
-        <div className="mp-header__inner">
-          <Link to="/impact" className="mp-back">← Back to impact</Link>
-          <h1 className="mp-header__title">My projects & evidence</h1>
-          <p className="mp-header__sub">
+    <IndividualLayout title="My projects & evidence" topLabel="MY IMPACT">
+      <div className="mp-panel">
+        <div className="mp-panel__header">
+          <p className="mp-panel__sub">
             {user?.displayName || 'Your'} funded portfolio · all evidence on the public ledger
           </p>
         </div>
-      </div>
 
-      <div className="mp-body">
         {loading && (
           <div className="mp-loading">
             {[1, 2, 3].map(i => <div key={i} className="mp-skel" />)}
@@ -145,8 +138,6 @@ export default function MyProjects() {
           </div>
         )}
       </div>
-
-      <Footer />
-    </div>
+    </IndividualLayout>
   )
 }

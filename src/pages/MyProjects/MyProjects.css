@@ -1,56 +1,22 @@
-/* ── My Projects page (S8) ───────────────────────────────────────────────── */
-.mp-page {
-  min-height: 100vh;
-  background: #F5F0EC;
-  display: flex;
-  flex-direction: column;
+/* ── My Projects page (S8) — now rendered inside IndividualLayout ─────────── */
+
+/* Panel wrapper matching the shared card design system */
+.mp-panel {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 2px 12px rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
-/* Header */
-.mp-header {
-  background: #112121;
-  padding: 28px 0 32px;
+.mp-panel__header {
+  margin-bottom: 20px;
 }
 
-.mp-header__inner {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 28px;
-}
-
-.mp-back {
-  display: inline-block;
-  color: rgba(255,255,255,0.55);
-  font-size: 13px;
-  text-decoration: none;
-  margin-bottom: 12px;
-}
-
-.mp-back:hover {
-  color: #AACBA7;
-}
-
-.mp-header__title {
-  font-size: 26px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.02em;
-  margin: 0 0 6px;
-}
-
-.mp-header__sub {
+.mp-panel__sub {
   font-size: 13.5px;
-  color: rgba(255,255,255,0.55);
+  color: #6B7B6E;
   margin: 0;
-}
-
-/* Body */
-.mp-body {
-  flex: 1;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 28px 28px 56px;
-  width: 100%;
 }
 
 /* Loading skeletons */
@@ -275,10 +241,7 @@
 }
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .mp-header { padding: 20px 0 24px; }
-  .mp-header__inner { padding: 0 16px; }
-  .mp-header__title { font-size: 22px; }
-  .mp-body { padding: 20px 16px 40px; }
+  .mp-panel { padding: 16px; }
   .mp-card { flex-direction: column; gap: 12px; }
   .mp-card__actions { flex-direction: row; align-items: center; justify-content: flex-start; flex-wrap: wrap; }
   .mp-card__btn { flex: 1; text-align: center; }

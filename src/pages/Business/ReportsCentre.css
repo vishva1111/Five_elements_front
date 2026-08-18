@@ -1,0 +1,326 @@
+/* ── Reports Centre page ─────────────────────────────────────────────────── */
+
+/* Summary strip */
+.rc-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.rc-stat-card {
+  background: #F5F0EC;
+  border: 0.5px solid #EAE3DA;
+  border-radius: 12px;
+  padding: 15px 16px;
+}
+
+.rc-stat-card__label {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6B7B6E;
+  margin-bottom: 7px;
+}
+
+.rc-stat-card__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rc-stat-card__num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 24px;
+  color: #112121;
+  line-height: 1;
+}
+
+.rc-stat-card__sub {
+  font-size: 12px;
+  color: #6B7B6E;
+}
+
+/* Toolbar */
+.rc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.rc-toolbar__title {
+  font-size: 13px;
+  color: #6B7B6E;
+}
+
+.rc-generate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #2B5341;
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  padding: 10px 20px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.rc-generate-btn:hover {
+  background: #1e3d2f;
+  transform: translateY(-1px);
+}
+
+.rc-generate-btn__plus {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* Table card */
+.rc-table-wrap {
+  background: #fff;
+  border: 0.5px solid #AACBA7;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.rc-table-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  max-height: calc(100vh - 400px);
+  min-height: 180px;
+}
+
+.rc-table-head {
+  display: grid;
+  grid-template-columns: 1.3fr 2fr 1fr 1.2fr 90px;
+  padding: 0 20px;
+  height: 44px;
+  align-items: center;
+  background: #FAF7F3;
+  border-bottom: 0.5px solid #AACBA7;
+  min-width: 700px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.rc-th {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: #6B7B6E;
+  text-transform: uppercase;
+}
+
+.rc-table-row {
+  display: grid;
+  grid-template-columns: 1.3fr 2fr 1fr 1.2fr 90px;
+  padding: 14px 20px;
+  align-items: center;
+  border-bottom: 0.5px solid #F4EEE6;
+  transition: background 0.12s;
+  min-width: 700px;
+}
+
+.rc-table-row:hover {
+  background: #FAF9F6;
+}
+
+.rc-table-row:last-of-type {
+  border-bottom: none;
+}
+
+.rc-td {
+  font-size: 13px;
+  color: #112121;
+  min-width: 0;
+}
+
+.rc-report-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #F5F0EC;
+  color: #2B5341;
+  padding: 3px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.rc-report-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #112121;
+}
+
+.rc-report-name-icon {
+  margin-right: 6px;
+}
+
+.rc-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 10.5px;
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.rc-status-pill--published {
+  background: #EAF3DE;
+  color: #2B5341;
+}
+
+.rc-status-pill--draft {
+  background: #FEF0E3;
+  color: #8B3A00;
+  border: 0.5px solid #F5C27A;
+}
+
+.rc-status-pill--dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.rc-date-cell {
+  color: #6B7B6E;
+  font-size: 12.5px;
+}
+
+.rc-date-cell--due {
+  color: #8B3A00;
+  font-weight: 600;
+}
+
+.rc-view-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #185FA5;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+  transition: gap 0.12s;
+}
+
+.rc-view-link:hover {
+  gap: 7px;
+  text-decoration: underline;
+}
+
+/* Loading skeletons */
+.rc-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rc-skel-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.rc-skel-stat {
+  height: 76px;
+  border-radius: 12px;
+}
+
+.rc-skel-table {
+  height: 260px;
+  border-radius: 16px;
+}
+
+/* Empty state */
+.rc-empty {
+  background: #fff;
+  border: 0.5px solid #AACBA7;
+  border-radius: 16px;
+  padding: 56px 40px;
+  text-align: center;
+  max-width: 560px;
+  margin: 8px auto;
+}
+
+.rc-empty__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+  border-radius: 14px;
+  background: #EAF3DE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+.rc-empty__title {
+  font-weight: 700;
+  font-size: 20px;
+  margin-bottom: 8px;
+  color: #112121;
+}
+
+.rc-empty__sub {
+  font-size: 14px;
+  color: #6B7B6E;
+  line-height: 1.5;
+  max-width: 380px;
+  margin: 0 auto 22px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .rc-summary-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .rc-summary-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .rc-stat-card {
+    padding: 12px 14px;
+  }
+
+  .rc-stat-card__num {
+    font-size: 18px;
+  }
+
+  .rc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rc-generate-btn {
+    justify-content: center;
+  }
+
+  .rc-empty {
+    padding: 32px 20px;
+  }
+}

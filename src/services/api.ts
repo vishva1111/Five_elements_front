@@ -349,6 +349,47 @@ export async function fetchReports(): Promise<{ reports: Report[] }> {
   return res.json()
 }
 
+export interface ReportScopeItem {
+  label: string
+  value: string
+  desc: string
+}
+
+export interface ReportLedgerEntry {
+  id: string
+  date: string
+  project: string
+  projectId: string
+  trees: number
+  tCO2e: number
+  verified: boolean
+  txHash: string | null
+}
+
+export interface ReportDetailData {
+  id: string
+  name: string
+  status: string
+  framework: string
+  period: string
+  orgName: string
+  date: string
+  scopeSummary: ReportScopeItem[]
+  funding: {
+    treesFunded: number
+    treesFundedFmt: string
+    verifiedLedgerEntries: number
+  }
+  ledgerEntries: ReportLedgerEntry[]
+}
+
+export async function fetchReportDetail(id: string): Promise<{ report: ReportDetailData }> {
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+  const res = await fetch(`${BASE_URL}/api/reports/${id}`, { headers: await getAuthHeaders() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 // ── Team ──────────────────────────────────────────────────────────────────────
 
 export interface TeamMember {
