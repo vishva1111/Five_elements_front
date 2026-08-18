@@ -313,10 +313,12 @@ export default function Landing() {
           <div className="l0-proj-grid">
             {featuredProjects.map(p => (
               <Link key={p.id} to={`/projects/${p.slug || p.id}`} className="l0-proj-card" style={{ textDecoration: 'none', display: 'block', cursor: 'pointer' }}>
-                {p.coverImage
-                  ? <img src={p.coverImage} alt={p.name} className="l0-proj-card__img-slot" style={{ objectFit: 'cover', width: '100%' }} />
-                  : <div className="l0-proj-card__img-slot" />
-                }
+                <img
+                  src={p.coverImage || 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&q=80'}
+                  alt={p.name}
+                  className="l0-proj-card__img-slot"
+                  style={{ objectFit: 'cover', width: '100%' }}
+                />
                 <div className="l0-proj-card__body">
                   <div className="l0-proj-card__top">
                     <h3 className="l0-proj-card__h3">{p.name}</h3>
@@ -439,7 +441,6 @@ export default function Landing() {
             </div>
             <div className="l0-footer__col">
               <span className="l0-footer__col-title">For businesses</span>
-              <Link to="/business">Emissions platform</Link>
               <a href="#">Targets &amp; SBTi</a>
               <a href="#">Regulatory reports</a>
               <a href="#">Project portfolio</a>
@@ -461,7 +462,7 @@ export default function Landing() {
           </div>
           <div className="l0-footer__bottom">
             <div className="l0-footer__bottom-left">
-              <span>© 2026 Five Elements CARM · Rooted in Earth · Prithvi</span>
+              <span className="l0-footer__copy">© 2026 Five Elements CARM · Rooted in Earth · Prithvi</span>
               <a href="#">Privacy</a>
               <a href="#">Terms</a>
             </div>

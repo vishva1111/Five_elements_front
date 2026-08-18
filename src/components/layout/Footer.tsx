@@ -9,7 +9,6 @@ const FOOTER_LINKS = {
     { label: 'Explore profiles', to: '/profiles' },
   ],
   'For businesses': [
-    { label: 'Emissions platform', to: '/business' },
     { label: 'Targets & SBTi', to: '/business/targets' },
     { label: 'Regulatory reports', to: '/business/reports' },
     { label: 'Project portfolio', to: '/business/portfolio' },
@@ -67,7 +66,7 @@ export default function Footer() {
         </div>
 
         <div className="footer__bottom">
-          <p>© {new Date().getFullYear()} Five Elements CARM. All rights reserved.</p>
+          <p>© 2026 Five Elements CARM · Rooted in Earth · Prithvi</p>
           <div className="footer__bottom-links">
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>
