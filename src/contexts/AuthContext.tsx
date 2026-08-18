@@ -34,7 +34,7 @@ const AuthContext = createContext<AuthContextValue>({
 
 // ── Role → home route map ─────────────────────────────────────────────────────
 export const ROLE_HOME: Record<UserRole, string> = {
-  individual: '/submit-project/details',
+  individual: '/impact',
   business:   '/business',
   partner:    '/partner',
   admin:      '/admin',

@@ -49,7 +49,9 @@ export default function Login() {
     const { error: err } = await signIn(email, password)
     setBusy(false)
     if (err) {
-      setError(err)
+      // Supabase returns this for both wrong password and non-existent account
+      const isNotFound = /invalid login credentials/i.test(err) || /user not found/i.test(err)
+      setError(isNotFound ? '__not_found__' : err)
       return
     }
     // Navigation handled by the useEffect above once user state updates
@@ -96,7 +98,12 @@ export default function Login() {
 
           {error && (
             <div className="login-card__error" role="alert">
-              {error}
+              {error === '__not_found__' ? (
+                <>
+                  No account found with this email.{' '}
+                  <Link to="/signup" className="login-card__error-link">Create a new account →</Link>
+                </>
+              ) : error}
             </div>
           )}
 

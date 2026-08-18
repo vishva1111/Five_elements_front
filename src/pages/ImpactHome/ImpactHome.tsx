@@ -1,156 +1,389 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import { TreePine, Leaf, MapPin, ExternalLink } from 'lucide-react'
-import Navbar from '../../components/layout/Navbar'
-import Footer from '../../components/layout/Footer'
-import PentagonIcon from '../../components/ui/PentagonIcon'
-import NotificationBell from '../../components/ui/NotificationBell'
-import { useLedger } from '../../hooks/useLedger'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  TreePine, Leaf, MapPin, ExternalLink,
+  LayoutGrid, AlignJustify, BookOpen,
+  BarChart2, Settings, LogOut, Bell,
+  TrendingUp, Award, ChevronRight, Menu, X,
+  Sprout, AlertCircle, CircleUser
+} from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { fetchUserImpact, fetchPlatformStats } from '../../services/api'
+import type { UserImpactEntry, UserImpactStats } from '../../services/api'
 import './ImpactHome.css'
 
-// In a real app this would come from auth context
-const DEMO_USER = {
-  name: 'Aditi Sharma',
-  location: 'Pune',
-  avatar: 'AS',
-  trees: 312,
-  tCO2e: 4.1,
-  projects: 3,
+const NAV_ITEMS = [
+  { icon: LayoutGrid,    label: 'Dashboard',    href: '/impact',       active: true  },
+  { icon: AlignJustify,  label: 'My Projects',  href: '/my-projects',  active: false },
+  { icon: BookOpen,      label: 'Ledger',        href: '/ledger',       active: false },
+  { icon: BarChart2,     label: 'Reports',       href: '/reports',      active: false },
+  { icon: Award,         label: 'Certificates',  href: '/certificates', active: false },
+  { icon: CircleUser,    label: 'Public profile',href: '/profile',      active: false },
+]
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+function getCO2Rank(tCO2e: number): string {
+  if (tCO2e === 0) return '—'
+  if (tCO2e >= 10) return 'Top 5%'
+  if (tCO2e >= 5)  return 'Top 12%'
+  if (tCO2e >= 2)  return 'Top 25%'
+  return 'Top 50%'
 }
 
 export default function ImpactHome() {
-  const { entries, stats, loading } = useLedger({})
-  // Show only first 5 entries as "my entries" for demo
-  const myEntries = entries.slice(0, 5)
+  const { user, signOut, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const [entries, setEntries]   = useState<UserImpactEntry[]>([])
+  const [stats, setStats]       = useState<UserImpactStats>({ trees: 0, tCO2e: 0, projects: 0, fundsInvested: 0 })
+  const [platStats, setPlatStats] = useState({ treesFunded: 0, tCO2eVerified: 0, projectsActive: 0 })
+  const [dataLoading, setDataLoading] = useState(true)
+  const [dataError, setDataError]     = useState<string | null>(null)
+
+  // Redirect non-individual users away
+  useEffect(() => {
+    if (!authLoading && user && user.role !== 'individual') {
+      navigate('/', { replace: true })
+    }
+  }, [authLoading, user, navigate])
+
+  // Fetch user-specific impact data
+  useEffect(() => {
+    if (authLoading || !user) return
+
+    setDataLoading(true)
+    setDataError(null)
+
+    Promise.all([
+      fetchUserImpact(user.displayName || user.email),
+      fetchPlatformStats(),
+    ])
+      .then(([impact, plat]) => {
+        setEntries(impact.entries)
+        setStats(impact.stats)
+        setPlatStats(plat)
+      })
+      .catch((err: Error) => setDataError(err.message || 'Failed to load impact data'))
+      .finally(() => setDataLoading(false))
+  }, [authLoading, user])
+
+  async function handleSignOut() {
+    await signOut()
+    navigate('/login')
+  }
+
+  // ── Loading skeleton ──────────────────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <div className="ih-shell">
+        <div className="ih-loading-screen">
+          <div className="ih-spinner" />
+          <p>Loading your impact…</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Not logged in ─────────────────────────────────────────────────────────
+  if (!user) {
+    return (
+      <div className="ih-shell">
+        <div className="ih-loading-screen">
+          <AlertCircle size={40} color="#F09125" />
+          <p>Please <Link to="/login" className="ih-link">log in</Link> to view your impact dashboard.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const displayName = user.displayName || user.email
+  const initials    = getInitials(displayName)
+  const recentEntries = entries.slice(0, 4)
+  const hasData     = entries.length > 0
 
   return (
-    <div className="impact-home">
-      <Navbar />
+    <div className="ih-shell">
 
-      {/* Header */}
-      <div className="impact-home__header dark-section">
-        <div className="container impact-home__header-inner">
-          <div className="impact-home__avatar">{DEMO_USER.avatar}</div>
-          <div style={{ flex: 1 }}>
-            <p className="section-label" style={{ color: 'var(--color-accent)' }}>MY IMPACT</p>
-            <h1 className="impact-home__name">{DEMO_USER.name}</h1>
-            <p className="impact-home__loc">📍 {DEMO_USER.location}</p>
-          </div>
-          <div style={{ color: '#fff' }}>
-            <NotificationBell />
-          </div>
+      {/* ── Sidebar ── */}
+      <aside className={`ih-sidebar ${sidebarOpen ? 'ih-sidebar--open' : ''}`}>
+        {/* Brand */}
+        <div className="ih-sidebar__brand">
+          <svg width="30" height="30" viewBox="0 0 40 40" fill="none">
+            <polygon points="20,3 37,13.5 31,34 9,34 3,13.5" fill="none" stroke="#F09125" strokeWidth="1.8"/>
+            <text x="20" y="25" textAnchor="middle" fontSize="14" fill="#F09125">★</text>
+          </svg>
+          <span className="ih-sidebar__brand-text">five elements <strong>CARM</strong></span>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="container impact-home__stats-row">
-        <div className="card impact-home__stat-card">
-          <PentagonIcon emoji="🌳" color="#2D6A4F" size={48} />
-          <div>
-            <span className="impact-home__stat-num">{DEMO_USER.trees.toLocaleString()}</span>
-            <span className="impact-home__stat-label">trees funded</span>
-          </div>
-        </div>
-        <div className="card impact-home__stat-card">
-          <PentagonIcon emoji="🌿" color="#40916C" size={48} />
-          <div>
-            <span className="impact-home__stat-num">{DEMO_USER.tCO2e}</span>
-            <span className="impact-home__stat-label">tCO₂e offset</span>
-          </div>
-        </div>
-        <div className="card impact-home__stat-card">
-          <PentagonIcon emoji="🗺️" color="#1B4332" size={48} />
-          <div>
-            <span className="impact-home__stat-num">{DEMO_USER.projects}</span>
-            <span className="impact-home__stat-label">projects backed</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Map placeholder */}
-      <div className="container impact-home__section">
-        <div className="impact-home__section-header">
-          <h2>Where your trees are growing</h2>
-          <span className="impact-home__section-count">{DEMO_USER.trees} trees across {DEMO_USER.projects} projects</span>
-        </div>
-        <div className="impact-home__map-placeholder">
-          <MapPin size={32} color="var(--color-earth)" />
-          <p>Interactive map — geo-tagged tree locations</p>
-          <span>Coming soon: live satellite view of your funded areas</span>
-        </div>
-      </div>
-
-      {/* Ledger entries */}
-      <div className="container impact-home__section">
-        <div className="impact-home__section-header">
-          <h2>My ledger entries</h2>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Link to="/my-projects" className="impact-home__see-all">My projects & evidence →</Link>
-            <Link to="/ledger" className="impact-home__see-all">See all on ledger →</Link>
+        {/* User pill */}
+        <div className="ih-sidebar__user">
+          <div className="ih-sidebar__avatar">{initials}</div>
+          <div className="ih-sidebar__user-info">
+            <span className="ih-sidebar__user-name">{displayName}</span>
+            <span className="ih-sidebar__user-role">Individual</span>
           </div>
         </div>
 
-        {loading ? (
-          <div className="impact-home__loading">Loading entries…</div>
-        ) : (
-          <div className="impact-home__entries">
-            {myEntries.map((entry) => (
-              <div key={entry.id} className="card impact-home__entry-card">
-                <div className="impact-home__entry-top">
-                  <span className="impact-home__entry-id">{entry.id}</span>
-                  {entry.verified && (
-                    <span className="badge badge-verified">✓ Verified</span>
-                  )}
-                </div>
-                <p className="impact-home__entry-project">{entry.project}</p>
-                <div className="impact-home__entry-meta">
-                  <span><TreePine size={13} /> {entry.trees} trees</span>
-                  <span><Leaf size={13} /> {entry.tCO2e} tCO₂e</span>
-                  <span>{entry.date}</span>
-                </div>
-                {entry.txHash && (
-                  <a href="#" className="impact-home__tx-link">
-                    {entry.txHash} <ExternalLink size={11} />
-                  </a>
+        {/* Nav */}
+        <nav className="ih-sidebar__nav">
+          {NAV_ITEMS.map(({ icon: Icon, label, href, active }) => (
+            <Link
+              key={label}
+              to={href}
+              className={`ih-sidebar__nav-item ${active ? 'ih-sidebar__nav-item--active' : ''}`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Bottom — user card + sign out */}
+        <div className="ih-sidebar__bottom">
+          <div className="ih-sidebar__user-card">
+            <div className="ih-sidebar__avatar">{initials}</div>
+            <div className="ih-sidebar__user-info">
+              <span className="ih-sidebar__user-name">{displayName}</span>
+              <span className="ih-sidebar__user-email">{user.email}</span>
+            </div>
+          </div>
+          <button className="ih-sidebar__signout" onClick={handleSignOut}>
+            <LogOut size={15} />
+            <span>Sign out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div className="ih-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* ── Main ── */}
+      <main className="ih-main">
+
+        {/* Top bar */}
+        <header className="ih-topbar">
+          <button className="ih-topbar__menu" onClick={() => setSidebarOpen(v => !v)}>
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <div className="ih-topbar__title">
+            <span className="ih-topbar__label">MY IMPACT</span>
+            <h1 className="ih-topbar__name">{displayName}</h1>
+          </div>
+          <div className="ih-topbar__actions">
+            <button className="ih-topbar__bell">
+              <Bell size={20} />
+            </button>
+            <div className="ih-topbar__avatar">{initials}</div>
+          </div>
+        </header>
+
+        <div className="ih-content">
+
+          {/* ── Error banner ── */}
+          {dataError && (
+            <div className="ih-error-banner">
+              <AlertCircle size={16} />
+              <span>Could not load your data: {dataError}</span>
+            </div>
+          )}
+
+          {/* ── KPI cards ── */}
+          <section className="ih-kpi-row">
+            <div className="ih-kpi-card ih-kpi-card--green">
+              <div className="ih-kpi-card__icon">🌳</div>
+              <div className="ih-kpi-card__body">
+                <span className="ih-kpi-card__num">
+                  {dataLoading ? '—' : stats.trees.toLocaleString()}
+                </span>
+                <span className="ih-kpi-card__label">Trees Funded</span>
+              </div>
+              <TrendingUp size={16} className="ih-kpi-card__trend" />
+            </div>
+
+            <div className="ih-kpi-card ih-kpi-card--teal">
+              <div className="ih-kpi-card__icon">🌿</div>
+              <div className="ih-kpi-card__body">
+                <span className="ih-kpi-card__num">
+                  {dataLoading ? '—' : <>{stats.tCO2e} <small>tCO₂e</small></>}
+                </span>
+                <span className="ih-kpi-card__label">Carbon Offset</span>
+              </div>
+              <TrendingUp size={16} className="ih-kpi-card__trend" />
+            </div>
+
+            <div className="ih-kpi-card ih-kpi-card--amber">
+              <div className="ih-kpi-card__icon">🗺️</div>
+              <div className="ih-kpi-card__body">
+                <span className="ih-kpi-card__num">
+                  {dataLoading ? '—' : stats.projects}
+                </span>
+                <span className="ih-kpi-card__label">Projects Backed</span>
+              </div>
+              <ChevronRight size={16} className="ih-kpi-card__trend" />
+            </div>
+
+            <div className="ih-kpi-card ih-kpi-card--dark">
+              <div className="ih-kpi-card__icon">🏅</div>
+              <div className="ih-kpi-card__body">
+                <span className="ih-kpi-card__num">
+                  {dataLoading ? '—' : getCO2Rank(stats.tCO2e)}
+                </span>
+                <span className="ih-kpi-card__label">CO₂ Rank</span>
+              </div>
+              <ChevronRight size={16} className="ih-kpi-card__trend" />
+            </div>
+          </section>
+
+          {/* ── Middle row: Map + Platform stats ── */}
+          <section className="ih-mid-row">
+            {/* Map */}
+            <div className="ih-card ih-map-card">
+              <div className="ih-card__header">
+                <h2>Where your trees are growing</h2>
+                {hasData && (
+                  <span className="ih-card__meta">
+                    {stats.trees} trees · {stats.projects} project{stats.projects !== 1 ? 's' : ''}
+                  </span>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              {!hasData && !dataLoading ? (
+                <div className="ih-empty-map">
+                  <Sprout size={36} color="#40916C" />
+                  <p>No trees funded yet</p>
+                  <span>Fund your first project to see your trees on the map</span>
+                  <Link to="/projects" className="ih-btn ih-btn--primary" style={{ marginTop: 8 }}>
+                    Browse projects →
+                  </Link>
+                </div>
+              ) : (
+                <div className="ih-map-placeholder">
+                  <MapPin size={36} color="#2D6A4F" />
+                  <p>Interactive map — geo-tagged tree locations</p>
+                  <span>Coming soon: live satellite view of your funded areas</span>
+                </div>
+              )}
+            </div>
 
-      {/* Platform stats */}
-      <div className="impact-home__platform dark-section">
-        <div className="container impact-home__platform-inner">
-          <p className="section-label" style={{ color: 'var(--color-accent)' }}>PLATFORM TOTAL</p>
-          <div className="impact-home__platform-stats">
-            <div className="impact-home__platform-stat">
-              <span className="stat-number">{(stats.treesFunded || 0).toLocaleString()}</span>
-              <span>trees funded</span>
+            {/* Platform stats */}
+            <div className="ih-card ih-platform-card">
+              <p className="ih-platform-card__label">PLATFORM TOTAL</p>
+              <div className="ih-platform-card__stat">
+                <span className="ih-platform-card__num">
+                  {(platStats.treesFunded || 0).toLocaleString()}
+                </span>
+                <span>trees funded</span>
+              </div>
+              <div className="ih-platform-card__stat">
+                <span className="ih-platform-card__num">
+                  {(platStats.tCO2eVerified || 0).toLocaleString()}
+                </span>
+                <span>tCO₂e verified</span>
+              </div>
+              <div className="ih-platform-card__stat">
+                <span className="ih-platform-card__num">
+                  {platStats.projectsActive || 0}
+                </span>
+                <span>active projects</span>
+              </div>
             </div>
-            <div className="impact-home__platform-stat">
-              <span className="stat-number">{(stats.tCO2eVerified || 0).toLocaleString()} tCO₂e</span>
-              <span>verified</span>
+          </section>
+
+          {/* ── Ledger entries ── */}
+          <section className="ih-card ih-ledger-card">
+            <div className="ih-card__header">
+              <h2>My Ledger Entries</h2>
+              {hasData && (
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <Link to="/my-projects" className="ih-link">My projects & evidence →</Link>
+                  <Link to="/ledger" className="ih-link">See all →</Link>
+                </div>
+              )}
             </div>
-            <div className="impact-home__platform-stat">
-              <span className="stat-number">{stats.projectsActive || 0}</span>
-              <span>active projects</span>
+
+            {dataLoading ? (
+              <div className="ih-loading">
+                <div className="ih-spinner ih-spinner--sm" />
+                <span>Loading your entries…</span>
+              </div>
+            ) : !hasData ? (
+              <div className="ih-empty">
+                <Sprout size={40} color="#40916C" />
+                <p>No ledger entries yet</p>
+                <span>Once you fund a project, your verified impact entries will appear here.</span>
+                <Link to="/projects" className="ih-btn ih-btn--primary" style={{ marginTop: 12 }}>
+                  Fund your first project →
+                </Link>
+              </div>
+            ) : (
+              <div className="ih-entries">
+                {recentEntries.map((entry) => (
+                  <div key={entry.id} className="ih-entry">
+                    <div className="ih-entry__left">
+                      <span className="ih-entry__id">{entry.id}</span>
+                      <span className="ih-entry__project">{entry.project}</span>
+                      <div className="ih-entry__meta">
+                        <span><TreePine size={12} /> {entry.trees} trees</span>
+                        <span><Leaf size={12} /> {entry.tCO2e} tCO₂e</span>
+                        <span>{entry.date}</span>
+                      </div>
+                    </div>
+                    <div className="ih-entry__right">
+                      {entry.verified && (
+                        <span className="ih-badge ih-badge--verified">✓ Verified</span>
+                      )}
+                      {entry.txHash && (
+                        <a href="#" className="ih-tx-link">
+                          {entry.txHash.slice(0, 12)}… <ExternalLink size={10} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {entries.length > 4 && (
+                  <div className="ih-entries__more">
+                    <Link to="/ledger" className="ih-link">
+                      +{entries.length - 4} more entries — view all on ledger →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* ── CTA ── */}
+          <section className="ih-cta">
+            <div className="ih-cta__text">
+              <h2>
+                {hasData ? 'Keep growing your impact' : 'Start your climate journey'}
+              </h2>
+              <p>
+                {hasData
+                  ? 'Fund more trees, back more projects, build a verifiable record of your climate action.'
+                  : 'Fund real reforestation projects and build a transparent, verified record of your climate impact.'}
+              </p>
             </div>
-          </div>
+            <div className="ih-cta__btns">
+              <Link to="/projects" className="ih-btn ih-btn--primary">
+                {hasData ? 'Fund more trees →' : 'Browse projects →'}
+              </Link>
+              <Link to="/ledger" className="ih-btn ih-btn--outline">View public ledger</Link>
+            </div>
+          </section>
+
         </div>
-      </div>
-
-      {/* CTA */}
-      <div className="container impact-home__cta">
-        <h2>Keep growing your impact</h2>
-        <p>Fund more trees, back more projects, build a verifiable record of your climate action.</p>
-        <div className="impact-home__cta-btns">
-          <Link to="/projects" className="btn btn-primary">Fund more trees →</Link>
-          <Link to="/ledger" className="btn btn-outline">View public ledger</Link>
-        </div>
-      </div>
-
-      <Footer />
+      </main>
     </div>
   )
 }

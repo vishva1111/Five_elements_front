@@ -103,6 +103,13 @@
   line-height: 1.4;
 }
 
+.login-card__error-link {
+  color: #8B3A00;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.login-card__error-link:hover { color: #F09125; }
+
 /* Submit button */
 .login-card__btn {
   height: 48px;

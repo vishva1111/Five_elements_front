@@ -485,3 +485,67 @@ export async function fetchProfile(slug: string): Promise<ProfileData> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+// ── User Impact (individual dashboard) ───────────────────────────────────────
+
+export interface UserImpactEntry {
+  id: string
+  date: string
+  project: string
+  trees: number
+  tCO2e: number
+  verified: boolean
+  txHash: string
+}
+
+export interface UserImpactStats {
+  trees: number
+  tCO2e: number
+  projects: number
+  fundsInvested: number
+}
+
+export interface UserImpactData {
+  entries: UserImpactEntry[]
+  stats: UserImpactStats
+}
+
+/**
+ * Fetch all ledger entries for the currently logged-in user.
+ * Matches on the `funder` column using the user's displayName.
+ * Returns derived stats (trees, tCO2e, unique projects, funds invested).
+ */
+export async function fetchUserImpact(funderName: string): Promise<UserImpactData> {
+  if (!funderName) return { entries: [], stats: { trees: 0, tCO2e: 0, projects: 0, fundsInvested: 0 } }
+
+  const rows = await sbFetch<LedgerRow[]>('ledger_entries', {
+    select: 'id,date,project,funder,trees,t_co2e,verified,tx_hash',
+    funder: `ilike.%${funderName}%`,
+    order:  'created_at.desc',
+    limit:  '200',
+  })
+
+  const entries: UserImpactEntry[] = rows.map(r => ({
+    id:       r.id,
+    date:     r.date,
+    project:  r.project,
+    trees:    r.trees,
+    tCO2e:    r.t_co2e,
+    verified: r.verified,
+    txHash:   r.tx_hash,
+  }))
+
+  const uniqueProjects = new Set(entries.map(e => e.project)).size
+  const totalTrees     = entries.reduce((s, e) => s + (e.trees || 0), 0)
+  const totalTCO2e     = entries.reduce((s, e) => s + (e.tCO2e || 0), 0)
+
+  return {
+    entries,
+    stats: {
+      trees:         totalTrees,
+      tCO2e:         Math.round(totalTCO2e * 10) / 10,
+      projects:      uniqueProjects,
+      fundsInvested: 0, // no price data in ledger; extend later
+    },
+  }
+}

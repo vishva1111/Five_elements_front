@@ -126,6 +126,9 @@ export default function Signup() {
                 <strong>Account created!</strong>
                 <p>{success.replace('Account created! ', '')}</p>
               </div>
+              <Link to="/login" className="su-btn-primary" style={{ marginTop: '16px', textAlign: 'center', textDecoration: 'none' }}>
+                Go to Login →
+              </Link>
             </div>
           ) : (
             <form className="su-form" onSubmit={handleSubmit} noValidate>
