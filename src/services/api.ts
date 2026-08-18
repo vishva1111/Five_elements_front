@@ -8,27 +8,40 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
 }
 
-// ── Supabase direct config ────────────────────────────────────────────────────
-const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL  as string
-const SUPABASE_KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+// ── Generic Supabase REST helper (uses supabase-js client — no env vars needed) ──
+async function sbFetch<T>(table: string, params: Record<string, string> = {}): Promise<T> {
+  let query = supabase.from(table).select(params.select || '*')
 
-// ── Generic Supabase REST helper ──────────────────────────────────────────────
-async function sbFetch<T>(path: string, params: Record<string, string> = {}): Promise<T> {
-  const qs = new URLSearchParams(params).toString()
-  const url = `${SUPABASE_URL}/rest/v1/${path}${qs ? `?${qs}` : ''}`
-  const res = await fetch(url, {
-    headers: {
-      'apikey':        SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Content-Type':  'application/json',
-      'Accept':        'application/json',
-    },
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { message?: string }).message || `HTTP ${res.status}`)
+  // Apply filters from params (skip 'select', 'order', 'limit', 'offset')
+  for (const [key, val] of Object.entries(params)) {
+    if (key === 'select' || key === 'order' || key === 'limit' || key === 'offset') continue
+    // Parse Supabase filter syntax: "eq.value", "gte.value", "ilike.%value%", "gt.value"
+    const dotIdx = val.indexOf('.')
+    if (dotIdx === -1) continue
+    const op  = val.slice(0, dotIdx)
+    const v   = val.slice(dotIdx + 1)
+    if      (op === 'eq')    query = (query as any).eq(key, v)
+    else if (op === 'gte')   query = (query as any).gte(key, v)
+    else if (op === 'lte')   query = (query as any).lte(key, v)
+    else if (op === 'gt')    query = (query as any).gt(key, v)
+    else if (op === 'ilike') query = (query as any).ilike(key, v)
   }
-  return res.json() as Promise<T>
+
+  // Order
+  if (params.order) {
+    const [col, dir] = params.order.split('.')
+    query = (query as any).order(col, { ascending: dir !== 'desc' })
+  }
+
+  // Limit
+  if (params.limit) query = (query as any).limit(Number(params.limit))
+
+  // Offset
+  if (params.offset) query = (query as any).range(Number(params.offset), Number(params.offset) + Number(params.limit || 50) - 1)
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+  return (data ?? []) as T
 }
 
 // ── DB row type (snake_case from Supabase) ────────────────────────────────────
