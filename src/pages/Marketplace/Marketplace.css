@@ -330,14 +330,15 @@
   overflow: hidden;
 }
 
-/* Full-bleed cover image fill */
+/* Pentagon-clipped background fill */
 .mp-card__thumb-bg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  display: block;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .mp-card__thumb-label {

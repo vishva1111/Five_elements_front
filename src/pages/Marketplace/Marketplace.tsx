@@ -157,18 +157,15 @@ function ProjectCard({ project: p }: { project: any }) {
 
   return (
     <Link to={`/projects/${p.slug || p.id}`} className="mp-card">
-      {/* Cover image thumbnail */}
+      {/* Pentagon thumbnail */}
       <div className="mp-card__thumb">
-        <img
-          src={imageUrl}
-          alt={p.name}
+        <div
           className="mp-card__thumb-bg"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          crossOrigin="anonymous"
-          onError={(e) => {
-            const img = e.target as HTMLImageElement
-            img.style.display = 'none'
+          style={{
+            backgroundImage: `url(${imageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            clipPath: 'url(#pentaThumb)',
           }}
         />
         {/* Pentagon outline overlay */}
@@ -280,6 +277,15 @@ export default function Marketplace() {
 
   return (
     <div className="mp">
+
+      {/* ── Pentagon clip-path definition (used by all cards) ── */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <defs>
+          <clipPath id="pentaThumb" clipPathUnits="objectBoundingBox">
+            <polygon points="0.5,0 0.9755,0.3455 0.7939,0.9045 0.2061,0.9045 0.0245,0.3455" />
+          </clipPath>
+        </defs>
+      </svg>
 
       {/* ── HEADER ── */}
       <div className="mp__header">
