@@ -157,15 +157,18 @@ function ProjectCard({ project: p }: { project: any }) {
 
   return (
     <Link to={`/projects/${p.slug || p.id}`} className="mp-card">
-      {/* Pentagon thumbnail */}
+      {/* Cover image thumbnail */}
       <div className="mp-card__thumb">
-        {/* Photo fill clipped to pentagon shape */}
-        <div
+        <img
+          src={imageUrl}
+          alt={p.name}
           className="mp-card__thumb-bg"
-          style={{
-            backgroundImage: `url(${imageUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement
+            img.style.display = 'none'
           }}
         />
         {/* Pentagon outline overlay */}
