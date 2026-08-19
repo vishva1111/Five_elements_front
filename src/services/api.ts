@@ -283,7 +283,7 @@ export async function submitFunding(payload: FundingPayload): Promise<{ orderId:
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/fund`, {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await getAuthHeaders(),
     body:    JSON.stringify(payload),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '../../hooks/useProjects'
 import { submitFunding } from '../../services/api'
@@ -52,6 +52,11 @@ export default function FundFlow() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isDeclined, setIsDeclined] = useState(false)
   const [isDone, setIsDone] = useState(false)
+
+  // Demo card fields (pre-filled for testing)
+  const [cardNumber, setCardNumber] = useState('1234 1234 1234 1234')
+  const [cardExpiry, setCardExpiry] = useState('11/11')
+  const [cardCvv, setCardCvv]       = useState('123')
 
   const location = useLocation()
 
@@ -301,10 +306,26 @@ export default function FundFlow() {
                 inputMode="numeric"
                 placeholder="Card number"
                 className="ff-input ff-input--mono"
+                value={cardNumber}
+                onChange={e => setCardNumber(e.target.value)}
               />
               <div className="ff-input-row">
-                <input type="text" inputMode="numeric" placeholder="MM / YY" className="ff-input ff-input--mono" />
-                <input type="text" inputMode="numeric" placeholder="CVV" className="ff-input ff-input--mono" />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="MM / YY"
+                  className="ff-input ff-input--mono"
+                  value={cardExpiry}
+                  onChange={e => setCardExpiry(e.target.value)}
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="CVV"
+                  className="ff-input ff-input--mono"
+                  value={cardCvv}
+                  onChange={e => setCardCvv(e.target.value)}
+                />
               </div>
             </div>
 

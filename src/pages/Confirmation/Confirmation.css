@@ -172,10 +172,271 @@
   color: #2B5341;
   border: 1.5px solid #AACBA7;
 }
+/* ── Invoice summary card (on confirmation page) ─────────────────────────── */
+.conf-invoice-summary {
+  background: #F5F0EC;
+  border: 1px solid #EAE3DA;
+  border-radius: 12px;
+  padding: 0;
+  margin: 20px 0 12px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.conf-invoice-summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 18px;
+  font-size: 13px;
+  border-bottom: 1px solid #EAE3DA;
+  gap: 12px;
+}
+
+.conf-invoice-summary__row:last-child {
+  border-bottom: none;
+}
+
+.conf-invoice-summary__label {
+  color: #9AA79C;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.conf-invoice-summary__val {
+  color: #112121;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.conf-invoice-summary__val--mono {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2B5341;
+}
+
+.conf-invoice-summary__row--total {
+  background: #EAF3DE;
+  font-weight: 700;
+  font-size: 14px;
+  color: #2B5341;
+}
+
+.conf-invoice-summary__row--total span:first-child {
+  color: #2B5341;
+  font-weight: 700;
+}
+
+/* ── Invoice print button ─────────────────────────────────────────────────── */
+.conf-btn--invoice {
+  background: #fff;
+  color: #2B5341;
+  border: 1.5px solid #AACBA7;
+  width: 100%;
+  margin-bottom: 16px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.conf-btn--invoice:hover {
+  background: #EAF3DE;
+  border-color: #2B5341;
+}
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .conf-card { padding: 28px 18px 24px; border-radius: 16px; }
   .conf-h1 { font-size: 20px; }
   .conf-stats { padding: 12px 14px; }
   .conf-stat__num { font-size: 17px; }
+/* ── Invoice button ───────────────────────────────────────────────────────── */
+.conf-btn--invoice {
+  background: #F5F0EC;
+  color: #2B5341;
+  border: 1.5px solid #AACBA7;
+  width: 100%;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.conf-btn--invoice:hover {
+  background: #EAF3DE;
+}
+
+/* ── Invoice / Slip ───────────────────────────────────────────────────────── */
+.conf-invoice {
+  background: #fff;
+  border: 1px solid #EAE3DA;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0 16px;
+  text-align: left;
+  font-size: 13px;
+  color: #1a1a1a;
+}
+
+.conf-invoice__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #2B5341;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.conf-invoice__brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.conf-invoice__brand-icon {
+  font-size: 24px;
+}
+
+.conf-invoice__brand-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2B5341;
+}
+
+.conf-invoice__brand-sub {
+  font-size: 10px;
+  color: #9CA3AF;
+  margin-top: 2px;
+}
+
+.conf-invoice__meta {
+  text-align: right;
+}
+
+.conf-invoice__meta-row {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  font-size: 12px;
+  margin-bottom: 3px;
+  color: #6B7280;
+}
+
+.conf-invoice__meta-row strong {
+  color: #1a1a1a;
+}
+
+.conf-invoice__badge {
+  background: #EAF3DE;
+  color: #2B5341;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.conf-invoice__section {
+  margin-bottom: 16px;
+}
+
+.conf-invoice__section-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.conf-invoice__billed-name,
+.conf-invoice__project-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #112121;
+}
+
+.conf-invoice__project-meta {
+  font-size: 11px;
+  color: #6B7280;
+  margin-top: 2px;
+}
+
+.conf-invoice__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 12px;
+}
+
+.conf-invoice__table th {
+  background: #F5F0EC;
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+}
+
+.conf-invoice__table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #EAE3DA;
+  color: #374151;
+}
+
+.conf-invoice__table tfoot td {
+  border-top: 2px solid #2B5341;
+  border-bottom: none;
+  font-size: 13px;
+  padding-top: 10px;
+  color: #112121;
+}
+
+.conf-invoice__impact {
+  display: flex;
+  gap: 20px;
+  background: #F5F0EC;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.conf-invoice__impact-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.conf-invoice__impact-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2B5341;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.conf-invoice__impact-label {
+  font-size: 10px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.conf-invoice__footer {
+  font-size: 10px;
+  color: #9CA3AF;
+  border-top: 1px solid #EAE3DA;
+  padding-top: 12px;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+.conf-invoice__footer p + p {
+  margin-top: 4px;
+}
 }
