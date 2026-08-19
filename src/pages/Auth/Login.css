@@ -7,17 +7,61 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px 48px;
+  padding: 80px 16px 48px;
   font-family: 'Inter', sans-serif;
   color: #112121;
 }
 
-/* ── Logo ────────────────────────────────────────────────────────────────── */
-.li-logo-wrap {
+/* ── Top-left brand bar ──────────────────────────────────────────────────── */
+.li-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  padding: 0 24px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
+  background: rgba(17, 33, 33, 0.94);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.li-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  color: #fff;
+  pointer-events: auto;
+}
+
+.li-brand__icon {
+  width: 32px;
+  height: 30px;
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  background: rgba(240,145,37,0.15);
+  border: 1.5px solid rgba(240,145,37,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.li-brand__text {
+  color: #fff;
+}
+
+.li-brand__accent {
+  color: #F09125;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 /* ── Card ────────────────────────────────────────────────────────────────── */

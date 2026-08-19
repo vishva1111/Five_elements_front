@@ -76,8 +76,13 @@ export default function Login() {
       const intended = (location.state as { from?: string })?.from
       if (intended && intended !== '/login') {
         navigate(intended, { replace: true })
+      } else if (user.isFirstLogin) {
+        navigate('/welcome', { replace: true })
+      } else if (user.roles && user.roles.length > 1) {
+        // Multi-role user — let them pick which workspace to open
+        navigate('/role-select', { replace: true })
       } else {
-        navigate(user.isFirstLogin ? '/welcome' : ROLE_HOME[user.role], { replace: true })
+        navigate(ROLE_HOME[user.role], { replace: true })
       }
     }
   }, [user])
@@ -108,9 +113,14 @@ export default function Login() {
 
   return (
     <div className="li-page">
-      {/* Logo */}
-      <div className="li-logo-wrap">
-        <LogoIcon />
+      {/* Top-left brand bar */}
+      <div className="li-topbar">
+        <a href="/" className="li-brand">
+          <span className="li-brand__icon">⬠</span>
+          <span className="li-brand__text">
+            five elements <strong className="li-brand__accent">CARM</strong>
+          </span>
+        </a>
       </div>
 
       {/* Card */}

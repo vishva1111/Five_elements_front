@@ -95,6 +95,7 @@ export default function Signup() {
   const [errors,   setErrors]   = useState<Record<string, string>>({})
   const [apiError, setApiError] = useState<string | null>(null)
   const [success,  setSuccess]  = useState(false)
+  const [roleAdded, setRoleAdded] = useState(false)
   const [busy,     setBusy]     = useState(false)
 
   const strength = getStrength(password)
@@ -115,9 +116,10 @@ export default function Signup() {
     if (!validate()) return
     setBusy(true)
     setApiError(null)
-    const { error: err, emailConfirmationRequired } = await signUp(fullName, email, password)
+    const { error: err, emailConfirmationRequired, roleAdded: added } = await signUp(fullName, email, password, role)
     setBusy(false)
     if (err) { setApiError(err); return }
+    if (added) { setRoleAdded(true); return }
     if (emailConfirmationRequired) { setSuccess(true); return }
     navigate('/welcome', { replace: true })
   }
@@ -130,6 +132,33 @@ export default function Signup() {
   }
   async function handleApple() {
     await supabase.auth.signInWithOAuth({ provider: 'apple',   options: { redirectTo: window.location.origin + '/welcome' } })
+  }
+
+  // ── Role added screen (existing account, new role added) ───────────────────
+  if (roleAdded) {
+    return (
+      <div className="su-page">
+        <div className="su-logo-wrap">
+          <LogoIcon />
+        </div>
+        <div className="su-card">
+          <div className="su-success">
+            <div className="su-success__icon">✓</div>
+            <strong>{role === 'business' ? 'Business' : 'Individual'} access added!</strong>
+            <p>
+              Your existing account now has both Individual and Business access.
+              Log in and choose which workspace to open.
+            </p>
+            <Link to="/login" className="su-btn-primary su-btn-primary--link">
+              Go to Login →
+            </Link>
+          </div>
+        </div>
+        <p className="su-signin-line">
+          Already have an account? <Link to="/login">Sign in</Link>
+        </p>
+      </div>
+    )
   }
 
   // ── Success screen ──────────────────────────────────────────────────────────
@@ -159,9 +188,14 @@ export default function Signup() {
   // ── Main form ───────────────────────────────────────────────────────────────
   return (
     <div className="su-page">
-      {/* Logo */}
-      <div className="su-logo-wrap">
-        <LogoIcon />
+      {/* Top-left brand bar */}
+      <div className="su-topbar">
+        <a href="/" className="su-brand">
+          <span className="su-brand__icon">⬠</span>
+          <span className="su-brand__text">
+            five elements <strong className="su-brand__accent">CARM</strong>
+          </span>
+        </a>
       </div>
 
       {/* Card */}
