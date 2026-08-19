@@ -1,140 +1,222 @@
-/* ── Signup page — matches Impact/Landing page style ─────────────────────── */
+/* ── Signup page — single card, cream background ─────────────────────────── */
 
 .su-page {
   min-height: 100vh;
   background: #F5F0EC;
   display: flex;
   flex-direction: column;
-}
-
-/* ── Dark hero band (same as Impact page header) ─────────────────────────── */
-.su-hero {
-  background: #112121;
-  padding: 48px 24px 56px;
-}
-
-.su-hero__inner {
-  max-width: 560px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.su-hero__eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #AACBA7;
-  margin: 0 0 12px;
-  text-transform: uppercase;
-}
-
-.su-hero__h1 {
-  font-size: 28px;
-  font-weight: 800;
-  color: #fff;
-  margin: 0 0 10px;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.su-hero__sub {
-  font-size: 14px;
-  color: rgba(255,255,255,0.55);
-  margin: 0;
-}
-
-/* ── Body / card area ────────────────────────────────────────────────────── */
-.su-body {
-  flex: 1;
-  display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 0 16px 48px;
-  margin-top: -28px;
+  padding: 32px 16px 48px;
+  font-family: 'Inter', sans-serif;
+  color: #112121;
 }
 
+/* ── Logo ────────────────────────────────────────────────────────────────── */
+.su-logo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
 .su-card {
-  background: #fff;
-  border: 0.5px solid #EAE3DA;
-  border-radius: 20px;
+  background: #ffffff;
+  border: 0.5px solid #D8CFC4;
+  border-radius: 18px;
   padding: 36px 32px 28px;
   width: 100%;
-  max-width: 440px;
-  box-shadow: 0 4px 32px rgba(17,33,33,0.10);
-  height: fit-content;
+  max-width: 360px;
+  box-shadow: 0 8px 28px rgba(17, 33, 33, 0.10);
+}
+
+.su-card__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #112121;
+  text-align: center;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.su-card__sub {
+  font-size: 13px;
+  color: #6B7B6E;
+  text-align: center;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+/* ── Role chooser ────────────────────────────────────────────────────────── */
+.su-role-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6B7B6E;
+  margin: 0 0 8px;
+}
+
+.su-role-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.su-role-card {
+  border: 1.5px solid #D8CFC4;
+  border-radius: 10px;
+  padding: 12px 10px;
+  cursor: pointer;
+  background: #FAFAF8;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: inherit;
+}
+
+.su-role-card:hover {
+  border-color: #AACBA7;
+}
+
+.su-role-card--ind {
+  border-color: #F09125;
+  background: #FEF4E7;
+}
+
+.su-role-card--biz {
+  border-color: #185FA5;
+  background: #EAF2FA;
+}
+
+.su-role-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #112121;
+  display: block;
+}
+
+.su-role-card__desc {
+  font-size: 11px;
+  color: #6B7B6E;
+  line-height: 1.45;
+  display: block;
 }
 
 /* ── Form ────────────────────────────────────────────────────────────────── */
 .su-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-.su-label {
+.su-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #6B7B6E;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  gap: 5px;
 }
 
+.su-field__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6B7B6E;
+}
+
+.su-field__error {
+  font-size: 11px;
+  color: #b00020;
+}
+
+/* ── Input ───────────────────────────────────────────────────────────────── */
 .su-input {
-  height: 46px;
-  border: 1px solid #AACBA7;
+  width: 100%;
+  border: 1px solid #D8CFC4;
   border-radius: 10px;
-  padding: 0 14px;
+  background: #F5F0EC;
+  padding: 10px 14px;
   font-size: 14px;
   color: #112121;
-  background: #fff;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   font-family: inherit;
 }
 
+.su-input::placeholder {
+  color: #AABBA7;
+}
+
 .su-input:focus {
-  border-color: #2B5341;
-  box-shadow: 0 0 0 3px rgba(43,83,65,0.10);
+  border-color: #F09125;
+  box-shadow: 0 0 0 3px rgba(240, 145, 37, 0.14);
+  background: #ffffff;
 }
 
 .su-input:disabled {
-  background: #F5F0EC;
-  color: #9AA79C;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-/* ── Password strength ───────────────────────────────────────────────────── */
-.su-strength {
+.su-input--err {
+  border-color: #b00020 !important;
+}
+
+/* ── Password wrapper ────────────────────────────────────────────────────── */
+.su-pw-wrap {
+  position: relative;
+}
+
+.su-pw-wrap .su-input {
+  padding-right: 42px;
+}
+
+.su-pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #6B7B6E;
   display: flex;
-  gap: 4px;
-  margin-top: 6px;
+  align-items: center;
+  line-height: 1;
 }
 
-.su-strength__bar {
-  flex: 1;
+.su-pw-toggle:hover {
+  color: #112121;
+}
+
+/* ── Strength bar ────────────────────────────────────────────────────────── */
+.su-strength-track {
   height: 3px;
-  border-radius: 99px;
-  background: #EAE3DA;
-  transition: background 0.2s;
+  background: #E8E2DA;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 2px;
 }
 
-.su-strength__bar--weak   { background: #E05C3A; }
-.su-strength__bar--fair   { background: #F09125; }
-.su-strength__bar--good   { background: #AACBA7; }
-.su-strength__bar--strong { background: #2B5341; }
-
-.su-strength__hint {
-  font-size: 11.5px;
-  color: #9AA79C;
-  margin-top: 4px;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
+.su-strength-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease, background 0.3s ease;
 }
 
-/* ── Error / success ─────────────────────────────────────────────────────── */
-.su-error {
+.su-strength-hint {
+  font-size: 11px;
+  color: #6B7B6E;
+  line-height: 1.4;
+}
+
+/* ── API error ───────────────────────────────────────────────────────────── */
+.su-api-error {
   background: #FEF0E3;
   border: 0.5px solid #F5C27A;
   border-radius: 8px;
@@ -144,63 +226,34 @@
   line-height: 1.4;
 }
 
-.su-success {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #EAF5EC;
-  border: 0.5px solid #AACBA7;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 4px;
-}
-
-.su-success__icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #2B5341;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.su-success strong {
-  display: block;
-  font-size: 14px;
-  color: #112121;
-  margin-bottom: 4px;
-}
-
-.su-success p {
-  font-size: 13px;
-  color: #2B5341;
-  margin: 0;
-  line-height: 1.4;
-}
-
 /* ── Primary button ──────────────────────────────────────────────────────── */
 .su-btn-primary {
-  height: 48px;
+  width: 100%;
+  height: 46px;
   background: #F09125;
-  color: #fff;
+  color: #ffffff;
   border: none;
   border-radius: 9999px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
   margin-top: 4px;
   font-family: inherit;
   letter-spacing: -0.01em;
+  transition: opacity 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .su-btn-primary:hover:not(:disabled) {
-  background: #d47d1a;
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.su-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .su-btn-primary:disabled {
@@ -208,51 +261,56 @@
   cursor: not-allowed;
 }
 
+.su-btn-primary--link {
+  margin-top: 16px;
+}
+
 /* ── OR divider ──────────────────────────────────────────────────────────── */
 .su-or {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 20px 0 16px;
+  margin: 16px 0;
   font-size: 12px;
-  color: #C9BFB3;
+  color: #9aaa9e;
 }
 
 .su-or::before,
 .su-or::after {
   content: '';
   flex: 1;
-  height: 0.5px;
-  background: #EAE3DA;
+  height: 1px;
+  background: #D8CFC4;
 }
 
 /* ── Social buttons ──────────────────────────────────────────────────────── */
 .su-social {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .su-social__btn {
-  height: 46px;
-  border: 1px solid #EAE3DA;
-  border-radius: 10px;
-  background: #fff;
-  font-size: 14px;
+  width: 100%;
+  height: 44px;
+  border: 1px solid #D8CFC4;
+  border-radius: 9999px;
+  background: #ffffff;
+  font-size: 13.5px;
   font-weight: 600;
   color: #112121;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
   font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .su-social__btn:hover:not(:disabled) {
-  border-color: #AACBA7;
   background: #F5F0EC;
+  border-color: #AACBA7;
 }
 
 .su-social__btn:disabled {
@@ -261,63 +319,115 @@
 }
 
 .su-social__hint {
-  font-size: 11.5px;
-  color: #9AA79C;
+  font-size: 11px;
+  color: #9aaa9e;
   text-align: center;
+  margin: 10px 0 0;
   line-height: 1.5;
-  margin: 12px 0 0;
 }
 
 /* ── Terms ───────────────────────────────────────────────────────────────── */
 .su-terms {
   font-size: 11.5px;
-  color: #9AA79C;
+  color: #6B7B6E;
   text-align: center;
+  margin: 14px 0 0;
   line-height: 1.5;
-  margin: 10px 0 0;
 }
 
 .su-terms a {
-  color: #6B7B6E;
+  color: #F09125;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.su-terms a:hover {
   text-decoration: underline;
 }
 
 /* ── Partner note ────────────────────────────────────────────────────────── */
 .su-partner-note {
-  margin-top: 20px;
+  margin-top: 16px;
   padding: 12px 14px;
   background: #F5F0EC;
+  border: 0.5px solid #D8CFC4;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 11.5px;
   color: #6B7B6E;
-  line-height: 1.5;
+  line-height: 1.55;
+}
+
+.su-partner-note a {
+  color: #2B5341;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.su-partner-note a:hover {
+  text-decoration: underline;
+}
+
+/* ── Sign-in link (below card) ───────────────────────────────────────────── */
+.su-signin-line {
+  font-size: 13px;
+  color: #6B7B6E;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.su-signin-line a {
+  color: #F09125;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.su-signin-line a:hover {
+  text-decoration: underline;
+}
+
+/* ── Success screen ──────────────────────────────────────────────────────── */
+.su-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   text-align: center;
 }
 
-/* ── Footer sign-in link ─────────────────────────────────────────────────── */
-.su-footer {
+.su-success__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2B5341;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 18px;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.su-success strong {
+  font-size: 18px;
+  color: #112121;
+}
+
+.su-success p {
   font-size: 13px;
   color: #6B7B6E;
-}
-
-.su-footer a {
-  color: #2B5341;
-  text-decoration: none;
-  font-weight: 700;
-}
-
-.su-footer a:hover {
-  text-decoration: underline;
+  margin: 0;
+  line-height: 1.5;
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .su-hero { padding: 36px 16px 48px; }
-  .su-hero__h1 { font-size: 22px; }
-  .su-card { padding: 28px 18px 24px; border-radius: 16px; }
+  .su-card {
+    padding: 28px 18px 24px;
+    border-radius: 16px;
+  }
+
+  .su-card__title {
+    font-size: 20px;
+  }
 }
