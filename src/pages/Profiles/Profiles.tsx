@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { TreePine, Leaf } from 'lucide-react'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
@@ -98,7 +99,7 @@ export default function Profiles() {
               const initials = getInitials(profile.name)
               const typeLabel = isOrg ? 'Business' : 'Individual'
               return (
-                <div key={profile.id} className="profiles__card">
+                <Link key={profile.id} to={`/profile/${profile.id}`} className="profiles__card profiles__card--link">
                   {/* Card top — dark hero with avatar */}
                   <div className="profiles__card-top">
                     <PentaAvatar initials={initials} isOrg={isOrg} />
@@ -132,7 +133,7 @@ export default function Profiles() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               )
             })}
           </div>

@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { TreePine, Leaf, MapPin, Globe, Share2, Copy, Check, ArrowLeft, ExternalLink } from 'lucide-react'
+import Navbar from '../../components/layout/Navbar'
+import Footer from '../../components/layout/Footer'
 import { fetchProfile, type ProfileData } from '../../services/api'
+import './PublicProfile.css'
 
-// ── Pentagon geometry ─────────────────────────────────────────────────────────
+// ── Pentagon geometry helper ──────────────────────────────────────────────────
 function penta(cx: number, cy: number, r: number, rot = -Math.PI / 2): string {
   return Array.from({ length: 5 }, (_, i) => {
     const a = rot + (i * 2 * Math.PI) / 5
@@ -10,116 +14,117 @@ function penta(cx: number, cy: number, r: number, rot = -Math.PI / 2): string {
   }).join(' ')
 }
 
-// ── Avatar SVG (org = building silhouette, individual = person) ───────────────
-function AvatarSVG({ isOrg }: { isOrg: boolean }) {
-  const pts = penta(52, 50, 46)
-  const inner = isOrg
-    ? `<rect x="20" y="30" width="64" height="44" rx="3" fill="#2B5341"/>
-       <rect x="30" y="40" width="12" height="12" rx="1" fill="#AACBA7"/>
-       <rect x="50" y="40" width="12" height="12" rx="1" fill="#AACBA7"/>
-       <rect x="40" y="56" width="24" height="18" rx="1" fill="#AACBA7"/>`
-    : `<circle cx="52" cy="38" r="14" fill="#AACBA7"/>
-       <ellipse cx="52" cy="80" rx="22" ry="16" fill="#4a7a5e"/>`
-  const svg = `<svg width="104" height="100" viewBox="0 0 104 100" role="img" aria-label="Profile avatar">
-    <defs><clipPath id="ppAv"><polygon points="${pts}"/></clipPath></defs>
-    <polygon points="${pts}" fill="none" stroke="#2B5341" stroke-width="2.5" stroke-linejoin="round"/>
-    <g clip-path="url(#ppAv)">
-      <rect x="0" y="0" width="104" height="100" fill="#1A3330"/>
-      ${inner}
-    </g>
-  </svg>`
-  return <div style={{ width: 104, height: 100 }} dangerouslySetInnerHTML={{ __html: svg }} />
+// ── Avatar with initials inside pentagon ──────────────────────────────────────
+function ProfileAvatar({ name, isOrg, size = 88 }: { name: string; isOrg: boolean; size?: number }) {
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('')
+  const cx = size / 2, cy = size / 2, r = size * 0.44
+  const pts = penta(cx, cy, r)
+  const stroke = isOrg ? '#F09125' : '#AACBA7'
+  const textColor = isOrg ? '#F09125' : '#AACBA7'
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label={`${name} avatar`}>
+      <polygon points={pts} fill="#1A3330" stroke={stroke} strokeWidth="2.5" strokeLinejoin="round" />
+      <text
+        x={cx} y={cy + 1}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize={size * 0.24}
+        fontWeight="800"
+        fill={textColor}
+        fontFamily="system-ui, sans-serif"
+        letterSpacing="1"
+      >
+        {initials}
+      </text>
+    </svg>
+  )
 }
 
-// ── Radar SVG (5-axis pentagon chart) ─────────────────────────────────────────
-function RadarSVG({ values }: { values: number[] }) {
-  const cx = 80, cy = 80, maxR = 68
+// ── Radar chart (5-axis) ──────────────────────────────────────────────────────
+function RadarChart({ values }: { values: number[] }) {
+  const cx = 72, cy = 72, maxR = 60
   const axes = values.map((v, i) => {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5
     const r = v * maxR
     return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }
   })
   const polyPts = axes.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
-  const gridPts = (r: number) => penta(cx, cy, r)
-  const svg = `<svg width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Impact radar">
-    <polygon points="${gridPts(maxR)}" fill="none" stroke="#2B5341" stroke-width="0.8"/>
-    <polygon points="${gridPts(maxR * 0.66)}" fill="none" stroke="#2B5341" stroke-width="0.5"/>
-    <polygon points="${gridPts(maxR * 0.33)}" fill="none" stroke="#2B5341" stroke-width="0.5"/>
-    <polygon points="${polyPts}" fill="#2B5341" fill-opacity="0.5" stroke="#AACBA7" stroke-width="1.5" stroke-linejoin="round"/>
-    ${axes.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#F09125"/>`).join('')}
-  </svg>`
-  return <div style={{ width: 160, height: 160 }} dangerouslySetInnerHTML={{ __html: svg }} />
+  const grid = (r: number) => penta(cx, cy, r)
+  return (
+    <svg width="144" height="144" viewBox="0 0 144 144" aria-label="Impact radar chart">
+      <polygon points={grid(maxR)} fill="none" stroke="#2B5341" strokeWidth="0.8" />
+      <polygon points={grid(maxR * 0.66)} fill="none" stroke="#2B5341" strokeWidth="0.5" />
+      <polygon points={grid(maxR * 0.33)} fill="none" stroke="#2B5341" strokeWidth="0.5" />
+      <polygon points={polyPts} fill="#2B5341" fillOpacity="0.45" stroke="#AACBA7" strokeWidth="1.5" strokeLinejoin="round" />
+      {axes.map((p, i) => (
+        <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="3" fill="#F09125" />
+      ))}
+    </svg>
+  )
 }
 
-// ── Element filter definitions ────────────────────────────────────────────────
+// ── Element filter tabs ───────────────────────────────────────────────────────
 const ELEMENTS = [
-  { key: 'earth', name: 'Earth', fill: '#2B5341', stroke: '#2B5341', pillBg: '#1A3330', pillBorder: '#2B5341', labelColor: '#AACBA7', soon: false, soonColor: '#2B5341' },
-  { key: 'water', name: 'Water', fill: 'none',    stroke: '#24403c', pillBg: '#1A3330', pillBorder: '#24403c', labelColor: '#4a6a5a', soon: true,  soonColor: '#185FA5' },
-  { key: 'fire',  name: 'Fire',  fill: 'none',    stroke: '#24403c', pillBg: '#1A3330', pillBorder: '#24403c', labelColor: '#4a6a5a', soon: true,  soonColor: '#F09125' },
-  { key: 'air',   name: 'Air',   fill: 'none',    stroke: '#24403c', pillBg: '#1A3330', pillBorder: '#24403c', labelColor: '#4a6a5a', soon: true,  soonColor: '#534AB7' },
-  { key: 'ether', name: 'Ether', fill: 'none',    stroke: '#24403c', pillBg: '#1A3330', pillBorder: '#24403c', labelColor: '#4a6a5a', soon: true,  soonColor: '#888' },
+  { key: 'all',   name: 'All',   soon: false },
+  { key: 'earth', name: 'Earth', soon: false },
+  { key: 'water', name: 'Water', soon: true  },
+  { key: 'fire',  name: 'Fire',  soon: true  },
+  { key: 'air',   name: 'Air',   soon: true  },
+  { key: 'ether', name: 'Ether', soon: true  },
 ]
 
-
-// ── Modal ─────────────────────────────────────────────────────────────────────
+// ── Tile detail modal ─────────────────────────────────────────────────────────
 function TileModal({ tile, onClose }: { tile: any; onClose: () => void }) {
-  const pts = penta(60, 58, 52)
-  const svg = `<svg width="120" height="116" viewBox="0 0 120 116">
-    <defs><clipPath id="ppmh"><polygon points="${pts}"/></clipPath></defs>
-    <polygon points="${pts}" fill="none" stroke="#2B5341" stroke-width="2.5" stroke-linejoin="round"/>
-    <g clip-path="url(#ppmh)">
-      <rect x="0" y="0" width="120" height="116" fill="#2B5341"/>
-      <ellipse cx="60" cy="96" rx="52" ry="34" fill="#4a7a5e"/>
-      <circle cx="60" cy="46" r="16" fill="#AACBA7"/>
-    </g>
-  </svg>`
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(17,33,33,0.72)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, maxWidth: 620, width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative', color: '#112121' }}>
-        <button onClick={onClose} aria-label="Close" style={{ position: 'absolute', top: 14, right: 14, width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: '0.5px solid #AACBA7', cursor: 'pointer', fontSize: 14, color: '#112121', zIndex: 2 }}>✕</button>
-        <div style={{ padding: '26px 26px 0', display: 'flex', gap: 20, alignItems: 'center' }}>
-          <div style={{ width: 120, height: 116, flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: svg }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 500, fontSize: 11, color: '#2B5341', background: '#EAF3DE', border: '0.5px solid #AACBA7', borderRadius: 6, padding: '2px 8px' }}>🌍 Earth</span>
-              <span style={{ fontWeight: 700, fontSize: 10, color: '#fff', background: '#112121', borderRadius: 5, padding: '2px 7px' }}>✓ Verified</span>
+    <div className="pp-modal-backdrop" onClick={onClose}>
+      <div className="pp-modal" onClick={e => e.stopPropagation()}>
+        <button className="pp-modal__close" onClick={onClose} aria-label="Close">✕</button>
+
+        <div className="pp-modal__header">
+          <div className="pp-modal__icon">{tile.icon}</div>
+          <div>
+            <div className="pp-modal__badges">
+              <span className="pp-badge pp-badge--earth">🌍 Earth</span>
+              <span className="pp-badge pp-badge--verified">✓ Verified</span>
             </div>
-            <div style={{ fontWeight: 700, fontSize: 19, lineHeight: 1.2, marginBottom: 4 }}>{tile.type}</div>
-            <div style={{ fontSize: 12.5, color: '#6B7B6E' }}>Afforestation & Land</div>
+            <div className="pp-modal__title">{tile.type}</div>
+            <div className="pp-modal__sub">Afforestation &amp; Land</div>
           </div>
         </div>
-        <div style={{ padding: '20px 26px 26px' }}>
-          <div style={{ background: '#F5F0EC', borderRadius: 12, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: '#EAF3DE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, flexShrink: 0 }}>{tile.icon}</div>
+
+        <div className="pp-modal__body">
+          <div className="pp-modal__qty-row">
+            <div className="pp-modal__qty-icon">{tile.icon}</div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{tile.qty}</div>
-              <div style={{ fontSize: 12, color: '#6B7B6E' }}>Funded {tile.date} · via five elements CARM</div>
+              <div className="pp-modal__qty">{tile.qty}</div>
+              <div className="pp-modal__qty-meta">Funded {tile.date} · via five elements CARM</div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div style={{ border: '0.5px solid #EAE3DA', borderRadius: 10, padding: '11px 13px' }}>
-              <div style={{ fontSize: 10.5, color: '#6B7B6E', marginBottom: 2 }}>Location</div>
-              <div style={{ fontWeight: 700, fontSize: 12.5 }}>India</div>
+
+          <div className="pp-modal__grid2">
+            <div className="pp-modal__info-cell">
+              <div className="pp-modal__info-label">Location</div>
+              <div className="pp-modal__info-value">{tile.location || 'India'}</div>
             </div>
-            <div style={{ border: '0.5px solid #EAE3DA', borderRadius: 10, padding: '11px 13px' }}>
-              <div style={{ fontSize: 10.5, color: '#6B7B6E', marginBottom: 2 }}>Standard · Registry</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5 }}>Verra VCS</div>
+            <div className="pp-modal__info-cell">
+              <div className="pp-modal__info-label">Standard · Registry</div>
+              <div className="pp-modal__info-value pp-modal__info-value--mono">{tile.standard || 'Verra VCS'}</div>
             </div>
           </div>
-          <div style={{ height: 110, borderRadius: 12, background: 'linear-gradient(135deg,#EAF3DE,#d6e8cf)', border: '0.5px solid #AACBA7', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontSize: 16 }}>📍</span>
-            <span style={{ fontSize: 12.5, color: '#2B5341', fontWeight: 700 }}>India</span>
+
+          <div className="pp-modal__map-placeholder">
+            <MapPin size={16} />
+            <span>{tile.location || 'India'}</span>
           </div>
-          <div style={{ fontWeight: 700, fontSize: 12, color: '#6B7B6E', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Evidence</div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            {['linear-gradient(135deg,#2B5341,#4a7a5e)', 'linear-gradient(135deg,#3a5f2b,#6b8f4a)'].map((g, i) => (
-              <div key={i} style={{ width: 72, height: 56, borderRadius: 8, background: g }} />
-            ))}
-            <div style={{ width: 72, height: 56, borderRadius: 8, background: 'linear-gradient(135deg,#4a7a5e,#AACBA7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#fff' }}>+4</div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button type="button" style={{ flex: 1, background: '#F09125', color: '#fff', border: 'none', borderRadius: 9999, padding: '11px 0', cursor: 'pointer', fontWeight: 700, fontSize: 13.5 }}>Verify on the public ledger</button>
-            <Link to="/projects" style={{ flex: 1, background: '#fff', border: '1.5px solid #F09125', color: '#F09125', borderRadius: 9999, padding: '11px 0', fontWeight: 700, fontSize: 13.5, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Project page →</Link>
+
+          <div className="pp-modal__actions">
+            <button className="btn btn-primary btn-sm">Verify on public ledger</button>
+            <Link to="/projects" className="btn btn-outline btn-sm">Project page →</Link>
           </div>
         </div>
       </div>
@@ -146,200 +151,278 @@ export default function PublicProfile() {
       .catch(err => { setError(err.message); setLoading(false) })
   }, [id])
 
-  const activeEl = ELEMENTS.find(e => e.key === filter)
-  const isComingSoon = filter !== 'all' && activeEl?.soon
-  const hasTiles = filter === 'all' || filter === 'earth'
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#112121', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#AACBA7', fontSize: 14 }}>Loading profile…</div>
-      </div>
-    )
-  }
-
-  if (error || !profile) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#112121', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#F09125', fontSize: 14 }}>Profile not found.</div>
-      </div>
-    )
-  }
-
   function copyUrl() {
+    if (!profile) return
     navigator.clipboard.writeText(profile.shareUrl).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
   }
 
+  if (loading) {
+    return (
+      <div className="public-profile">
+        <Navbar />
+        <div className="pp-loading">
+          <div className="pp-loading__spinner" />
+          <p>Loading profile…</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="public-profile">
+        <Navbar />
+        <div className="pp-error">
+          <h2>Profile not found</h2>
+          <p>This profile doesn't exist or has been removed.</p>
+          <Link to="/profiles" className="btn btn-primary btn-sm">← Back to profiles</Link>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  const activeEl = ELEMENTS.find(e => e.key === filter)
+  const isComingSoon = filter !== 'all' && activeEl?.soon
+  const hasTiles = !isComingSoon
+
+  const sortedTiles = [...(profile.tiles || [])].sort((a, b) => {
+    if (sort === 'largest') {
+      const aNum = parseFloat(a.qty) || 0
+      const bNum = parseFloat(b.qty) || 0
+      return bNum - aNum
+    }
+    return new Date(b.date).getTime() - new Date(a.date).getTime()
+  })
+
   return (
-    <div style={{ minHeight: '100vh', background: '#112121' }}>
+    <div className="public-profile">
+      <Navbar />
 
-      {/* Top bar */}
-      <header style={{ background: '#112121', borderBottom: '0.5px solid #24403c', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <svg width="24" height="25" viewBox="0 0 40 42" aria-hidden="true">
-          <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill="none" stroke="#AACBA7" strokeWidth="1.6" strokeLinejoin="round" />
-          <path d="M20 12 L22.3 18.6 L29.2 18.6 L23.6 22.7 L25.9 29.3 L20 25.2 L14.1 29.3 L16.4 22.7 L10.8 18.6 L17.7 18.6 Z" fill="none" stroke="#F09125" strokeWidth="1.4" strokeLinejoin="round" />
-        </svg>
-        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#fff' }}>five elements <strong>CARM</strong></span>
-        <span style={{ fontSize: 11.5, color: '#7c9a86' }}>· public profile</span>
-        <div style={{ flex: 1 }} />
-        <Link to="/" style={{ color: '#AACBA7', fontWeight: 700, fontSize: 12.5 }}>What is CARM? →</Link>
-      </header>
+      {/* ── Hero band ── */}
+      <div className="pp-hero">
+        <div className="container">
+          <Link to="/profiles" className="pp-back-link">
+            <ArrowLeft size={14} /> Explore profiles
+          </Link>
 
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px 72px' }}>
+          <div className="pp-hero__inner">
+            {/* Identity */}
+            <div className="pp-hero__identity">
+              <ProfileAvatar name={profile.displayName} isOrg={profile.isOrg} size={88} />
+              <div className="pp-hero__info">
+                <span className={`pp-type-badge ${profile.isOrg ? 'pp-type-badge--org' : 'pp-type-badge--ind'}`}>
+                  {profile.isOrg ? 'Business' : 'Individual'}
+                </span>
+                <h1 className="pp-hero__name">{profile.displayName}</h1>
+                {profile.bio && <p className="pp-hero__bio">{profile.bio}</p>}
+                <div className="pp-hero__meta">
+                  {profile.metaLine && (
+                    <span className="pp-hero__meta-item">
+                      <MapPin size={13} /> {profile.metaLine}
+                    </span>
+                  )}
+                  {profile.website && (
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="pp-hero__meta-item pp-hero__meta-item--link">
+                      <Globe size={13} /> Website <ExternalLink size={11} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
 
-        {/* Section 1: Identity + headline */}
-        <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 22 }}>
-          <div style={{ display: 'flex', gap: 20, alignItems: 'center', flex: 1, minWidth: 320 }}>
-            <AvatarSVG isOrg={profile.isOrg} />
-            <div>
-              <h1 style={{ fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: 28, lineHeight: 1.1, color: '#fff', marginBottom: 5 }}>{profile.displayName}</h1>
-              <div style={{ fontSize: 14, color: '#AACBA7', lineHeight: 1.45, marginBottom: 6, maxWidth: 420 }}>{profile.bio}</div>
-              <div style={{ fontSize: 12, color: '#7c9a86' }}>{profile.metaLine}</div>
+            {/* Radar */}
+            <div className="pp-hero__radar">
+              <RadarChart values={profile.radarValues} />
+              <span className="pp-hero__radar-label">Impact across five elements</span>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-            <RadarSVG values={profile.radarValues} />
-            <span style={{ fontSize: 11, color: '#7c9a86' }}>Impact across five elements</span>
-          </div>
         </div>
+      </div>
 
-        {/* Headline stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${profile.stats.length}, minmax(0,1fr))`, gap: 14, marginBottom: 14 }}>
+      {/* ── Stats strip ── */}
+      <div className="container">
+        <div className="pp-stats">
           {profile.stats.map((s: any) => (
-            <div key={s.label} style={{ background: '#1A3330', border: '0.5px solid #2B5341', borderRadius: 14, padding: '18px 18px 15px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: 11, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#AACBA7' }}>{s.label}</span>
-                <span style={{ fontWeight: 700, fontSize: 9, color: '#112121', background: '#AACBA7', borderRadius: 4, padding: '2px 6px', whiteSpace: 'nowrap' }}>✓ Verified</span>
+            <div key={s.label} className="pp-stat card">
+              <div className="pp-stat__label">
+                {s.label}
+                <span className="pp-verified-badge">✓ Verified</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                <span style={{ fontWeight: 700, fontSize: 34, lineHeight: 1, color: '#F09125' }}>{s.value}</span>
-                {s.unit && <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#AACBA7' }}>{s.unit}</span>}
+              <div className="pp-stat__value">
+                <span className="pp-stat__num">{s.value}</span>
+                {s.unit && <span className="pp-stat__unit">{s.unit}</span>}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Verification note */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#1A3330', border: '0.5px solid #2B5341', borderRadius: 10, padding: '11px 16px', marginBottom: 40 }}>
-          <span style={{ color: '#AACBA7', fontSize: 14 }}>⛓</span>
-          <span style={{ fontSize: 13, color: '#AACBA7', lineHeight: 1.4 }}>
-            Every figure here is backed by evidence on the <a href="#" style={{ fontWeight: 700, color: '#F09125', textDecoration: 'underline' }}>public ledger</a> — this page shows only approved entries.
+        {/* Ledger note */}
+        <div className="pp-ledger-note card">
+          <span className="pp-ledger-note__icon">⛓</span>
+          <span>
+            Every figure here is backed by evidence on the{' '}
+            <Link to="/ledger" className="pp-ledger-note__link">public ledger</Link>
+            {' '}— this page shows only approved entries.
           </span>
         </div>
+      </div>
 
-        {/* Section 2: Project canvas */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+      {/* ── Actions canvas ── */}
+      <div className="container pp-section">
+        <div className="pp-section__header">
           <div>
-            <h2 style={{ fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 3 }}>Every action, one by one</h2>
-            <div style={{ fontSize: 13, color: '#7c9a86' }}>{profile.tiles.length} verified actions · Earth element</div>
+            <h2 className="pp-section__title">Every action, one by one</h2>
+            <p className="pp-section__sub">{profile.tiles.length} verified actions · Earth element</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: '#7c9a86', fontWeight: 700 }}>Sort</span>
+          <div className="pp-sort">
+            <span className="pp-sort__label">Sort</span>
             {(['newest', 'largest'] as const).map(s => (
-              <button key={s} type="button" onClick={() => setSort(s)} style={{ background: sort === s ? '#2B5341' : 'transparent', color: sort === s ? '#fff' : '#7c9a86', border: `0.5px solid ${sort === s ? '#2B5341' : '#24403c'}`, borderRadius: 9999, padding: '6px 14px', cursor: 'pointer', fontWeight: 700, fontSize: 12, textTransform: 'capitalize' }}>{s}</button>
+              <button
+                key={s}
+                className={`pp-sort__btn ${sort === s ? 'pp-sort__btn--active' : ''}`}
+                onClick={() => setSort(s)}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
             ))}
           </div>
         </div>
 
         {/* Element filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: '#1A3330', border: '0.5px solid #2B5341', borderRadius: 14, padding: '12px 16px', marginBottom: 20 }}>
-          <button type="button" onClick={() => setFilter('all')} style={{ background: filter === 'all' ? '#2B5341' : 'transparent', color: filter === 'all' ? '#fff' : '#7c9a86', border: `1px solid ${filter === 'all' ? '#2B5341' : '#24403c'}`, borderRadius: 10, padding: '9px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 12.5 }}>All</button>
-          {ELEMENTS.map(e => (
-            <div key={e.key} onClick={() => setFilter(e.key)} role="button" tabIndex={0} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 13px', borderRadius: 10, background: filter === e.key ? '#2B5341' : e.pillBg, border: `1px solid ${filter === e.key ? '#AACBA7' : e.pillBorder}`, minWidth: 68, cursor: 'pointer', opacity: e.soon ? 0.5 : 1 }}>
-              <svg width="26" height="27" viewBox="0 0 40 42" aria-hidden="true">
-                <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill={e.fill} stroke={e.stroke} strokeWidth="2" strokeLinejoin="round" />
+        <div className="pp-element-filter card">
+          {ELEMENTS.map(el => (
+            <button
+              key={el.key}
+              className={`pp-element-btn ${filter === el.key ? 'pp-element-btn--active' : ''} ${el.soon ? 'pp-element-btn--soon' : ''}`}
+              onClick={() => setFilter(el.key)}
+            >
+              <svg width="22" height="22" viewBox="0 0 40 42" aria-hidden="true">
+                <polygon
+                  points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75"
+                  fill={filter === el.key ? '#2B5341' : 'none'}
+                  stroke={filter === el.key ? '#AACBA7' : '#2B5341'}
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
               </svg>
-              <span style={{ fontWeight: 700, fontSize: 10.5, color: filter === e.key ? '#fff' : e.labelColor }}>{e.name}</span>
-            </div>
+              <span>{el.name}</span>
+              {el.soon && <span className="pp-element-btn__soon">Soon</span>}
+            </button>
           ))}
         </div>
 
-        {/* Coming soon state */}
+        {/* Coming soon */}
         {isComingSoon && (
-          <div style={{ background: '#1A3330', border: '0.5px solid #2B5341', borderRadius: 16, padding: '52px 32px', textAlign: 'center', marginBottom: 40 }}>
-            <svg width="56" height="58" viewBox="0 0 40 42" style={{ marginBottom: 14 }}>
-              <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill="none" stroke={activeEl?.soonColor || '#2B5341'} strokeWidth="1.5" strokeDasharray="4 3" strokeLinejoin="round" />
+          <div className="pp-coming-soon card">
+            <svg width="48" height="50" viewBox="0 0 40 42">
+              <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill="none" stroke="#2B5341" strokeWidth="1.5" strokeDasharray="4 3" strokeLinejoin="round" />
             </svg>
-            <div style={{ fontWeight: 700, fontSize: 17, color: '#fff', marginBottom: 6 }}>{activeEl?.name} arrives later</div>
-            <div style={{ fontSize: 13.5, color: '#AACBA7', lineHeight: 1.5, maxWidth: 380, margin: '0 auto' }}>
-              {activeEl?.name} projects are coming to the platform in a future phase. Actions funded then will appear here — the framework keeps their place.
-            </div>
+            <h3>{activeEl?.name} arrives later</h3>
+            <p>{activeEl?.name} projects are coming to the platform in a future phase. Actions funded then will appear here.</p>
           </div>
         )}
 
-        {/* Pentagon tile grid */}
-        {hasTiles && (
-          <div style={{ background: '#1A3330', border: '0.5px solid #2B5341', borderRadius: 20, padding: '28px 24px 20px', marginBottom: 8 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: '18px 14px' }}>
-              {profile.tiles.map((t: any, i: number) => (
-                <div key={i} onClick={() => setModal(t)} role="button" tabIndex={0} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', cursor: 'pointer', transition: 'transform 0.12s' }}>
-                  <div style={{ width: 132, height: 128, clipPath: 'polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%)', background: '#22453c', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, paddingTop: 10 }}>
-                    <span style={{ fontSize: 30, lineHeight: 1 }}>{t.icon}</span>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: '#fff', lineHeight: 1.1 }}>{t.qty}</span>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#7c9a86' }}>{t.date}</span>
+        {/* Tile grid */}
+        {hasTiles && sortedTiles.length > 0 && (
+          <div className="pp-tiles card">
+            <div className="pp-tiles__grid">
+              {sortedTiles.map((t: any, i: number) => (
+                <button
+                  key={i}
+                  className="pp-tile"
+                  onClick={() => setModal(t)}
+                  aria-label={`View details for ${t.type}`}
+                >
+                  <div className="pp-tile__penta">
+                    <span className="pp-tile__icon">{t.icon}</span>
+                    <span className="pp-tile__qty">{t.qty}</span>
+                    <span className="pp-tile__date">{t.date}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: '#AACBA7', lineHeight: 1.3, marginTop: 7, maxWidth: 140 }}>{t.type}</div>
-                </div>
+                  <div className="pp-tile__label">{t.type}</div>
+                </button>
               ))}
             </div>
-            <div style={{ textAlign: 'center', fontSize: 11.5, color: '#7c9a86', marginTop: 20 }}>Older actions load as you scroll</div>
+            <p className="pp-tiles__hint">Click any tile to see details</p>
           </div>
         )}
-        <div style={{ height: 32 }} />
 
-        {/* Section 3: Projects + Share */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
+        {hasTiles && sortedTiles.length === 0 && (
+          <div className="pp-coming-soon card">
+            <TreePine size={40} color="#2B5341" />
+            <h3>No actions yet</h3>
+            <p>This profile hasn't recorded any verified actions yet.</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Projects + Milestones + Share ── */}
+      <div className="container pp-section">
+        <div className="pp-bottom-grid">
+
           {/* Projects supported */}
-          <div style={{ background: '#1A3330', border: '0.5px solid #2B5341', borderRadius: 16, padding: '20px 22px' }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: '#fff', marginBottom: 14 }}>Projects supported</div>
+          <div className="card pp-projects">
+            <h2 className="pp-projects__title">Projects supported</h2>
+            {profile.projects.length === 0 && (
+              <p className="pp-projects__empty">No projects yet.</p>
+            )}
             {profile.projects.map((p: any, i: number) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '11px 0', borderBottom: '0.5px solid #24403c' }}>
-                <div style={{ width: 44, height: 44, clipPath: 'polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%)', background: p.hero, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                  <div style={{ fontSize: 11.5, color: '#7c9a86' }}>{p.location} · {p.standard}</div>
+              <div key={i} className="pp-project-row">
+                <div className="pp-project-row__avatar" style={{ background: p.hero }} />
+                <div className="pp-project-row__info">
+                  <div className="pp-project-row__name">{p.name}</div>
+                  <div className="pp-project-row__meta">{p.location} · {p.standard}</div>
                 </div>
-                <a href="#" style={{ fontWeight: 700, fontSize: 12, color: '#F09125', whiteSpace: 'nowrap' }}>Ledger →</a>
+                <Link to="/ledger" className="pp-project-row__link">Ledger →</Link>
               </div>
             ))}
           </div>
 
-          {/* Right column: Milestones + Share */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="pp-right-col">
             {/* Milestones */}
-            <div style={{ background: '#1A3330', border: '0.5px solid #2B5341', borderRadius: 16, padding: '20px 22px' }}>
-              <div style={{ fontWeight: 700, fontSize: 15, color: '#fff', marginBottom: 14 }}>Milestones</div>
-              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+            <div className="card pp-milestones">
+              <h2 className="pp-milestones__title">Milestones</h2>
+              <div className="pp-milestones__grid">
                 {profile.badges.map((b: any, i: number) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: 72, opacity: b.opacity }}>
-                    <svg width="46" height="48" viewBox="0 0 40 42">
+                  <div key={i} className="pp-milestone" style={{ opacity: b.opacity }}>
+                    <svg width="44" height="46" viewBox="0 0 40 42">
                       <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill={b.fill} stroke="#AACBA7" strokeWidth="1.5" strokeLinejoin="round" />
                       <text x="20" y="26" textAnchor="middle" fontSize="13">{b.icon}</text>
                     </svg>
-                    <span style={{ fontSize: 10, color: '#AACBA7', textAlign: 'center', lineHeight: 1.25 }}>{b.label}</span>
+                    <span className="pp-milestone__label">{b.label}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Share */}
-            <div style={{ background: '#22453c', border: '0.5px solid #2B5341', borderRadius: 16, padding: '20px 22px' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 5 }}>Share this profile</div>
-              <div style={{ fontSize: 12, color: '#AACBA7', marginBottom: 14, lineHeight: 1.45 }}>{profile.shareNote}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#112121', borderRadius: 9, padding: '9px 12px', marginBottom: 10 }}>
-                <span style={{ flex: 1, fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5, color: '#AACBA7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.shareUrl}</span>
-                <button type="button" onClick={copyUrl} style={{ background: '#F09125', color: '#fff', border: 'none', borderRadius: 7, padding: '5px 12px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>{copied ? 'Copied!' : 'Copy'}</button>
+            <div className="card pp-share">
+              <div className="pp-share__header">
+                <Share2 size={16} />
+                <h2 className="pp-share__title">Share this profile</h2>
               </div>
-              {profile.isOrg && <a href="#" style={{ fontWeight: 700, fontSize: 12, color: '#F09125' }}>Get the embeddable widget →</a>}
+              <p className="pp-share__note">{profile.shareNote}</p>
+              <div className="pp-share__url-row">
+                <span className="pp-share__url">{profile.shareUrl}</span>
+                <button className="pp-share__copy-btn" onClick={copyUrl}>
+                  {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy</>}
+                </button>
+              </div>
+              {profile.isOrg && (
+                <a href="#" className="pp-share__widget-link">Get the embeddable widget →</a>
+              )}
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
-      {/* Detail modal */}
+      <Footer />
+
+      {/* Tile detail modal */}
       {modal && <TileModal tile={modal} onClose={() => setModal(null)} />}
     </div>
   )

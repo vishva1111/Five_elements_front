@@ -245,15 +245,64 @@ export default function IndividualLanding() {
         </div>
       </section>
 
+      {/* ── TESTIMONIALS / TRUST BAND ── */}
+      <section className="il__trust">
+        <div className="il__trust-inner">
+          <p className="il__section-label">WHAT FUNDERS SAY</p>
+          <h2 className="il__section-h2">Real people. Real trees.</h2>
+          <div className="il__testimonials">
+            {[
+              {
+                quote: "I finally feel like my offset actually means something. I can see the GPS pin, the photo, the ledger entry — it's real.",
+                name: "Priya M.",
+                role: "Individual funder · 312 trees",
+                initials: "PM",
+              },
+              {
+                quote: "Two minutes to calculate, five minutes to fund. The certificate arrived with a transaction hash I could actually verify.",
+                name: "Arjun K.",
+                role: "Individual funder · 120 trees",
+                initials: "AK",
+              },
+              {
+                quote: "Every other platform gave me a PDF. Five Elements gave me a ledger entry. That's the difference.",
+                name: "Sneha R.",
+                role: "Individual funder · 88 trees",
+                initials: "SR",
+              },
+            ].map((t) => (
+              <div key={t.name} className="il__testimonial">
+                <p className="il__testimonial-quote">"{t.quote}"</p>
+                <div className="il__testimonial-author">
+                  <div className="il__testimonial-avatar">{t.initials}</div>
+                  <div>
+                    <div className="il__testimonial-name">{t.name}</div>
+                    <div className="il__testimonial-role">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── FOOTER CTA ── */}
       <section className="il__footer-cta">
         <div className="il__footer-cta-inner">
-          <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
-            <polygon points={pentaPoints(36, 36, 32)} fill="#2B5341" fillOpacity="0.15" stroke="#2B5341" strokeWidth="2" strokeLinejoin="round" />
-            <text x="36" y="46" textAnchor="middle" fontSize="28">🌍</text>
-          </svg>
-          <h2 className="il__footer-cta-h2">Start with your footprint</h2>
-          <p className="il__footer-cta-sub">No account needed. No signup wall. Just an honest first number.</p>
+          <p className="il__section-label il__section-label--light">READY TO START?</p>
+          <h2 className="il__footer-cta-h2">Your trees are waiting.</h2>
+          <p className="il__footer-cta-sub">
+            Join thousands of individuals who fund verified trees — with geo-tagged proof, not just a certificate.
+          </p>
+          <div className="il__footer-cta-btns">
+            <Link to="/fund" className="il__btn-primary">🌍 Fund a project</Link>
+            <Link to="/projects" className="il__btn-ghost">Browse projects →</Link>
+          </div>
+          <div className="il__footer-cta-trust">
+            <span>✓ No account needed to start</span>
+            <span>✓ Every tree on the public ledger</span>
+            <span>✓ Geo-tagged field evidence</span>
+          </div>
         </div>
       </section>
 
