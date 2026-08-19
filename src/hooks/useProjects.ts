@@ -49,7 +49,10 @@ export function useProject(slugOrId: string) {
   const [error, setError]       = useState<string | null>(null)
 
   useEffect(() => {
-    if (!slugOrId) return
+    if (!slugOrId) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     fetchProject(slugOrId)

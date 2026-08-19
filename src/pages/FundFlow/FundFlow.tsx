@@ -135,6 +135,17 @@ export default function FundFlow() {
     )
   }
 
+  // ── No project ID ─────────────────────────────────────────────────────────
+  if (!projectId) {
+    return (
+      <div className="ff">
+        <div className="ff-fund" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <p style={{ color: '#6B7280', fontSize: 16 }}>No project selected. Please go back and choose a project to fund.</p>
+        </div>
+      </div>
+    )
+  }
+
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
