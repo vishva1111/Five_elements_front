@@ -165,7 +165,6 @@ function ProjectCard({ project: p }: { project: any }) {
             backgroundImage: `url(${imageUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            clipPath: 'url(#pentaThumb)',
           }}
         />
         {/* Pentagon outline overlay */}

@@ -97,7 +97,7 @@ function rowToProject(p: ProjectRow): Project {
   }
 }
 
-// ── Projects ──────────────────────────────────────────────────────────────────
+// ── Projects ─────────────────────────────────────────────────────────────────
 
 export async function fetchProjects(params: ProjectFilters = {}): Promise<ProjectsResponse> {
   const qs: Record<string, string> = {

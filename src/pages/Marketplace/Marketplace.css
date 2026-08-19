@@ -321,24 +321,23 @@
 /* Photo thumbnail */
 .mp-card__thumb {
   position: relative;
-  height: 180px;
-  background: #F0EBE4;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  height: 190px;
+  background: #1A3330;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 /* Pentagon-clipped background fill */
 .mp-card__thumb-bg {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
 }
 
 .mp-card__thumb-label {
