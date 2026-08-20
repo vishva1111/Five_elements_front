@@ -5,7 +5,7 @@ import {
   TrendingUp, Award, ChevronRight,
   Sprout, AlertCircle
 } from 'lucide-react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
 import { fetchUserImpact, fetchPlatformStats } from '../../services/api'
 import type { UserImpactEntry, UserImpactStats } from '../../services/api'
 import IndividualLayout from './IndividualLayout'
@@ -29,10 +29,18 @@ export default function ImpactHome() {
   const [dataLoading, setDataLoading] = useState(true)
   const [dataError, setDataError]     = useState<string | null>(null)
 
-  // Redirect non-individual users away
+  // Redirect users who have NO individual role at all.
+  // Multi-role users (e.g. individual + business) are allowed here even
+  // when their active DB role is 'business'.
+  // Guard: only redirect once roles array is fully loaded (length > 0).
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'individual') {
-      navigate('/', { replace: true })
+    if (
+      !authLoading &&
+      user &&
+      user.roles.length > 0 &&
+      !user.roles.includes('individual')
+    ) {
+      navigate(ROLE_HOME[user.role] ?? '/', { replace: true })
     }
   }, [authLoading, user, navigate])
 

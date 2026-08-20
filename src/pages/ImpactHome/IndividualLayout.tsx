@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import './ImpactHome.css'
+import './IndividualLayout.css'
 
 const NAV_ITEMS = [
   { icon: LayoutGrid,    label: 'Dashboard',     href: '/impact' },
@@ -17,7 +18,7 @@ const NAV_ITEMS = [
 ]
 
 function getInitials(name: string): string {
-  return name
+  return name 
     .split(' ')
     .map(w => w[0])
     .join('')
@@ -41,7 +42,8 @@ export default function IndividualLayout({ children, title, topLabel = 'MY IMPAC
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen]         = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   const displayName = user?.displayName || user?.email || 'User'
   const initials    = getInitials(displayName)
@@ -103,16 +105,46 @@ export default function IndividualLayout({ children, title, topLabel = 'MY IMPAC
               <span className="ih-sidebar__user-email">{user?.email}</span>
             </div>
           </div>
-          <button className="ih-sidebar__signout" onClick={handleSignOut}>
+          <button className="ih-sidebar__signout" onClick={() => setShowLogoutModal(true)}>
             <LogOut size={15} />
             <span>Sign out</span>
           </button>
         </div>
+
       </aside>
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div className="ih-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Logout confirmation modal — outside <aside> so it's not clipped */}
+      {showLogoutModal && (
+        <div className="ih-modal-overlay" onClick={() => setShowLogoutModal(false)}>
+          <div className="ih-modal" onClick={e => e.stopPropagation()}>
+            <div className="ih-modal__icon">
+              <LogOut size={28} />
+            </div>
+            <h3 className="ih-modal__title">Sign out?</h3>
+            <p className="ih-modal__sub">You will be redirected to the login page.</p>
+            <div className="ih-modal__actions">
+              <button
+                type="button"
+                className="ih-modal__cancel"
+                onClick={() => setShowLogoutModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ih-modal__confirm"
+                onClick={handleSignOut}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Main ── */}

@@ -46,8 +46,10 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />
   }
 
-  // Authenticated but wrong role → redirect to their correct home
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  // Authenticated but wrong role → redirect to their correct home.
+  // Check user.roles (ALL roles) not user.role (active role) so that
+  // multi-role users can access any of their allowed dashboards.
+  if (allowedRoles && !allowedRoles.some(r => user.roles.includes(r))) {
     return <Navigate to={ROLE_HOME[user.role]} replace />
   }
 

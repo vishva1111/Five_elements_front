@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { icon: '▤',  label: 'Projects',       to: '/business/portfolio' },
   { icon: '📊', label: 'Reports',        to: '/business/reports' },
   { icon: '◎',  label: 'Public profile', to: '/business/public-profile' },
+  { icon: '🧰', label: 'Toolkit',        to: '/business/toolkit' },
   { icon: '◍',  label: 'Team',           to: '/business/team' },
   { icon: '⚙',  label: 'Settings',       to: '/business/settings' },
 ]

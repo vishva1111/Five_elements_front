@@ -87,8 +87,8 @@ export default function RoleSelect() {
   const name  = user?.displayName?.split(' ')[0] || 'there'
   const roles = user?.roles ?? []
 
-  function handleSelect(role: UserRole) {
-    setActiveRole(role)
+  async function handleSelect(role: UserRole) {
+    await setActiveRole(role)
     navigate(ROLE_HOME[role], { replace: true })
   }
 

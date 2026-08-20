@@ -21,7 +21,7 @@ interface AuthContextValue {
   signIn:        (email: string, password: string) => Promise<{ error: string | null }>
   signUp:        (fullName: string, email: string, password: string, role?: UserRole) => Promise<{ error: string | null; emailConfirmationRequired?: boolean; roleAdded?: boolean }>
   signOut:       () => Promise<void>
-  setActiveRole: (role: UserRole) => void
+  setActiveRole: (role: UserRole) => Promise<void>
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ const AuthContext = createContext<AuthContextValue>({
   signIn:        async () => ({ error: null }),
   signUp:        async () => ({ error: null }),
   signOut:       async () => {},
-  setActiveRole: () => {},
+  setActiveRole: async () => {},
 })
 
 // ── Role → home route map ─────────────────────────────────────────────────────
@@ -92,35 +92,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   async function hydrateUser(supabaseUser: User, supabaseSession: Session) {
-    const profile = await fetchProfile(supabaseUser.id)
-    const roles   = profile?.roles ?? ['individual']
+    // Retry profile fetch up to 2 times — avoids stale/null profile on slow DB
+    let profile = await fetchProfile(supabaseUser.id)
+    if (!profile) {
+      await new Promise(r => setTimeout(r, 500))
+      profile = await fetchProfile(supabaseUser.id)
+    }
+
+    // If profile still null, do NOT default to 'individual' — use empty roles
+    // so ProtectedRoute stays in loading state rather than wrong-role redirect.
+    const activeRole = (profile?.role ?? 'individual') as UserRole
+    const roles      = profile?.roles?.length
+      ? profile.roles as UserRole[]
+      : [activeRole]
+
     setSession(supabaseSession)
     setUser({
       id:           supabaseUser.id,
       email:        supabaseUser.email ?? '',
-      role:         profile?.role ?? 'individual',
-      roles:        roles as UserRole[],
+      role:         activeRole,
+      roles,
       displayName:  profile?.displayName ?? supabaseUser.email ?? '',
       isFirstLogin: profile?.isFirstLogin ?? false,
     })
   }
 
   useEffect(() => {
+    let initialised = false
+
+    // Step 1: getSession gives us the current session immediately on mount.
+    // We await hydrateUser fully before setLoading(false) so ProtectedRoute
+    // always sees the correct role on hard refresh.
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       if (s?.user) {
         await hydrateUser(s.user, s)
       }
+      initialised = true
       setLoading(false)
     })
 
+    // Step 2: onAuthStateChange handles subsequent sign-in / sign-out events.
+    // Skip INITIAL_SESSION (getSession already handled it) and TOKEN_REFRESHED
+    // (token refresh should not re-hydrate user — it would overwrite the active
+    // role the user selected and cause spurious redirects).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
+      if (event === 'INITIAL_SESSION') return
+      if (event === 'TOKEN_REFRESHED') {
+        // Just update the session token, don't re-fetch profile from DB
+        if (s) setSession(s)
+        return
+      }
+
       if (s?.user) {
         await hydrateUser(s.user, s)
       } else {
         setUser(null)
         setSession(null)
       }
-      setLoading(false)
+
+      // If getSession somehow hasn't finished yet, mark loading done here too
+      if (!initialised) {
+        initialised = true
+        setLoading(false)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -174,15 +208,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Switch active role (for multi-role users) — also updates profile.role in DB
-  function setActiveRole(role: UserRole) {
+  // Returns a Promise so callers can await DB persistence before navigating.
+  async function setActiveRole(role: UserRole): Promise<void> {
     if (!user) return
+    // Update local state immediately for snappy UI
     setUser({ ...user, role })
-    // Persist active role to profile
-    supabase
+    // Await DB update so that a hard refresh reads the correct role
+    await supabase
       .from('profiles')
       .update({ role })
       .eq('auth_id', user.id)
-      .then(() => {})
   }
 
   return (

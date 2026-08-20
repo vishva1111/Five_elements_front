@@ -34,6 +34,7 @@ import ReportDetail from './pages/Business/ReportDetail'
 import PublicProfileSettings from './pages/Business/PublicProfileSettings'
 import Team from './pages/Business/Team'
 import OrgSettings from './pages/Business/OrgSettings'
+import BusinessToolkit from './pages/Business/BusinessToolkit'
 
 // ── Public profile ───────────────────────────────────────────────────────────
 import PublicProfile from './pages/PublicProfile/PublicProfile'
@@ -137,6 +138,7 @@ export default function App(): React.JSX.Element {
           <Route path="/business/public-profile" element={<ProtectedRoute allowedRoles={['business']}><PublicProfileSettings /></ProtectedRoute>} />
           <Route path="/business/team" element={<ProtectedRoute allowedRoles={['business']}><Team /></ProtectedRoute>} />
           <Route path="/business/settings" element={<ProtectedRoute allowedRoles={['business']}><OrgSettings /></ProtectedRoute>} />
+          <Route path="/business/toolkit" element={<ProtectedRoute allowedRoles={['business']}><BusinessToolkit /></ProtectedRoute>} />
 
           {/* ── Partner zone (P1–P10, protected) ── */}
           <Route path="/partner/onboarding" element={<ProtectedRoute allowedRoles={['partner']}><PartnerOnboarding /></ProtectedRoute>} />
