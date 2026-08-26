@@ -1,9 +1,28 @@
 import React from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { Navigate } from 'react-router-dom'
+import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
 import './Maintenance.css'
 
 export default function Maintenance() {
-  const { signOut, user } = useAuth()
+  const { signOut, user, loading } = useAuth()
+
+  // Still loading auth — show spinner
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F0EC' }}>
+        <div style={{ width: 40, height: 40, border: '3px solid #EAE3DA', borderTopColor: '#2B5341', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  // Not logged in → go to login
+  if (!user) return <Navigate to="/login" replace />
+
+  // Active user trying to access /maintenance → send to their dashboard
+  if (user.status === 'active') {
+    return <Navigate to={ROLE_HOME[user.role]} replace />
+  }
 
   return (
     <div className="maintenance-wrapper">

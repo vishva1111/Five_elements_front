@@ -92,7 +92,7 @@ export default function App(): React.JSX.Element {
           {/* ── Auth ── */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/maintenance" element={<ProtectedRoute><Maintenance /></ProtectedRoute>} />
+          <Route path="/maintenance" element={<Maintenance />} />
           <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
           <Route path="/role-select" element={<ProtectedRoute><RoleSelect /></ProtectedRoute>} />
 
