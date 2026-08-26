@@ -46,6 +46,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />
   }
 
+  // Account pending approval → show maintenance page (admin users bypass this)
+  if (user.status === 'pending' && !user.roles.includes('admin')) {
+    return <Navigate to="/maintenance" replace />
+  }
+
   // Authenticated but wrong role → redirect to their correct home.
   // Check user.roles (ALL roles) not user.role (active role) so that
   // multi-role users can access any of their allowed dashboards.

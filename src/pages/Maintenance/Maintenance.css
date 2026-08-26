@@ -1,0 +1,107 @@
+.maintenance-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F5F0EC;
+  padding: 24px;
+}
+
+.maintenance-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 48px 40px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.maintenance-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.maintenance-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1A2E25;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+.maintenance-subtitle {
+  font-size: 15px;
+  color: #2B5341;
+  font-weight: 500;
+  margin: 0 0 32px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.maintenance-message {
+  background: #F5F0EC;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: left;
+  margin-bottom: 24px;
+}
+
+.maintenance-message p {
+  font-size: 14px;
+  color: #4A5568;
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+}
+
+.maintenance-message p:last-child {
+  margin-bottom: 0;
+}
+
+.maintenance-message strong {
+  color: #1A2E25;
+}
+
+.maintenance-message a {
+  color: #2B5341;
+  text-decoration: underline;
+}
+
+.maintenance-message a:hover {
+  color: #1A2E25;
+}
+
+.maintenance-user-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #EAE3DA;
+  border-radius: 20px;
+  padding: 6px 16px;
+  margin-bottom: 24px;
+}
+
+.maintenance-user-email {
+  font-size: 13px;
+  color: #4A5568;
+  font-weight: 500;
+}
+
+.maintenance-signout-btn {
+  display: inline-block;
+  background: #2B5341;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: 100%;
+}
+
+.maintenance-signout-btn:hover {
+  background: #1A2E25;
+}

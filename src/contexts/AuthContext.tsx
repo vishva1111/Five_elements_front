@@ -12,6 +12,7 @@ export interface AuthUser {
   roles: UserRole[]       // all roles this user has
   displayName: string
   isFirstLogin: boolean
+  status: string          // 'active' | 'pending' | etc.
 }
 
 interface AuthContextValue {
@@ -49,11 +50,12 @@ async function fetchProfile(userId: string): Promise<{
   roles: UserRole[]
   displayName: string
   isFirstLogin: boolean
+  status: string
 } | null> {
   // Try auth_id column first
   const { data: byAuthId } = await supabase
     .from('profiles')
-    .select('role, roles, display_name, is_first_login')
+    .select('role, roles, display_name, is_first_login, status')
     .eq('auth_id', userId)
     .maybeSingle()
 
@@ -64,13 +66,14 @@ async function fetchProfile(userId: string): Promise<{
       roles:        roles.length > 0 ? roles : [(byAuthId.role as UserRole) || 'individual'],
       displayName:  byAuthId.display_name || '',
       isFirstLogin: byAuthId.is_first_login ?? false,
+      status:       byAuthId.status || 'pending',
     }
   }
 
   // Fallback: some profiles (test users) have UUID stored as id
   const { data: byId } = await supabase
     .from('profiles')
-    .select('role, roles, display_name, is_first_login')
+    .select('role, roles, display_name, is_first_login, status')
     .eq('id', userId)
     .maybeSingle()
 
@@ -82,6 +85,7 @@ async function fetchProfile(userId: string): Promise<{
     roles:        roles.length > 0 ? roles : [(byId.role as UserRole) || 'individual'],
     displayName:  byId.display_name || '',
     isFirstLogin: byId.is_first_login ?? false,
+    status:       byId.status || 'pending',
   }
 }
 
@@ -114,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       roles,
       displayName:  profile?.displayName ?? supabaseUser.email ?? '',
       isFirstLogin: profile?.isFirstLogin ?? false,
+      status:       profile?.status ?? 'pending',
     })
   }
 

@@ -9,6 +9,9 @@ import Signup from './pages/Auth/Signup'
 import Welcome from './pages/Auth/Welcome'
 import RoleSelect from './pages/Auth/RoleSelect'
 
+// ── Maintenance ──────────────────────────────────────────────────────────────
+import Maintenance from './pages/Maintenance/Maintenance'
+
 // ── Core pages ───────────────────────────────────────────────────────────────
 import Landing from './pages/Landing/Landing'
 import Marketplace from './pages/Marketplace/Marketplace'
@@ -89,6 +92,7 @@ export default function App(): React.JSX.Element {
           {/* ── Auth ── */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/maintenance" element={<ProtectedRoute><Maintenance /></ProtectedRoute>} />
           <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
           <Route path="/role-select" element={<ProtectedRoute><RoleSelect /></ProtectedRoute>} />
 
