@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: '💳', label: 'Finance console',    path: '/admin/finance' },
   { icon: '📡', label: 'Platform health',    path: '/admin/health' },
   { icon: '⚙️', label: 'Configuration',      path: '/admin/config' },
+  { icon: '🌳', label: 'Tree Records',        path: '/admin/tree-records' },
 ]
 
 interface Props {

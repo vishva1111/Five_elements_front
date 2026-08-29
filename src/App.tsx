@@ -79,6 +79,7 @@ import LedgerAdmin          from './pages/Admin/LedgerAdmin'
 import FinanceConsole       from './pages/Admin/FinanceConsole'
 import PlatformHealth       from './pages/Admin/PlatformHealth'
 import Configuration        from './pages/Admin/Configuration'
+import TreeRecords          from './pages/Admin/TreeRecords'
 
 export default function App(): React.JSX.Element {
   // AuthProvider wraps the entire app so useAuth() works everywhere
@@ -172,6 +173,7 @@ export default function App(): React.JSX.Element {
           <Route path="/admin/finance"      element={<ProtectedRoute allowedRoles={['admin']}><FinanceConsole /></ProtectedRoute>} />
           <Route path="/admin/health"       element={<ProtectedRoute allowedRoles={['admin']}><PlatformHealth /></ProtectedRoute>} />
           <Route path="/admin/config"       element={<ProtectedRoute allowedRoles={['admin']}><Configuration /></ProtectedRoute>} />
+          <Route path="/admin/tree-records" element={<ProtectedRoute allowedRoles={['admin']}><TreeRecords /></ProtectedRoute>} />
 
           {/* ── Fallback ── */}
           <Route path="*" element={<Landing />} />
