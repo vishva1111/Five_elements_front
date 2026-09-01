@@ -2,7 +2,21 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchDashboard, type DashboardData, type DashboardProject } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../supabaseClient'
 import './Dashboard.css'
+
+interface TreeRecord {
+  id: string
+  photo_url: string
+  latitude: number
+  longitude: number
+  species: string
+  health_status: string
+  notes?: string
+  submitted_at: string
+  synced: boolean
+  project_id?: string
+}
 
 const NAV_ITEMS = [
   { icon: '▤',  label: 'Projects',       to: '/business/portfolio' },
@@ -104,6 +118,8 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [treeRecords, setTreeRecords] = useState<TreeRecord[]>([])
+  const [treeLoading, setTreeLoading] = useState(true)
 
   async function handleLogout() {
     await signOut()
@@ -127,7 +143,20 @@ export default function Dashboard() {
     }
   }, [])
 
+  const loadTreeRecords = useCallback(async () => {
+    setTreeLoading(true)
+    const { data: records } = await supabase
+      .from('tree_records')
+      .select('id, photo_url, latitude, longitude, species, health_status, notes, submitted_at, synced, project_id')
+      .eq('user_id', '5be2e23c-22a2-4c5e-adf9-1a764bf85f5f')
+      .order('submitted_at', { ascending: false })
+      .limit(50)
+    setTreeRecords(records ?? [])
+    setTreeLoading(false)
+  }, [])
+
   useEffect(() => { load() }, [load])
+  useEffect(() => { loadTreeRecords() }, [loadTreeRecords])
 
   const isMobile  = typeof window !== 'undefined' && window.innerWidth <= 768
   const sidebarW  = collapsed ? '64px' : '240px'
@@ -446,6 +475,77 @@ export default function Dashboard() {
                   )
                 }
               </div>
+            {/* ── Field Captures: Sundarbans Tree Belt ── */}
+            <div style={{ marginTop: 32 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <h2 className="db-portfolio-title">🌿 Field Captures — All Projects</h2>
+                  <div className="db-portfolio-sub">Live tree records submitted by field users via TreeApp</div>
+                </div>
+                <button type="button" className="db-cta-btn" onClick={loadTreeRecords} style={{ fontSize: 12, padding: '6px 14px' }}>
+                  ↻ Refresh
+                </button>
+              </div>
+
+              {treeLoading && (
+                <div style={{ color: '#9AA79C', fontSize: 13, padding: '20px 0' }}>Loading field captures…</div>
+              )}
+
+              {!treeLoading && treeRecords.length === 0 && (
+                <div className="db-card" style={{ textAlign: 'center', padding: '40px 24px' }}>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>📍</div>
+                  <div style={{ fontWeight: 600, color: '#112121', marginBottom: 6 }}>No field captures yet</div>
+                  <div style={{ fontSize: 13, color: '#6B7B6E' }}>
+                    Field users can submit tree records via the TreeApp mobile app.<br />
+                    Records tagged to <strong>Sundarbans Tree Belt</strong> will appear here.
+                  </div>
+                </div>
+              )}
+
+              {!treeLoading && treeRecords.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+                  {treeRecords.map(rec => {
+                    const healthColor = rec.health_status === 'healthy' ? '#22c55e' : rec.health_status === 'sick' ? '#f59e0b' : rec.health_status === 'dead' ? '#ef4444' : '#9AA79C'
+                    const healthEmoji = rec.health_status === 'healthy' ? '✅' : rec.health_status === 'sick' ? '⚠️' : rec.health_status === 'dead' ? '❌' : '❓'
+                    const date = new Date(rec.submitted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                    return (
+                      <div key={rec.id} className="db-card" style={{ padding: 0, overflow: 'hidden' }}>
+                        {rec.photo_url ? (
+                          <img
+                            src={rec.photo_url}
+                            alt={rec.species}
+                            style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        ) : (
+                          <div style={{ width: '100%', height: 100, background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🌳</div>
+                        )}
+                        <div style={{ padding: '12px 14px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <span style={{ fontWeight: 700, fontSize: 14, color: '#112121' }}>{rec.species}</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: healthColor, background: healthColor + '18', borderRadius: 12, padding: '2px 8px' }}>
+                              {healthEmoji} {rec.health_status.charAt(0).toUpperCase() + rec.health_status.slice(1)}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 11.5, color: '#6B7B6E', marginBottom: 4 }}>
+                            📍 {rec.latitude.toFixed(5)}, {rec.longitude.toFixed(5)}
+                          </div>
+                          {rec.notes && (
+                            <div style={{ fontSize: 12, color: '#6B7B6E', marginBottom: 4, fontStyle: 'italic' }}>{rec.notes}</div>
+                          )}
+                          <div style={{ fontSize: 11, color: '#9AA79C', marginBottom: 4 }}>{date}</div>
+                          {rec.project_id && (
+                            <div style={{ fontSize: 11, color: '#2B5341', background: '#e8f5e9', borderRadius: 8, padding: '2px 8px', display: 'inline-block', fontWeight: 600 }}>
+                              🌍 {rec.project_id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
             </>
           )}
         </main>
