@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import NotificationBell from '../../components/ui/NotificationBell'
+import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Partner.css'
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
@@ -36,10 +37,7 @@ export default function PartnerLayout({ children, title }: PartnerLayoutProps) {
       <aside className="pl-sidebar">
         {/* Brand */}
         <div className="pl-sidebar__brand">
-          <svg width="28" height="28" viewBox="0 0 30 30" aria-hidden="true">
-            <polygon points="15,2 27.5,10.5 22.9,24.5 7.1,24.5 2.5,10.5" fill="#2B5341" />
-            <polygon points="15,7 22.5,12.5 19.7,21 10.3,21 7.5,12.5" fill="#AACBA7" />
-          </svg>
+          <FiveElementsIcon size={28} />
           {!collapsed && <span className="pl-sidebar__brand-name">Five Elements</span>}
         </div>
 

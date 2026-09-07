@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
+import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './Signup.css'
 
 // ── Password strength ─────────────────────────────────────────────────────────
@@ -26,15 +27,6 @@ function getStrength(pw: string): { score: number; label: string; color: string 
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
-function LogoIcon() {
-  return (
-    <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-      <polygon points="22,3 41,15 34,37 10,37 3,15" fill="#2B5341" />
-      <path d="M22 12 C16 18 16 28 22 32 C28 28 28 18 22 12Z" fill="#F5F0EC" opacity="0.85" />
-    </svg>
-  )
-}
-
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -139,7 +131,7 @@ export default function Signup() {
     return (
       <div className="su-page">
         <div className="su-logo-wrap">
-          <LogoIcon />
+          <FiveElementsLogo size={44} variant="icon" theme="dark" />
         </div>
         <div className="su-card">
           <div className="su-success">
@@ -166,7 +158,7 @@ export default function Signup() {
     return (
       <div className="su-page">
         <div className="su-logo-wrap">
-          <LogoIcon />
+          <FiveElementsLogo size={44} variant="icon" theme="dark" />
         </div>
         <div className="su-card">
           <div className="su-success">
@@ -191,10 +183,7 @@ export default function Signup() {
       {/* Top-left brand bar */}
       <div className="su-topbar">
         <a href="/" className="su-brand">
-          <span className="su-brand__icon">⬠</span>
-          <span className="su-brand__text">
-            five elements <strong className="su-brand__accent">CARM</strong>
-          </span>
+          <FiveElementsLogo size={30} variant="full" theme="dark" />
         </a>
       </div>
 

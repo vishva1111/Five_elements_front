@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, ROLE_HOME, UserRole } from '../../contexts/AuthContext'
+import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './RoleSelect.css'
 
 // ── Pentagon helper ───────────────────────────────────────────────────────────
@@ -97,10 +98,7 @@ export default function RoleSelect() {
       {/* Top-left brand bar */}
       <div className="rs-topbar">
         <a href="/" className="rs-brand">
-          <span className="rs-brand__icon">⬠</span>
-          <span className="rs-brand__text">
-            five elements <strong className="rs-brand__accent">CARM</strong>
-          </span>
+          <FiveElementsLogo size={30} variant="full" theme="dark" />
         </a>
       </div>
 

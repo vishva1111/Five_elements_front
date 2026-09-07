@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
+import FiveElementsLogo from '../ui/FiveElementsLogo'
 import './Navbar.css'
 
 const NAV_LINKS = [
@@ -19,10 +20,7 @@ export default function Navbar({ dark = true }) {
       <div className="navbar__inner container">
         {/* Logo */}
         <Link to="/" className="navbar__logo">
-          <span className="navbar__logo-icon">⬠</span>
-          <span>
-            five elements <strong className="navbar__logo-accent">CARM</strong>
-          </span>
+          <FiveElementsLogo size={32} variant="full" theme="dark" />
         </Link>
 
         {/* Desktop links */}

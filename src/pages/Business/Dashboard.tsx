@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { fetchDashboard, type DashboardData, type DashboardProject } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../supabaseClient'
+import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Dashboard.css'
 
 interface TreeRecord {
@@ -186,10 +187,7 @@ export default function Dashboard() {
         style={{ width: sidebarW }}
       >
         <div className="db-sidebar__logo">
-          <svg width="26" height="27" viewBox="0 0 40 42" aria-hidden="true">
-            <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill="none" stroke="#2B5341" strokeWidth="1.6" strokeLinejoin="round" />
-            <path d="M20 12 L22.3 18.6 L29.2 18.6 L23.6 22.7 L25.9 29.3 L20 25.2 L14.1 29.3 L16.4 22.7 L10.8 18.6 L17.7 18.6 Z" fill="none" stroke="#F09125" strokeWidth="1.4" strokeLinejoin="round" />
-          </svg>
+          <FiveElementsIcon size={26} />
           <span className="db-sidebar__brand" style={{ display: labelDisp }}>
             five elements <strong>CARM</strong>
           </span>

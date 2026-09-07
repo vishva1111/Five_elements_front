@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutGrid, AlignJustify, BookOpen, BarChart2, Award, CircleUser,
@@ -60,10 +61,7 @@ export default function IndividualLayout({ children, title, topLabel = 'MY IMPAC
       <aside className={`ih-sidebar ${sidebarOpen ? 'ih-sidebar--open' : ''}`}>
         {/* Brand */}
         <div className="ih-sidebar__brand">
-          <svg width="30" height="30" viewBox="0 0 40 40" fill="none">
-            <polygon points="20,3 37,13.5 31,34 9,34 3,13.5" fill="none" stroke="#F09125" strokeWidth="1.8"/>
-            <text x="20" y="25" textAnchor="middle" fontSize="14" fill="#F09125">★</text>
-          </svg>
+          <FiveElementsIcon size={28} />
           <span className="ih-sidebar__brand-text">five elements <strong>CARM</strong></span>
         </div>
 

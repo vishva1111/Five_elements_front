@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import NotificationBell from '../../components/ui/NotificationBell'
+import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Admin.css'
 
 interface NavItem {
@@ -51,7 +52,9 @@ export default function AdminLayout({ title, subtitle, children, pendingCounts =
       {/* Sidebar */}
       <aside className={`ad-sidebar${collapsed ? ' ad-sidebar--collapsed' : ''}`}>
         <div className="ad-sidebar__brand">
-          <div className="ad-sidebar__logo">🌿</div>
+          <div className="ad-sidebar__logo">
+            <FiveElementsIcon size={28} />
+          </div>
           {!collapsed && (
             <div>
               <div className="ad-sidebar__name">Five Elements</div>

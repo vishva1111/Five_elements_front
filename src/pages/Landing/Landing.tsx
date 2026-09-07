@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchProjects, fetchPlatformStats } from '../../services/api'
 import type { Project } from '../../types'
+import Navbar from '../../components/layout/Navbar'
+import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './Landing.css'
 
 // ── Pentagon helper ────────────────────────────────────────────────────────────
@@ -70,18 +72,9 @@ function avatarPenta(initials: string, color: string) {
   return svgEl(`<svg width="100%" viewBox="0 0 52 53" aria-hidden="true">${g}</svg>`)
 }
 
-// ── Nav logo SVG ───────────────────────────────────────────────────────────────
-const NavLogo = () => (
-  <svg width="30" height="31" viewBox="0 0 40 42" aria-hidden="true">
-    <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill="none" stroke="#AACBA7" strokeWidth="1.5" strokeLinejoin="round" />
-    <path d="M20 12 L22.3 18.6 L29.2 18.6 L23.6 22.7 L25.9 29.3 L20 25.2 L14.1 29.3 L16.4 22.7 L10.8 18.6 L17.7 18.6 Z" fill="none" stroke="#F09125" strokeWidth="1.4" strokeLinejoin="round" />
-  </svg>
-)
-
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function Landing() {
   const [t, setT] = useState(0)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const rafRef = useRef<number | null>(null)
 
   // Real data from API
@@ -150,48 +143,8 @@ export default function Landing() {
   return (
     <div style={{ minHeight: '100vh', background: '#F5F0EC' }}>
 
-      {/* ── NAV WRAPPER (position:relative so mobile menu anchors to it) ── */}
-      <div className="l0-nav-wrap">
-        <nav className="l0-nav">
-          <Link to="/" className="l0-nav__brand">
-            <NavLogo />
-            <span className="l0-nav__name">five elements <strong>CARM</strong></span>
-          </Link>
-          <div className="l0-nav__right">
-            <div className="l0-nav__links">
-              <Link to="/projects">Projects</Link>
-              <a href="#how">How it works</a>
-              <Link to="/ledger">Ledger</Link>
-              <Link to="/profiles">Explore profiles</Link>
-            </div>
-            <div className="l0-nav__actions">
-              <Link to="/login" className="l0-nav__login">Log in</Link>
-            </div>
-            <button
-              type="button"
-              className="l0-nav__hamburger"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={mobileMenuOpen}
-              onClick={() => setMobileMenuOpen(o => !o)}
-            >
-              {mobileMenuOpen ? '✕' : '☰'}
-            </button>
-          </div>
-        </nav>
-
-        {/* ── MOBILE MENU ── */}
-        {mobileMenuOpen && (
-          <div className="l0-mobile-menu">
-            <Link to="/projects" onClick={() => setMobileMenuOpen(false)}>Projects</Link>
-            <a href="#how" onClick={() => setMobileMenuOpen(false)}>How it works</a>
-            <Link to="/ledger" onClick={() => setMobileMenuOpen(false)}>Ledger</Link>
-            <Link to="/profiles" onClick={() => setMobileMenuOpen(false)}>Explore profiles</Link>
-            <div className="l0-mobile-menu__actions">
-              <Link to="/login" className="l0-nav__login" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* ── SHARED NAVBAR ── */}
+      <Navbar dark={false} />
 
       {/* ── HERO ── */}
       <header className="l0-hero">
@@ -424,8 +377,7 @@ export default function Landing() {
           <div className="l0-footer__grid">
             <div className="l0-footer__brand-col">
               <Link to="/" className="l0-footer__brand">
-                <NavLogo />
-                <span className="l0-nav__name">five elements <strong>CARM</strong></span>
+                <FiveElementsLogo size={26} variant="full" theme="light" />
               </Link>
               <p className="l0-footer__tagline">Climate action, rooted in the elements of nature. Measure, fund, prove — on a public ledger anyone can check.</p>
               <div className="l0-footer__subscribe">

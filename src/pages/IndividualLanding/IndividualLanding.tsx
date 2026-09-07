@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './IndividualLanding.css'
 
 // ── Pentagon SVG helper ──────────────────────────────────────────────────────
@@ -79,11 +80,7 @@ export default function IndividualLanding() {
       <nav className="il__nav">
         <div className="il__nav-inner">
           <Link to="/" className="il__nav-logo">
-            <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-              <polygon points={pentaPoints(14, 14, 13)} fill="none" stroke="#AACBA7" strokeWidth="1.5" strokeLinejoin="round" />
-              <text x="14" y="19" textAnchor="middle" fontSize="13" fill="#AACBA7">🌍</text>
-            </svg>
-            <span>Five Elements</span>
+            <FiveElementsLogo size={40} variant="full" theme="light" />
           </Link>
           <div className="il__nav-links">
             <Link to="/projects">Projects</Link>

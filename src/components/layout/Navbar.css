@@ -8,9 +8,9 @@
 }
 
 .navbar--dark {
-  background: rgba(17, 33, 33, 0.94);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.97);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  color: #112121;
 }
 
 .navbar--light {
@@ -23,7 +23,7 @@
   display: flex;
   align-items: center;
   gap: 32px;
-  height: 64px;
+  height: 52px;
 }
 
 /* ── Logo ── */
@@ -82,7 +82,7 @@
 
 .navbar--dark .navbar__link:hover,
 .navbar--dark .navbar__link--active {
-  background: rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.06);
 }
 
 .navbar--light .navbar__link:hover,

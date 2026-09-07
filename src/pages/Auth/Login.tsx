@@ -2,17 +2,10 @@ import React, { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
 import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
+import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './Login.css'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
-function LogoIcon() {
-  return (
-    <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-      <polygon points="22,3 41,15 34,37 10,37 3,15" fill="#2B5341" />
-      <path d="M22 12 C16 18 16 28 22 32 C28 28 28 18 22 12Z" fill="#F5F0EC" opacity="0.85" />
-    </svg>
-  )
-}
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -116,10 +109,7 @@ export default function Login() {
       {/* Top-left brand bar */}
       <div className="li-topbar">
         <a href="/" className="li-brand">
-          <span className="li-brand__icon">⬠</span>
-          <span className="li-brand__text">
-            five elements <strong className="li-brand__accent">CARM</strong>
-          </span>
+          <FiveElementsLogo size={30} variant="full" theme="dark" />
         </a>
       </div>
 

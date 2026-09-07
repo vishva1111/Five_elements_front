@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import FiveElementsLogo from '../ui/FiveElementsLogo'
 import './Footer.css'
 
 const FOOTER_LINKS = {
@@ -35,10 +36,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="footer__brand">
             <Link to="/" className="footer__logo">
-              <span className="footer__logo-icon">⬠</span>
-              <span>
-                five elements <strong className="footer__logo-accent">CARM</strong>
-              </span>
+              <FiveElementsLogo size={26} variant="full" theme="light" />
             </Link>
             <p className="footer__tagline">
               Climate action, rooted in the elements of nature. Measure, fund, prove — on a public ledger anyone can check.
