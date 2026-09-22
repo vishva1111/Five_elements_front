@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: '🤝', label: 'Partner management', path: '/admin/partners' },
   { icon: '👥', label: 'Users & tenants',    path: '/admin/users' },
   { icon: '🌿', label: 'Projects oversight', path: '/admin/projects' },
+  { icon: '✅', label: 'Task management',    path: '/admin/tasks' },
   { icon: '🛡️', label: 'Data quality',       path: '/admin/data-quality' },
   { icon: '📒', label: 'Ledger admin',       path: '/admin/ledger' },
   { icon: '💳', label: 'Finance console',    path: '/admin/finance' },

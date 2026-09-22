@@ -166,12 +166,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   async function signIn(email: string, password: string): Promise<{ error: string | null }> {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return { error: error.message }
-    if (data.session?.user) {
-      await hydrateUser(data.session.user, data.session)
+    try {
+      const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+      const res = await fetch(`${BACKEND}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const json = await res.json()
+      if (!res.ok) return { error: json.error ?? 'Login failed' }
+
+      const { data: sessionData, error: sessionErr } = await supabase.auth.setSession({
+        access_token:  json.session.access_token,
+        refresh_token: json.session.refresh_token,
+      })
+      if (sessionErr) return { error: sessionErr.message }
+      if (sessionData.session?.user) {
+        await hydrateUser(sessionData.session.user, sessionData.session)
+      }
+      return { error: null }
+    } catch (err: any) {
+      return { error: err?.message ?? 'Network error — could not reach server' }
     }
-    return { error: null }
   }
 
   async function signUp(

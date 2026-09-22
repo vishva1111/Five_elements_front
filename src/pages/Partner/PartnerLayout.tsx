@@ -1,113 +1,131 @@
 import React, { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import NotificationBell from '../../components/ui/NotificationBell'
+import { useAuth } from '../../contexts/AuthContext'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
-import './Partner.css'
+import '../Business/Dashboard.css'
 
-// ── Nav items ─────────────────────────────────────────────────────────────────
-const NAV = [
-  { path: '/partner/dashboard',    icon: '⬡', label: 'Dashboard' },
-  { path: '/partner/projects',     icon: '🌱', label: 'Projects' },
-  { path: '/partner/evidence',     icon: '📁', label: 'Evidence vault' },
-  { path: '/partner/submissions',  icon: '📋', label: 'Submissions' },
-  { path: '/partner/funders',      icon: '💰', label: 'Funders' },
-  { path: '/partner/team',         icon: '👥', label: 'Team' },
-  { path: '/partner/settings',     icon: '⚙️', label: 'Settings' },
+const NAV_ITEMS = [
+  { icon: '⬡',  label: 'Dashboard',     to: '/partner/dashboard' },
+  { icon: '🌱', label: 'Projects',      to: '/partner/projects' },
+  { icon: '📁', label: 'Evidence vault',to: '/partner/evidence' },
+  { icon: '📋', label: 'Submissions',   to: '/partner/submissions' },
+  { icon: '✅', label: 'Tasks',         to: '/partner/tasks' },
+  { icon: '💰', label: 'Funders',       to: '/partner/funders' },
+  { icon: '👥', label: 'Team',          to: '/partner/team' },
+  { icon: '⚙',  label: 'Settings',      to: '/partner/settings' },
 ]
 
 interface PartnerLayoutProps {
   children: React.ReactNode
-  title?: string
+  title: string
+  subtitle?: string
 }
 
-export default function PartnerLayout({ children, title }: PartnerLayoutProps) {
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
+export default function PartnerLayout({ children, title, subtitle }: PartnerLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { signOut, user } = useAuth()
 
-  async function handleSignOut() {
+  const sidebarW  = collapsed ? '64px' : '240px'
+  const labelDisp = collapsed ? 'none' : 'block'
+
+  async function handleLogout() {
     await signOut()
     navigate('/login')
   }
 
+  const initials = user?.displayName
+    ? user.displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'PA'
+
   return (
-    <div className={`pl-shell ${collapsed ? 'pl-shell--collapsed' : ''}`}>
-      {/* Sidebar */}
-      <aside className="pl-sidebar">
-        {/* Brand */}
-        <div className="pl-sidebar__brand">
-          <FiveElementsIcon size={28} />
-          {!collapsed && <span className="pl-sidebar__brand-name">Five Elements</span>}
+    <div className="db-shell">
+
+      {/* SIDEBAR */}
+      <aside className="db-sidebar" style={{ width: sidebarW }}>
+        <div className="db-sidebar__logo">
+          <FiveElementsIcon size={26} />
+          <span className="db-sidebar__brand" style={{ display: labelDisp }}>
+            five elements <strong>CARM</strong>
+          </span>
         </div>
 
-        {/* Zone label */}
-        {!collapsed && (
-          <div className="pl-sidebar__zone">Partner zone</div>
-        )}
-
-        {/* Nav */}
-        <nav className="pl-sidebar__nav">
-          {NAV.map(item => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `pl-nav-item ${isActive ? 'pl-nav-item--active' : ''}`
-              }
-            >
-              <span className="pl-nav-item__icon">{item.icon}</span>
-              {!collapsed && <span className="pl-nav-item__label">{item.label}</span>}
-            </NavLink>
-          ))}
+        <nav className="db-sidebar__nav">
+          {NAV_ITEMS.map(n => {
+            const isActive = n.to === '/partner/dashboard'
+              ? location.pathname === '/partner/dashboard' || location.pathname === '/partner'
+              : location.pathname.startsWith(n.to)
+            return (
+              <Link
+                key={n.to}
+                to={n.to}
+                className={`db-nav${isActive ? ' db-nav--active' : ''}`}
+              >
+                <span className="db-nav__icon">{n.icon}</span>
+                <span className="db-nav__label" style={{ display: labelDisp }}>{n.label}</span>
+              </Link>
+            )
+          })}
         </nav>
 
-        {/* Bottom: user + sign out */}
-        <div className="pl-sidebar__bottom">
-          {!collapsed && (
-            <div className="pl-sidebar__user">
-              <div className="pl-sidebar__avatar">
-                {(user?.displayName || 'P').charAt(0).toUpperCase()}
-              </div>
-              <div className="pl-sidebar__user-info">
-                <div className="pl-sidebar__user-name">{user?.displayName || 'Partner'}</div>
-                <div className="pl-sidebar__user-role">Partner admin</div>
-              </div>
-            </div>
-          )}
-          <button
-            type="button"
-            className="pl-sidebar__signout"
-            onClick={handleSignOut}
-            title="Sign out"
-          >
-            ↩
-          </button>
-        </div>
-
-        {/* Collapse toggle */}
-        <button
-          type="button"
-          className="pl-sidebar__toggle"
-          onClick={() => setCollapsed(c => !c)}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? '›' : '‹'}
-        </button>
-      </aside>
-
-      {/* Main content */}
-      <main className="pl-main">
-        <div className="pl-page-header">
-          {title && <h1 className="pl-page-title">{title}</h1>}
-          <div className="pl-page-header__actions">
-            <NotificationBell />
+        <div className="db-sidebar__user">
+          <div className="db-sidebar__avatar">{initials}</div>
+          <div className="db-sidebar__user-info" style={{ display: labelDisp }}>
+            <div className="db-sidebar__user-name">{user?.displayName || 'Partner'}</div>
+            <div className="db-sidebar__user-org">{user?.email || ''}</div>
           </div>
         </div>
-        <div className="pl-content">
+        <button
+          type="button"
+          onClick={() => setShowLogoutModal(true)}
+          className="db-nav db-nav--logout"
+          title="Sign out"
+        >
+          <span className="db-nav__icon">⏻</span>
+          <span className="db-nav__label" style={{ display: labelDisp }}>Sign out</span>
+        </button>
+
+        {/* Logout confirmation modal */}
+        {showLogoutModal && (
+          <div className="db-modal-overlay" onClick={() => setShowLogoutModal(false)}>
+            <div className="db-modal" onClick={e => e.stopPropagation()}>
+              <div className="db-modal__icon">⏻</div>
+              <h3 className="db-modal__title">Sign out?</h3>
+              <p className="db-modal__sub">You will be redirected to the login page.</p>
+              <div className="db-modal__actions">
+                <button type="button" className="db-modal__cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+                <button type="button" className="db-modal__confirm" onClick={handleLogout}>Sign out</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* MAIN */}
+      <div className="db-main">
+        <header className="db-topbar">
+          <button
+            type="button"
+            className="db-topbar__toggle"
+            onClick={() => setCollapsed(c => !c)}
+            aria-label="Toggle sidebar"
+          >☰</button>
+          <div className="db-topbar__title-wrap">
+            <h1 className="db-topbar__title">{title}</h1>
+            {subtitle && <div className="db-topbar__sub">{subtitle}</div>}
+          </div>
+          <div className="db-topbar__actions">
+            <NotificationBell />
+          </div>
+        </header>
+
+        <main className="db-content">
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

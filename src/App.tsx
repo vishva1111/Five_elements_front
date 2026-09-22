@@ -63,6 +63,8 @@ import FieldCapture         from './pages/Partner/FieldCapture'
 import SyncQueue            from './pages/Partner/SyncQueue'
 import EvidenceVault        from './pages/Partner/EvidenceVault'
 import SubmissionTracker    from './pages/Partner/SubmissionTracker'
+import PartnerProjects      from './pages/Partner/Projects'
+import PartnerTasks         from './pages/Partner/PartnerTasks'
 import FundersView          from './pages/Partner/FundersView'
 import PartnerTeam          from './pages/Partner/PartnerTeam'
 import PartnerSettings      from './pages/Partner/PartnerSettings'
@@ -80,6 +82,7 @@ import FinanceConsole       from './pages/Admin/FinanceConsole'
 import PlatformHealth       from './pages/Admin/PlatformHealth'
 import Configuration        from './pages/Admin/Configuration'
 import TreeRecords          from './pages/Admin/TreeRecords'
+import TaskManagement       from './pages/Admin/TaskManagement'
 
 export default function App(): React.JSX.Element {
   // AuthProvider wraps the entire app so useAuth() works everywhere
@@ -148,6 +151,7 @@ export default function App(): React.JSX.Element {
           {/* ── Partner zone (P1–P10, protected) ── */}
           <Route path="/partner/onboarding" element={<ProtectedRoute allowedRoles={['partner']}><PartnerOnboarding /></ProtectedRoute>} />
           <Route path="/partner/dashboard"  element={<ProtectedRoute allowedRoles={['partner']}><PartnerDashboard /></ProtectedRoute>} />
+          <Route path="/partner/projects"     element={<ProtectedRoute allowedRoles={['partner']}><PartnerProjects /></ProtectedRoute>} />
           <Route path="/partner/projects/new" element={<ProtectedRoute allowedRoles={['partner']}><ProjectRegistration /></ProtectedRoute>} />
           <Route path="/partner/field"      element={<ProtectedRoute allowedRoles={['partner']}><FieldCapture /></ProtectedRoute>} />
           <Route path="/partner/sync"       element={<ProtectedRoute allowedRoles={['partner']}><SyncQueue /></ProtectedRoute>} />
@@ -157,6 +161,7 @@ export default function App(): React.JSX.Element {
           <Route path="/partner/team"       element={<ProtectedRoute allowedRoles={['partner']}><PartnerTeam /></ProtectedRoute>} />
           <Route path="/partner/settings"          element={<ProtectedRoute allowedRoles={['partner']}><PartnerSettings /></ProtectedRoute>} />
           <Route path="/partner/linked-submissions" element={<ProtectedRoute allowedRoles={['partner']}><LinkedSubmissions /></ProtectedRoute>} />
+          <Route path="/partner/tasks"       element={<ProtectedRoute allowedRoles={['partner']}><PartnerTasks /></ProtectedRoute>} />
           {/* Redirect bare /partner to dashboard */}
           <Route path="/partner" element={<ProtectedRoute allowedRoles={['partner']}><PartnerDashboard /></ProtectedRoute>} />
 
@@ -168,6 +173,7 @@ export default function App(): React.JSX.Element {
           <Route path="/admin/partners"         element={<ProtectedRoute allowedRoles={['admin']}><PartnerManagement /></ProtectedRoute>} />
           <Route path="/admin/users"        element={<ProtectedRoute allowedRoles={['admin']}><UsersAndTenants /></ProtectedRoute>} />
           <Route path="/admin/projects"     element={<ProtectedRoute allowedRoles={['admin']}><ProjectsOversight /></ProtectedRoute>} />
+          <Route path="/admin/tasks"        element={<ProtectedRoute allowedRoles={['admin']}><TaskManagement /></ProtectedRoute>} />
           <Route path="/admin/data-quality" element={<ProtectedRoute allowedRoles={['admin']}><DataQuality /></ProtectedRoute>} />
           <Route path="/admin/ledger"       element={<ProtectedRoute allowedRoles={['admin']}><LedgerAdmin /></ProtectedRoute>} />
           <Route path="/admin/finance"      element={<ProtectedRoute allowedRoles={['admin']}><FinanceConsole /></ProtectedRoute>} />
