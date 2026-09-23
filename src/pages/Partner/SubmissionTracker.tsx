@@ -60,6 +60,9 @@ interface PendingTask {
   created_at:    string
   tree_id:       string | null
   review_notes:  string | null
+  photo_url:     string | null
+  tree_species:  string | null
+  tree_health:   string | null
 }
 
 const STATUS_ORDER = ['pending_review', 'in_review', 'needs_more_info', 'approved', 'rejected']
@@ -348,6 +351,16 @@ export default function SubmissionTracker() {
               {pendingTasks.map(task => (
                 <div key={task.id} className="pl-card" style={{ padding: '16px 20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    {/* Photo captured in the app */}
+                    {task.photo_url && (
+                      <a href={task.photo_url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
+                        <img
+                          src={task.photo_url}
+                          alt="Field capture"
+                          style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', border: '1px solid #e8f0e8', display: 'block' }}
+                        />
+                      </a>
+                    )}
                     <div style={{ flex: 1 }}>
                       {/* Task code + name */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -369,6 +382,7 @@ export default function SubmissionTracker() {
                       <div style={{ fontWeight: 700, fontSize: 15, color: '#112121', marginBottom: 4 }}>{task.name}</div>
                       <div style={{ fontSize: 12, color: '#6B7B6E', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                         <span>👤 {task.assignee_name}</span>
+                        {task.tree_species && <span>🌳 {task.tree_species}{task.tree_health ? ` · ${task.tree_health}` : ''}</span>}
                         {task.project_name && <span>🌿 {task.project_name}</span>}
                         {task.location && <span>📍 {task.location}</span>}
                         {task.completed_at && (

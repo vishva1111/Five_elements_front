@@ -1,115 +1,154 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
+import { useAuth } from '../../contexts/AuthContext'
+import { loadQueue, updateEntry, removeEntry, dataUrlToFile, CaptureEntry } from '../../services/fieldCaptureQueue'
 import './Partner.css'
 
-interface QueueItem {
-  id:        string
-  type:      'photo' | 'gps' | 'note'
-  name:      string
-  project:   string
-  size:      string
-  capturedAt: string
-  status:    'queued' | 'syncing' | 'synced' | 'failed'
-}
-
-const DEMO_QUEUE: QueueItem[] = [
-  { id: '1', type: 'photo', name: 'IMG_20260814_0832.jpg', project: 'Sahyadri Phase 2', size: '3.2 MB', capturedAt: 'Today 08:32', status: 'queued' },
-  { id: '2', type: 'gps',   name: 'track_morning.gpx',    project: 'Sahyadri Phase 2', size: '12 KB',  capturedAt: 'Today 08:45', status: 'queued' },
-  { id: '3', type: 'photo', name: 'IMG_20260814_0901.jpg', project: 'Sahyadri Phase 2', size: '2.8 MB', capturedAt: 'Today 09:01', status: 'synced' },
-  { id: '4', type: 'note',  name: 'field_notes.txt',       project: 'Konkan Mangroves', size: '1 KB',   capturedAt: 'Yesterday',   status: 'failed' },
-]
-
-const typeIcon = (t: QueueItem['type']) => t === 'photo' ? '📷' : t === 'gps' ? '📍' : '📝'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 export default function SyncQueue() {
+  const { session } = useAuth()
   const navigate = useNavigate()
-  const [items, setItems] = useState<QueueItem[]>(DEMO_QUEUE)
+  const [items, setItems] = useState<CaptureEntry[]>([])
   const [syncing, setSyncing] = useState(false)
 
-  const queued = items.filter(i => i.status === 'queued' || i.status === 'failed')
+  useEffect(() => {
+    setItems(loadQueue())
+  }, [])
+
+  const queued = items.filter(i => i.status !== 'synced')
+
+  // Uploads one capture's photo (+ a small companion notes file, since evidence_files
+  // has no gps/notes columns) to the real evidence-upload endpoint.
+  async function syncOne(entry: CaptureEntry): Promise<{ ok: boolean; error?: string }> {
+    const token = session?.access_token
+    if (!token) return { ok: false, error: 'Not signed in' }
+    if (!entry.submissionId) return { ok: false, error: 'No submission linked to this capture' }
+
+    const form = new FormData()
+    form.append('submissionId', entry.submissionId)
+
+    if (entry.photoDataUrl) {
+      form.append('files', dataUrlToFile(entry.photoDataUrl, entry.photoName || `capture-${entry.id}.jpg`))
+    }
+    const metaText = `GPS: ${entry.lat}, ${entry.lng}\nCaptured: ${entry.timestamp}\nNotes: ${entry.notes || '(none)'}`
+    form.append('files', new File([metaText], `capture-${entry.id}-info.txt`, { type: 'text/plain' }))
+
+    try {
+      const res = await fetch(`${API}/api/submit-project/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      const json = await res.json()
+      if (!res.ok) return { ok: false, error: json.error || 'Upload failed' }
+      return { ok: true }
+    } catch (e: any) {
+      return { ok: false, error: e.message || 'Network error' }
+    }
+  }
 
   async function syncAll() {
     setSyncing(true)
-    setItems(prev => prev.map(i => i.status !== 'synced' ? { ...i, status: 'syncing' } : i))
-    await new Promise(r => setTimeout(r, 1800))
-    setItems(prev => prev.map(i => ({ ...i, status: 'synced' })))
+    for (const entry of queued) {
+      setItems(updateEntry(entry.id, { status: 'syncing' }))
+      const result = await syncOne(entry)
+      if (result.ok) {
+        setItems(removeEntry(entry.id))
+      } else {
+        setItems(updateEntry(entry.id, { status: 'failed', errorMessage: result.error }))
+      }
+    }
     setSyncing(false)
-    navigate('/partner/evidence')
   }
+
+  async function syncSingle(entry: CaptureEntry) {
+    setItems(updateEntry(entry.id, { status: 'syncing' }))
+    const result = await syncOne(entry)
+    if (result.ok) {
+      setItems(removeEntry(entry.id))
+    } else {
+      setItems(updateEntry(entry.id, { status: 'failed', errorMessage: result.error }))
+    }
+  }
+
+  function discard(entry: CaptureEntry) {
+    if (!window.confirm(`Discard this capture (${entry.lat}, ${entry.lng})? This cannot be undone.`)) return
+    setItems(removeEntry(entry.id))
+  }
+
+  const failedCount = items.filter(i => i.status === 'failed').length
 
   return (
     <PartnerLayout title="Sync queue">
       <div style={{ maxWidth: 680 }}>
 
         {/* Summary */}
-        <div className="pl-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 20 }}>
-          <div className="pl-stat">
-            <div className="pl-stat__num">{queued.length}</div>
-            <div className="pl-stat__label">Pending sync</div>
+        <div className="pl-card" style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 13, color: '#6B7B6E' }}>
+              {queued.length === 0
+                ? 'Everything is synced.'
+                : `${queued.length} capture${queued.length !== 1 ? 's' : ''} waiting to upload${failedCount > 0 ? ` (${failedCount} failed last attempt)` : ''}`}
+            </div>
           </div>
-          <div className="pl-stat">
-            <div className="pl-stat__num">{items.filter(i => i.status === 'synced').length}</div>
-            <div className="pl-stat__label">Synced</div>
-          </div>
-          <div className="pl-stat">
-            <div className="pl-stat__num">{items.filter(i => i.status === 'failed').length}</div>
-            <div className="pl-stat__label">Failed</div>
-          </div>
+          <button
+            type="button"
+            className="pl-btn pl-btn--primary"
+            onClick={syncAll}
+            disabled={syncing || queued.length === 0}
+          >
+            {syncing ? 'Syncing…' : `Sync all (${queued.length})`}
+          </button>
         </div>
 
-        {queued.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-            <button type="button" className="pl-btn pl-btn--primary" onClick={syncAll} disabled={syncing}>
-              {syncing ? '⟳ Syncing…' : `↑ Sync ${queued.length} item${queued.length > 1 ? 's' : ''} to vault`}
-            </button>
+        {items.length === 0 ? (
+          <div className="pl-empty">
+            <div className="pl-empty__icon">✅</div>
+            <div className="pl-empty__title">Nothing to sync</div>
+            <div className="pl-empty__sub">Captures you add from Field Capture will show up here until they're uploaded.</div>
+            <button type="button" className="pl-btn pl-btn--primary" onClick={() => navigate('/partner/field')}>Go to Field Capture</button>
+          </div>
+        ) : (
+          <div className="pl-card">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {items.map(e => (
+                <div key={e.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: '0.5px solid #F0EDE8' }}>
+                  {e.photoDataUrl && (
+                    <img src={e.photoDataUrl} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#112121' }}>📍 {e.lat}, {e.lng}</div>
+                    {e.submissionTitle && <div style={{ fontSize: 11.5, color: '#6B7B6E' }}>🌿 {e.submissionTitle}</div>}
+                    {e.notes && <div style={{ fontSize: 12, color: '#6B7B6E' }}>{e.notes}</div>}
+                    <div style={{ fontSize: 11, color: '#9AA79C', marginTop: 2 }}>{new Date(e.timestamp).toLocaleString('en-IN')}</div>
+                    {e.status === 'failed' && e.errorMessage && (
+                      <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>⚠ {e.errorMessage}</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
+                    <span className={`pl-badge pl-badge--${e.status === 'failed' ? 'rejected' : e.status === 'syncing' ? 'progress' : 'pending'}`}>
+                      {e.status === 'syncing' ? 'Syncing…' : e.status === 'failed' ? 'Failed' : 'Queued'}
+                    </span>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {e.status !== 'syncing' && (
+                        <button type="button" onClick={() => syncSingle(e)} style={{ background: 'none', border: 'none', color: '#2B5341', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                          Retry
+                        </button>
+                      )}
+                      {e.status !== 'syncing' && (
+                        <button type="button" onClick={() => discard(e)} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                          Discard
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
-
-        <div className="pl-card">
-          <div className="pl-card__title">Queue ({items.length} items)</div>
-          {items.length === 0 ? (
-            <div className="pl-empty">
-              <div className="pl-empty__icon">✅</div>
-              <div className="pl-empty__title">Queue is empty</div>
-              <div className="pl-empty__sub">All captures have been synced to the evidence vault.</div>
-            </div>
-          ) : (
-            <table className="pl-table">
-              <thead>
-                <tr>
-                  <th>File</th>
-                  <th>Project</th>
-                  <th>Size</th>
-                  <th>Captured</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map(item => (
-                  <tr key={item.id}>
-                    <td>
-                      <span style={{ marginRight: 6 }}>{typeIcon(item.type)}</span>
-                      <span style={{ fontWeight: 600, fontSize: 12.5 }}>{item.name}</span>
-                    </td>
-                    <td style={{ color: '#6B7B6E', fontSize: 12.5 }}>{item.project}</td>
-                    <td style={{ color: '#9AA79C', fontSize: 12 }}>{item.size}</td>
-                    <td style={{ color: '#9AA79C', fontSize: 12 }}>{item.capturedAt}</td>
-                    <td>
-                      <span className={`pl-badge pl-badge--${
-                        item.status === 'synced'  ? 'approved' :
-                        item.status === 'syncing' ? 'info' :
-                        item.status === 'failed'  ? 'rejected' : 'pending'
-                      }`}>
-                        {item.status === 'syncing' ? '⟳ syncing' : item.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
       </div>
     </PartnerLayout>
   )
