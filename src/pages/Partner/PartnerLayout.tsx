@@ -8,8 +8,11 @@ import '../Business/Dashboard.css'
 const NAV_ITEMS = [
   { icon: '⬡',  label: 'Dashboard',     to: '/partner/dashboard' },
   { icon: '🌱', label: 'Projects',      to: '/partner/projects' },
+  { icon: '🧑‍🤝‍🧑', label: 'Users',         to: '/partner/users' },
+  { icon: '🌳', label: 'My trees',      to: '/partner/trees' },
   { icon: '📁', label: 'Evidence vault',to: '/partner/evidence' },
   { icon: '📋', label: 'Submissions',   to: '/partner/submissions' },
+  { icon: '🔗', label: 'Linked to me',  to: '/partner/linked-submissions' },
   { icon: '✅', label: 'Tasks',         to: '/partner/tasks' },
   { icon: '💰', label: 'Funders',       to: '/partner/funders' },
   { icon: '👥', label: 'Team',          to: '/partner/team' },

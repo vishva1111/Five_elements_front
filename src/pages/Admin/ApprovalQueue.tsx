@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL } from '../../config/api'
 import './Admin.css'
 
 interface QueueItem {
@@ -36,7 +37,7 @@ export default function ApprovalQueue() {
 
   useEffect(() => {
     fetch(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/queue`,
+      `${API_URL}/api/admin/queue`,
       { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
     )
       .then(r => r.json())

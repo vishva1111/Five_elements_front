@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL as API } from '../../config/api'
 import './Partner.css'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 export default function PartnerSettings() {
   const { session } = useAuth()

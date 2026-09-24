@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL as API } from '../../config/api'
 import './Partner.css'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 interface PartnerProject {
   id:               string
@@ -13,10 +12,10 @@ interface PartnerProject {
   category:         string | null
   location:         string
   description:      string | null
-  totalTrees:       number
-  fundedTrees:      number
+  totalTrees:       number | null
+  fundedTrees:      number | null
   progressPct:      number
-  tco2e:            number
+  tco2e:            number | null
   evidenceCount:    number
   fundersCount:     number
   status:           string
@@ -82,7 +81,7 @@ export default function Projects() {
 
               {/* Progress bar */}
               <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6B7B6E' }}>
-                <span>{p.fundedTrees.toLocaleString()} / {p.totalTrees.toLocaleString()} trees funded</span>
+                <span>{(p.fundedTrees ?? 0).toLocaleString()} / {(p.totalTrees ?? 0).toLocaleString()} trees funded</span>
                 <span style={{ fontWeight: 700, color: '#2B5341' }}>{p.progressPct}%</span>
               </div>
               <div style={{ height: 8, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden', marginBottom: 16 }}>

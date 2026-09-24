@@ -2,9 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL as API } from '../../config/api'
 import './Partner.css'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 interface Submission {
   id:          string
@@ -192,6 +191,32 @@ export default function SubmissionTracker() {
 
   const filtered = filter === 'all' ? submissions : submissions.filter(s => s.status === filter)
 
+  // P7: cards flow left to right as the Super Admin acts. Anything not yet
+  // decided sits in Pending, so nothing can fall out of the board.
+  const columns = [
+    {
+      key: 'pending',
+      title: 'Pending',
+      items: filtered.filter(s => !['approved', 'rejected'].includes(s.status)),
+      accent: '#AACBA7',
+    },
+    {
+      key: 'approved',
+      title: 'Approved',
+      items: filtered.filter(s => s.status === 'approved'),
+      accent: '#2B5341',
+    },
+    {
+      key: 'rejected',
+      title: 'Rejected',
+      items: filtered.filter(s => s.status === 'rejected'),
+      accent: '#8B3A00',
+    },
+  ]
+
+  const allApproved =
+    submissions.length > 0 && submissions.every(s => s.status === 'approved')
+
   return (
     <PartnerLayout title="Submission tracker">
 
@@ -248,65 +273,106 @@ export default function SubmissionTracker() {
             </button>
           </div>
 
-          <div className="pl-card">
-            {loading ? (
+          {loading ? (
+            <div className="pl-card">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[1,2,3].map(i => <div key={i} className="pl-skel" style={{ height: 48 }} />)}
               </div>
-            ) : filtered.length === 0 ? (
+            </div>
+          ) : submissions.length === 0 ? (
+            <div className="pl-card">
               <div className="pl-empty">
                 <div className="pl-empty__icon">📋</div>
                 <div className="pl-empty__title">No submissions yet</div>
                 <div className="pl-empty__sub">Register a project and submit it for admin review to see it here.</div>
                 <button type="button" className="pl-btn pl-btn--primary" onClick={() => navigate('/partner/projects/new')}>Register project</button>
               </div>
-            ) : (
-              <table className="pl-table">
-                <thead>
-                  <tr>
-                    <th>Project</th>
-                    <th>Element</th>
-                    <th>Evidence</th>
-                    <th>Submitted</th>
-                    <th>Updated</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(s => (
-                    <tr
-                      key={s.id}
-                      onClick={() => openSubmission(s.id)}
-                      style={{ cursor: 'pointer' }}
-                      title="Click to view project details"
-                    >
-                      <td style={{ fontWeight: 600 }}>{s.title}</td>
-                      <td style={{ color: '#6B7B6E', fontSize: 12.5, textTransform: 'capitalize' }}>{s.element}</td>
-                      <td style={{ color: '#9AA79C', fontSize: 12 }}>{s.evidenceCount} file{s.evidenceCount !== 1 ? 's' : ''}</td>
-                      <td style={{ color: '#9AA79C', fontSize: 12 }}>{s.submittedAt}</td>
-                      <td style={{ color: '#9AA79C', fontSize: 12 }}>{s.updatedAt}</td>
-                      <td>
-                        <span className={`pl-badge pl-badge--${badgeClass(s.status)}`}>{statusLabel(s.status)}</span>
-                      </td>
-                      <td>
-                        {s.status === 'needs_more_info' && (
-                          <button
-                            type="button"
-                            className="pl-btn pl-btn--orange"
-                            style={{ height: 28, fontSize: 11.5, padding: '0 10px' }}
-                            onClick={e => { e.stopPropagation(); navigate('/partner/evidence') }}
+            </div>
+          ) : (
+            <>
+              {allApproved && (
+                <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, fontWeight: 600, color: '#27500A', marginBottom: 16 }}>
+                  Everything's approved. Nice work.
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, alignItems: 'start' }}>
+                {columns.map(col => (
+                  <div key={col.key} className="pl-card" style={{ padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 4, background: col.accent }} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#112121' }}>{col.title}</span>
+                      <span style={{ fontSize: 12, color: '#9AA79C' }}>({col.items.length})</span>
+                    </div>
+
+                    {col.items.length === 0 ? (
+                      <div style={{ fontSize: 12.5, color: '#9AA79C', padding: '10px 0' }}>Nothing here.</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {col.items.map(sub => (
+                          <div
+                            key={sub.id}
+                            onClick={() => openSubmission(sub.id)}
+                            style={{
+                              border: `1px solid ${sub.status === 'rejected' ? '#E07050' : '#EDE6DF'}`,
+                              borderRadius: 10, padding: 12, cursor: 'pointer', background: '#fff',
+                            }}
+                            title="Click to view project details"
                           >
-                            Add evidence
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#112121', lineHeight: 1.35 }}>{sub.title}</div>
+                            <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 4, textTransform: 'capitalize' }}>
+                              {sub.element} · {sub.evidenceCount} file{sub.evidenceCount !== 1 ? 's' : ''} · {sub.submittedAt}
+                            </div>
+
+                            <div style={{ marginTop: 8 }}>
+                              <span className={`pl-badge pl-badge--${badgeClass(sub.status)}`}>{statusLabel(sub.status)}</span>
+                            </div>
+
+                            {/* The reason is on the face of the card, never behind
+                                a click — rejection is not a black box (P7-01). */}
+                            {sub.status === 'rejected' && (
+                              <div style={{ marginTop: 10, background: '#FFF0EC', border: '1px solid #F0C4B4', borderRadius: 8, padding: '8px 10px' }}>
+                                <div style={{ fontSize: 10.5, fontWeight: 700, color: '#8B3A00', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                  Why it was rejected
+                                </div>
+                                <div style={{ fontSize: 12.5, color: '#6B2E00', lineHeight: 1.5, marginTop: 3 }}>
+                                  {sub.reviewNotes || 'No reason was recorded. Contact your reviewer.'}
+                                </div>
+                              </div>
+                            )}
+
+                            {sub.status === 'needs_more_info' && sub.reviewNotes && (
+                              <div style={{ marginTop: 10, background: '#FEF0E3', border: '1px solid #F5C27A', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, color: '#8B3A00', lineHeight: 1.5 }}>
+                                {sub.reviewNotes}
+                              </div>
+                            )}
+
+                            {(sub.status === 'rejected' || sub.status === 'needs_more_info') && (
+                              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                                <button
+                                  type="button"
+                                  className="pl-btn pl-btn--orange"
+                                  style={{ height: 30, fontSize: 11.5, padding: '0 12px' }}
+                                  onClick={e => { e.stopPropagation(); navigate('/partner/evidence') }}
+                                >
+                                  {sub.status === 'rejected' ? 'Correct & resubmit' : 'Add evidence'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 12, lineHeight: 1.5 }}>
+                Resubmitting keeps the original photos and GPS — you only correct what was wrong.
+                The original rejection stays in the record.
+              </div>
+            </>
+          )}
 
           {filtered.some(s => s.reviewNotes) && (
             <div className="pl-card" style={{ marginTop: 16 }}>

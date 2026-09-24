@@ -12,4 +12,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Third-party libraries change far less often than app code — a
+        // separate vendor chunk means a deploy that only touches app pages
+        // doesn't invalidate the browser's cache of React/Router/Supabase.
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
+  },
 })

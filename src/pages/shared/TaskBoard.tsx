@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import { API_URL as API } from '../../config/api'
 
 interface Task {
   id: string

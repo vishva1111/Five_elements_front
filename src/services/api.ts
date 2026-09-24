@@ -1,5 +1,6 @@
 import type { ProjectFilters, ProjectsResponse, Project, LedgerEntry, Profile } from '../types'
 import { supabase } from '../supabaseClient'
+import { API_URL as BASE_URL } from '../config/api'
 
 // ── Auth token helper ─────────────────────────────────────────────────────────
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -280,7 +281,6 @@ export interface FundingPayload {
 }
 
 export async function submitFunding(payload: FundingPayload): Promise<{ orderId: string; status: string }> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/fund`, {
     method:  'POST',
     headers: await getAuthHeaders(),
@@ -325,7 +325,6 @@ export interface DashboardData {
 }
 
 export async function fetchDashboard(): Promise<DashboardData> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/dashboard`, { headers: await getAuthHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
@@ -343,7 +342,6 @@ export interface Report {
 }
 
 export async function fetchReports(): Promise<{ reports: Report[] }> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/reports`, { headers: await getAuthHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
@@ -384,7 +382,6 @@ export interface ReportDetailData {
 }
 
 export async function fetchReportDetail(id: string): Promise<{ report: ReportDetailData }> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/reports/${id}`, { headers: await getAuthHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
@@ -400,14 +397,12 @@ export interface TeamMember {
 }
 
 export async function fetchTeam(): Promise<{ members: TeamMember[] }> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/team`, { headers: await getAuthHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
 export async function inviteTeamMember(name: string, email: string, role: string): Promise<{ member: TeamMember }> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const headers = await getAuthHeaders()
   const res = await fetch(`${BASE_URL}/api/team`, {
     method: 'POST',
@@ -419,7 +414,6 @@ export async function inviteTeamMember(name: string, email: string, role: string
 }
 
 export async function removeTeamMember(id: string): Promise<void> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/team/${id}`, { method: 'DELETE', headers: await getAuthHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
@@ -463,7 +457,6 @@ export interface PortfolioData {
 }
 
 export async function fetchPortfolio(): Promise<PortfolioData> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/portfolio`, { headers: await getAuthHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
@@ -522,7 +515,6 @@ export interface ProfileData {
 }
 
 export async function fetchProfile(slug: string): Promise<ProfileData> {
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const res = await fetch(`${BASE_URL}/api/profiles/${slug}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { API_URL as API } from '../config/api'
 
 export interface Notification {
   id:        string
@@ -10,8 +11,6 @@ export interface Notification {
   read:      boolean
   createdAt: string
 }
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 export function useNotifications(pollIntervalMs = 30_000) {
   const { session } = useAuth()

@@ -2,6 +2,7 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
 import type { UserRole } from '../../contexts/AuthContext'
+import PageLoading from '../ui/PageLoading'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -15,6 +16,7 @@ interface ProtectedRouteProps {
 const ROLE_LEVEL: Record<UserRole, number> = {
   individual: 1,
   business:   1,
+  field_user: 1,
   partner:    2,
   admin:      3,
 }
@@ -32,25 +34,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   const location = useLocation()
 
   if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#F5F0EC',
-      }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          border: '3px solid #EAE3DA',
-          borderTopColor: '#2B5341',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    )
+    return <PageLoading />
   }
 
   // Not authenticated → go to login, remember where they were trying to go

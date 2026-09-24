@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../supabaseClient'
+import { API_URL as BACKEND } from '../config/api'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type UserRole = 'individual' | 'business' | 'partner' | 'admin'
+export type UserRole = 'individual' | 'business' | 'partner' | 'admin' | 'field_user'
 
 export interface AuthUser {
   id: string
@@ -42,6 +43,9 @@ export const ROLE_HOME: Record<UserRole, string> = {
   business:   '/business',
   partner:    '/partner',
   admin:      '/admin',
+  // Field users work in the mobile app; the web app has no console for them,
+  // so send them somewhere real rather than to an undefined route.
+  field_user: '/impact',
 }
 
 // ── Helper: fetch profile row ─────────────────────────────────────────────────
@@ -167,7 +171,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signIn(email: string, password: string): Promise<{ error: string | null }> {
     try {
-      const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5000'
       const res = await fetch(`${BACKEND}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -196,7 +199,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     role: UserRole = 'individual'
   ): Promise<{ error: string | null; emailConfirmationRequired?: boolean; roleAdded?: boolean }> {
-    const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5000'
     try {
       const res = await fetch(`${BACKEND}/api/auth/signup`, {
         method: 'POST',

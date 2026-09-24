@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import IndividualLayout from '../ImpactHome/IndividualLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL } from '../../config/api'
 import './MyProjects.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ export default function MyProjects() {
   useEffect(() => {
     if (!session?.access_token) return
 
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/my-projects`, {
+    fetch(`${API_URL}/api/my-projects`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
       .then(r => r.json())

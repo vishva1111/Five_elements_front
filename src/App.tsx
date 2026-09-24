@@ -1,94 +1,98 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import PageLoading from './components/ui/PageLoading'
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import Login from './pages/Auth/Login'
-import Signup from './pages/Auth/Signup'
-import Welcome from './pages/Auth/Welcome'
-import RoleSelect from './pages/Auth/RoleSelect'
+const Login = lazy(() => import('./pages/Auth/Login'))
+const Signup = lazy(() => import('./pages/Auth/Signup'))
+const Welcome = lazy(() => import('./pages/Auth/Welcome'))
+const RoleSelect = lazy(() => import('./pages/Auth/RoleSelect'))
 
 // ── Maintenance ──────────────────────────────────────────────────────────────
-import Maintenance from './pages/Maintenance/Maintenance'
+const Maintenance = lazy(() => import('./pages/Maintenance/Maintenance'))
 
 // ── Core pages ───────────────────────────────────────────────────────────────
-import Landing from './pages/Landing/Landing'
-import Marketplace from './pages/Marketplace/Marketplace'
-import ProjectDetail from './pages/ProjectDetail/ProjectDetail'
-import Ledger from './pages/Ledger/Ledger'
-import Profiles from './pages/Profiles/Profiles'
+const Landing = lazy(() => import('./pages/Landing/Landing'))
+const Marketplace = lazy(() => import('./pages/Marketplace/Marketplace'))
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail/ProjectDetail'))
+const Ledger = lazy(() => import('./pages/Ledger/Ledger'))
+const Profiles = lazy(() => import('./pages/Profiles/Profiles'))
 
 // ── Individual flow ──────────────────────────────────────────────────────────
-import IndividualLanding from './pages/IndividualLanding/IndividualLanding'
-import FundFlow from './pages/FundFlow/FundFlow'
-import ImpactHome from './pages/ImpactHome/ImpactHome'
+const IndividualLanding = lazy(() => import('./pages/IndividualLanding/IndividualLanding'))
+const FundFlow = lazy(() => import('./pages/FundFlow/FundFlow'))
+const ImpactHome = lazy(() => import('./pages/ImpactHome/ImpactHome'))
 
 // ── Business pages ───────────────────────────────────────────────────────────
-import Dashboard from './pages/Business/Dashboard'
-import EmissionsHub from './pages/Business/EmissionsHub'
-import SourceDataEntry from './pages/Business/SourceDataEntry'
-import BulkUpload from './pages/Business/BulkUpload'
-import Targets from './pages/Business/Targets'
-import Portfolio from './pages/Business/Portfolio'
-import BusinessFundFlow from './pages/Business/BusinessFundFlow'
-import ReportsCentre from './pages/Business/ReportsCentre'
-import ReportDetail from './pages/Business/ReportDetail'
-import PublicProfileSettings from './pages/Business/PublicProfileSettings'
-import Team from './pages/Business/Team'
-import OrgSettings from './pages/Business/OrgSettings'
-import BusinessToolkit from './pages/Business/BusinessToolkit'
+const Dashboard = lazy(() => import('./pages/Business/Dashboard'))
+const EmissionsHub = lazy(() => import('./pages/Business/EmissionsHub'))
+const SourceDataEntry = lazy(() => import('./pages/Business/SourceDataEntry'))
+const BulkUpload = lazy(() => import('./pages/Business/BulkUpload'))
+const Targets = lazy(() => import('./pages/Business/Targets'))
+const Portfolio = lazy(() => import('./pages/Business/Portfolio'))
+const BusinessFundFlow = lazy(() => import('./pages/Business/BusinessFundFlow'))
+const ReportsCentre = lazy(() => import('./pages/Business/ReportsCentre'))
+const ReportDetail = lazy(() => import('./pages/Business/ReportDetail'))
+const PublicProfileSettings = lazy(() => import('./pages/Business/PublicProfileSettings'))
+const Team = lazy(() => import('./pages/Business/Team'))
+const OrgSettings = lazy(() => import('./pages/Business/OrgSettings'))
+const BusinessToolkit = lazy(() => import('./pages/Business/BusinessToolkit'))
 
 // ── Public profile ───────────────────────────────────────────────────────────
-import PublicProfile from './pages/PublicProfile/PublicProfile'
+const PublicProfile = lazy(() => import('./pages/PublicProfile/PublicProfile'))
 
 // ── Individual flow — new screens ────────────────────────────────────────────
-import Confirmation from './pages/Confirmation/Confirmation'
-import MyProjects   from './pages/MyProjects/MyProjects'
-import Certificate  from './pages/Certificate/Certificate'
+const Confirmation = lazy(() => import('./pages/Confirmation/Confirmation'))
+const MyProjects = lazy(() => import('./pages/MyProjects/MyProjects'))
+const Certificate = lazy(() => import('./pages/Certificate/Certificate'))
 
 // ── Project submission flow (C1–C4) ──────────────────────────────────────────
-import SubmitProjectDetails from './pages/SubmitProject/SubmitProjectDetails'
-import AddPartner           from './pages/SubmitProject/AddPartner'
-import AddEvidence          from './pages/SubmitProject/AddEvidence'
-import ReviewSubmit         from './pages/SubmitProject/ReviewSubmit'
-import BusinessProgramme   from './pages/SubmitProject/BusinessProgramme'
+const SubmitProjectDetails = lazy(() => import('./pages/SubmitProject/SubmitProjectDetails'))
+const AddPartner = lazy(() => import('./pages/SubmitProject/AddPartner'))
+const AddEvidence = lazy(() => import('./pages/SubmitProject/AddEvidence'))
+const ReviewSubmit = lazy(() => import('./pages/SubmitProject/ReviewSubmit'))
+const BusinessProgramme = lazy(() => import('./pages/SubmitProject/BusinessProgramme'))
 
 // ── Partner zone (P1–P10) ─────────────────────────────────────────────────────
-import PartnerOnboarding    from './pages/Partner/PartnerOnboarding'
-import PartnerDashboard     from './pages/Partner/PartnerDashboard'
-import ProjectRegistration  from './pages/Partner/ProjectRegistration'
-import LinkedSubmissions    from './pages/Partner/LinkedSubmissions'
-import FieldCapture         from './pages/Partner/FieldCapture'
-import SyncQueue            from './pages/Partner/SyncQueue'
-import EvidenceVault        from './pages/Partner/EvidenceVault'
-import SubmissionTracker    from './pages/Partner/SubmissionTracker'
-import PartnerProjects      from './pages/Partner/Projects'
-import PartnerTasks         from './pages/Partner/PartnerTasks'
-import FundersView          from './pages/Partner/FundersView'
-import PartnerTeam          from './pages/Partner/PartnerTeam'
-import PartnerSettings      from './pages/Partner/PartnerSettings'
+const PartnerOnboarding = lazy(() => import('./pages/Partner/PartnerOnboarding'))
+const PartnerDashboard = lazy(() => import('./pages/Partner/PartnerDashboard'))
+const ProjectRegistration = lazy(() => import('./pages/Partner/ProjectRegistration'))
+const LinkedSubmissions = lazy(() => import('./pages/Partner/LinkedSubmissions'))
+const EvidenceVault = lazy(() => import('./pages/Partner/EvidenceVault'))
+const SubmissionTracker = lazy(() => import('./pages/Partner/SubmissionTracker'))
+const PartnerProjects = lazy(() => import('./pages/Partner/Projects'))
+const AddTree = lazy(() => import('./pages/Partner/AddTree'))
+const MyTrees = lazy(() => import('./pages/Partner/MyTrees'))
+const ImportFunders = lazy(() => import('./pages/Partner/ImportFunders'))
+const PartnerTasks = lazy(() => import('./pages/Partner/PartnerTasks'))
+const FundersView = lazy(() => import('./pages/Partner/FundersView'))
+const PartnerTeam = lazy(() => import('./pages/Partner/PartnerTeam'))
+const PartnerUsers = lazy(() => import('./pages/Partner/PartnerUsers'))
+const PartnerSettings = lazy(() => import('./pages/Partner/PartnerSettings'))
 
 // ── Super Admin zone (A1–A10) ─────────────────────────────────────────────────
-import ApprovalQueue        from './pages/Admin/ApprovalQueue'
-import EvidenceReview       from './pages/Admin/EvidenceReview'
-import PartnerManagement    from './pages/Admin/PartnerManagement'
-import UsersAndTenants      from './pages/Admin/UsersAndTenants'
-import SubmissionQueue      from './pages/Admin/SubmissionQueue'
-import ProjectsOversight    from './pages/Admin/ProjectsOversight'
-import DataQuality          from './pages/Admin/DataQuality'
-import LedgerAdmin          from './pages/Admin/LedgerAdmin'
-import FinanceConsole       from './pages/Admin/FinanceConsole'
-import PlatformHealth       from './pages/Admin/PlatformHealth'
-import Configuration        from './pages/Admin/Configuration'
-import TreeRecords          from './pages/Admin/TreeRecords'
-import TaskManagement       from './pages/Admin/TaskManagement'
+const ApprovalQueue = lazy(() => import('./pages/Admin/ApprovalQueue'))
+const EvidenceReview = lazy(() => import('./pages/Admin/EvidenceReview'))
+const PartnerManagement = lazy(() => import('./pages/Admin/PartnerManagement'))
+const UsersAndTenants = lazy(() => import('./pages/Admin/UsersAndTenants'))
+const SubmissionQueue = lazy(() => import('./pages/Admin/SubmissionQueue'))
+const ProjectsOversight = lazy(() => import('./pages/Admin/ProjectsOversight'))
+const DataQuality = lazy(() => import('./pages/Admin/DataQuality'))
+const LedgerAdmin = lazy(() => import('./pages/Admin/LedgerAdmin'))
+const FinanceConsole = lazy(() => import('./pages/Admin/FinanceConsole'))
+const PlatformHealth = lazy(() => import('./pages/Admin/PlatformHealth'))
+const Configuration = lazy(() => import('./pages/Admin/Configuration'))
+const TreeRecords = lazy(() => import('./pages/Admin/TreeRecords'))
+const TaskManagement = lazy(() => import('./pages/Admin/TaskManagement'))
 
 export default function App(): React.JSX.Element {
   // AuthProvider wraps the entire app so useAuth() works everywhere
   return (
     <AuthProvider>
       <Router>
+        <Suspense fallback={<PageLoading />}>
         <Routes>
           {/* ── Landing ── */}
           <Route path="/" element={<Landing />} />
@@ -153,12 +157,17 @@ export default function App(): React.JSX.Element {
           <Route path="/partner/dashboard"  element={<ProtectedRoute allowedRoles={['partner']}><PartnerDashboard /></ProtectedRoute>} />
           <Route path="/partner/projects"     element={<ProtectedRoute allowedRoles={['partner']}><PartnerProjects /></ProtectedRoute>} />
           <Route path="/partner/projects/new" element={<ProtectedRoute allowedRoles={['partner']}><ProjectRegistration /></ProtectedRoute>} />
-          <Route path="/partner/field"      element={<ProtectedRoute allowedRoles={['partner']}><FieldCapture /></ProtectedRoute>} />
-          <Route path="/partner/sync"       element={<ProtectedRoute allowedRoles={['partner']}><SyncQueue /></ProtectedRoute>} />
+          <Route path="/partner/trees"        element={<ProtectedRoute allowedRoles={['partner']}><MyTrees /></ProtectedRoute>} />
+          <Route path="/partner/trees/new"    element={<ProtectedRoute allowedRoles={['partner']}><AddTree /></ProtectedRoute>} />
+          <Route path="/partner/funders/import" element={<ProtectedRoute allowedRoles={['partner']}><ImportFunders /></ProtectedRoute>} />
+          {/* Field capture (P4) and the sync queue (P5) are mobile-app screens —
+              /app/capture and /app/queue in the TreeApp. They are deliberately
+              not served on the web: the offline guarantee depends on the device. */}
           <Route path="/partner/evidence"   element={<ProtectedRoute allowedRoles={['partner']}><EvidenceVault /></ProtectedRoute>} />
           <Route path="/partner/submissions" element={<ProtectedRoute allowedRoles={['partner']}><SubmissionTracker /></ProtectedRoute>} />
           <Route path="/partner/funders"    element={<ProtectedRoute allowedRoles={['partner']}><FundersView /></ProtectedRoute>} />
           <Route path="/partner/team"       element={<ProtectedRoute allowedRoles={['partner']}><PartnerTeam /></ProtectedRoute>} />
+          <Route path="/partner/users"      element={<ProtectedRoute allowedRoles={['partner']}><PartnerUsers /></ProtectedRoute>} />
           <Route path="/partner/settings"          element={<ProtectedRoute allowedRoles={['partner']}><PartnerSettings /></ProtectedRoute>} />
           <Route path="/partner/linked-submissions" element={<ProtectedRoute allowedRoles={['partner']}><LinkedSubmissions /></ProtectedRoute>} />
           <Route path="/partner/tasks"       element={<ProtectedRoute allowedRoles={['partner']}><PartnerTasks /></ProtectedRoute>} />
@@ -184,6 +193,7 @@ export default function App(): React.JSX.Element {
           {/* ── Fallback ── */}
           <Route path="*" element={<Landing />} />
         </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   )

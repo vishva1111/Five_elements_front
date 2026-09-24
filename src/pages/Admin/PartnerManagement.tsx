@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL as API } from '../../config/api'
 import './Admin.css'
 
 interface Partner {
@@ -29,7 +30,19 @@ export default function PartnerManagement() {
   const [acting,   setActing]   = useState<'approve' | 'reject' | null>(null)
   const [msg,      setMsg]      = useState('')
 
-  const API     = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+  // ── Create-partner form (top-down path: admin makes the org + its login) ──
+  const [showCreate,  setShowCreate]  = useState(false)
+  const [creating,    setCreating]    = useState(false)
+  const [createErr,   setCreateErr]   = useState('')
+  const [newPartner,  setNewPartner]  = useState<{ email: string; tempPassword: string | null; reused: boolean } | null>(null)
+  const [form, setForm] = useState({
+    orgName: '', orgType: '', contactName: '', contactEmail: '',
+    contactPhone: '', website: '', address: '', description: '',
+  })
+
+  const setField = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }))
+
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
 
   useEffect(() => {
@@ -41,6 +54,42 @@ export default function PartnerManagement() {
   }, [session])
 
   const filtered = filter === 'all' ? partners : partners.filter(p => p.status === filter)
+
+  async function reloadPartners() {
+    const res = await fetch(`${API}/api/admin/partners`, { headers })
+    const d = await res.json()
+    if (res.ok) setPartners(d.partners || [])
+  }
+
+  async function handleCreate() {
+    if (!form.orgName.trim() || !form.contactName.trim() || !form.contactEmail.trim()) {
+      setCreateErr('Organisation name, contact name and contact email are required.')
+      return
+    }
+    setCreating(true)
+    setCreateErr('')
+    try {
+      const res = await fetch(`${API}/api/admin/partners`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(form),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Failed to create partner')
+      setNewPartner({
+        email: form.contactEmail,
+        tempPassword: d.tempPassword || null,
+        reused: !!d.reusedExistingAccount,
+      })
+      setForm({ orgName: '', orgType: '', contactName: '', contactEmail: '', contactPhone: '', website: '', address: '', description: '' })
+      setShowCreate(false)
+      await reloadPartners()
+    } catch (e: unknown) {
+      setCreateErr(e instanceof Error ? e.message : 'Failed to create partner')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   async function handleDecision(action: 'approve' | 'reject') {
     if (!selected) return
@@ -69,6 +118,86 @@ export default function PartnerManagement() {
     <AdminLayout title="Partner management" subtitle={`${partners.filter(p => p.status === 'pending').length} pending`}>
 
       {msg && <div className={`ad-alert ${msg.startsWith('✅') ? 'ad-alert--success' : msg.startsWith('❌') ? 'ad-alert--warn' : 'ad-alert--danger'}`}>{msg}</div>}
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button type="button" className="ad-btn ad-btn--primary" onClick={() => { setShowCreate(v => !v); setCreateErr('') }}>
+          {showCreate ? 'Cancel' : '+ Create partner'}
+        </button>
+      </div>
+
+      {newPartner && (
+        <div className="ad-alert ad-alert--success" style={{ display: 'block' }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>
+            {newPartner.reused ? 'Partner profile created for an existing account ✓' : 'Partner created and invite emailed ✓'}
+          </div>
+          {newPartner.tempPassword ? (
+            <>
+              <div style={{ fontSize: 13 }}>
+                <strong>{newPartner.email}</strong> can sign in with this temporary password:
+              </div>
+              <div style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 15, fontWeight: 700, background: '#fff', border: '1px solid #AACBA7', borderRadius: 6, padding: '6px 12px', display: 'inline-block', color: '#112121' }}>
+                {newPartner.tempPassword}
+              </div>
+              <div style={{ fontSize: 11.5, marginTop: 6, opacity: 0.8 }}>
+                Shown once — copy it now if you need to pass it on.
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 13 }}>
+              <strong>{newPartner.email}</strong> already had an account; it now has partner access. No new password was issued.
+            </div>
+          )}
+          <button type="button" onClick={() => setNewPartner(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', marginTop: 8, padding: 0, color: 'inherit' }}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {showCreate && (
+        <div className="ad-card" style={{ marginBottom: 20 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>Create a partner</h3>
+          <p style={{ fontSize: 12.5, color: '#6B7B6E', margin: '0 0 16px' }}>
+            Creates the organisation and its login in one step, already approved — no application needed.
+          </p>
+
+          {createErr && <div className="ad-alert ad-alert--danger">{createErr}</div>}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {([
+              ['orgName',      'Organisation name *', 'Terra Roots Foundation'],
+              ['orgType',      'Organisation type',   'NGO / Trust / Co-operative'],
+              ['contactName',  'Contact name *',      'Priya Nair'],
+              ['contactEmail', 'Contact email *',     'priya@terraroots.org'],
+              ['contactPhone', 'Contact phone',       '+91 98765 43210'],
+              ['website',      'Website',             'https://terraroots.org'],
+              ['address',      'Registered address',  'City, State, Country'],
+            ] as const).map(([key, label, ph]) => (
+              <div key={key} className="sp-field">
+                <label className="sp-label" htmlFor={`cp-${key}`}>{label}</label>
+                <input
+                  id={`cp-${key}`}
+                  type={key === 'contactEmail' ? 'email' : 'text'}
+                  className="sp-input"
+                  placeholder={ph}
+                  value={form[key]}
+                  onChange={setField(key)}
+                />
+              </div>
+            ))}
+            <div className="sp-field" style={{ gridColumn: '1 / -1' }}>
+              <label className="sp-label" htmlFor="cp-description">Description</label>
+              <textarea id="cp-description" className="sp-textarea" rows={3} placeholder="What this organisation does…" value={form.description} onChange={setField('description')} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+            <button type="button" className="ad-btn ad-btn--ghost" onClick={() => setShowCreate(false)}>Cancel</button>
+            <button type="button" className="ad-btn ad-btn--primary" onClick={handleCreate} disabled={creating}>
+              {creating ? 'Creating…' : 'Create partner'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: 20, alignItems: 'start' }}>
 
