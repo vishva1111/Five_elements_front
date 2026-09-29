@@ -53,7 +53,6 @@ export default function AddTree() {
   const { session } = useAuth()
   const navigate    = useNavigate()
   const [searchParams] = useSearchParams()
-  const fileRef     = useRef<HTMLInputElement>(null)
   const token       = session?.access_token
 
   const [users,    setUsers]    = useState<TeamUser[]>([])
@@ -64,8 +63,6 @@ export default function AddTree() {
   const [projectId, setProjectId] = useState('')
   const [species,   setSpecies]   = useState('')
   const [sciName,   setSciName]   = useState('')
-  const [lat,       setLat]       = useState('')
-  const [lng,       setLng]       = useState('')
   const [quantity,  setQuantity]  = useState('1')
   const [eventType, setEventType] = useState('Planting')
   const [health,    setHealth]    = useState('healthy')
@@ -73,8 +70,6 @@ export default function AddTree() {
   const [landType,  setLandType]  = useState('')
   const [dbh,       setDbh]       = useState('')
   const [height,    setHeight]    = useState('')
-  const [notes,     setNotes]     = useState('')
-  const [photo,     setPhoto]     = useState<File | null>(null)
 
   // ── bulk import ──────────────────────────────────────────────────────────
   const sheetRef = useRef<HTMLInputElement>(null)
@@ -85,7 +80,6 @@ export default function AddTree() {
   const [importError,  setImportError]  = useState<string | null>(null)
   const [importResult, setImportResult] = useState<string | null>(null)
 
-  const [locating,  setLocating]  = useState(false)
   const [saving,    setSaving]    = useState(false)
   const [error,     setError]     = useState<string | null>(null)
   const [success,   setSuccess]   = useState<string | null>(null)
@@ -118,18 +112,6 @@ export default function AddTree() {
       .catch(() => setError('Could not load your team or projects.'))
       .finally(() => setLoading(false))
   }, [token, searchParams])
-
-  function useMyLocation() {
-    setLocating(true)
-    navigator.geolocation?.getCurrentPosition(
-      pos => {
-        setLat(pos.coords.latitude.toFixed(6))
-        setLng(pos.coords.longitude.toFixed(6))
-        setLocating(false)
-      },
-      () => { setLocating(false); setError('Could not read your location — enter the coordinates manually.') }
-    )
-  }
 
   /** Server-side parse with nothing written, so the partner sees what will land. */
   async function checkSheet(file: File) {
@@ -225,9 +207,6 @@ export default function AddTree() {
     if (!userId)         e.userId    = 'Required'
     if (!projectId)      e.projectId = 'Required'
     if (!species.trim()) e.species   = 'Required'
-    const la = Number(lat), ln = Number(lng)
-    if (!lat || !Number.isFinite(la) || la < -90  || la > 90)  e.lat = 'Enter a valid latitude'
-    if (!lng || !Number.isFinite(ln) || ln < -180 || ln > 180) e.lng = 'Enter a valid longitude'
     return e
   }
 
@@ -244,8 +223,6 @@ export default function AddTree() {
       form.append('user_id', userId)
       form.append('project_id', projectId)
       form.append('species', species.trim())
-      form.append('latitude', lat)
-      form.append('longitude', lng)
       form.append('quantity', quantity || '1')
       form.append('event_type', eventType)
       form.append('health_status', health)
@@ -254,8 +231,6 @@ export default function AddTree() {
       if (landType)       form.append('land_type', landType)
       if (dbh)            form.append('dbh_cm', dbh)
       if (height)         form.append('height_m', height)
-      if (notes.trim())   form.append('notes', notes.trim())
-      if (photo)          form.append('photo', photo)
 
       const res = await fetch(`${API}/api/partner/trees`, {
         method: 'POST',
@@ -274,9 +249,8 @@ export default function AddTree() {
       )
       // Keep user, project and event type — a partner usually files several in
       // a row for the same person. Clear what changes per tree.
-      setSpecies(''); setSciName(''); setLat(''); setLng('')
-      setQuantity('1'); setDbh(''); setHeight(''); setNotes(''); setPhoto(null)
-      if (fileRef.current) fileRef.current.value = ''
+      setSpecies(''); setSciName('')
+      setQuantity('1'); setDbh(''); setHeight('')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to record tree')
     } finally {
@@ -575,45 +549,6 @@ export default function AddTree() {
               <option value="">Not specified</option>
               {LAND_TYPES.map(l => <option key={l}>{l}</option>)}
             </select>
-          </div>
-        </div>
-
-        {/* ── Location and photo ────────────────────────────────────────── */}
-        <div className="pl-card" style={{ marginBottom: 16 }}>
-          <div className="pl-card__title">Location &amp; photo</div>
-
-          <div className="sp-grid-2" style={{ marginBottom: 10 }}>
-            <div className="sp-field">
-              <label className="sp-label sp-label--required" htmlFor="at-lat">Latitude</label>
-              <input id="at-lat" type="text" className={`sp-input ${errors.lat ? 'sp-input--error' : ''}`} placeholder="23.022500" value={lat} onChange={e => setLat(e.target.value)} />
-              {errors.lat && <div className="sp-field-error">{errors.lat}</div>}
-            </div>
-            <div className="sp-field">
-              <label className="sp-label sp-label--required" htmlFor="at-lng">Longitude</label>
-              <input id="at-lng" type="text" className={`sp-input ${errors.lng ? 'sp-input--error' : ''}`} placeholder="72.571400" value={lng} onChange={e => setLng(e.target.value)} />
-              {errors.lng && <div className="sp-field-error">{errors.lng}</div>}
-            </div>
-          </div>
-
-          <button type="button" className="pl-btn pl-btn--ghost" style={{ fontSize: 12.5, marginBottom: 14 }} onClick={useMyLocation} disabled={locating}>
-            {locating ? 'Getting location…' : '📍 Use my current location'}
-          </button>
-
-          <div style={{ fontSize: 11.5, color: '#9AA79C', marginBottom: 14, lineHeight: 1.5 }}>
-            These are the tree's coordinates, not yours — only use the button above if you're standing at the tree.
-          </div>
-
-          <div className="sp-field" style={{ marginBottom: 14 }}>
-            <label className="sp-label">Photo</label>
-            <button type="button" className="pl-btn pl-btn--ghost" style={{ fontSize: 12.5 }} onClick={() => fileRef.current?.click()}>
-              📷 {photo ? photo.name : 'Attach photo (optional)'}
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setPhoto(e.target.files?.[0] || null)} />
-          </div>
-
-          <div className="sp-field">
-            <label className="sp-label" htmlFor="at-notes">Notes</label>
-            <textarea id="at-notes" className="sp-textarea" rows={3} placeholder="Condition, surroundings, anything worth recording…" value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
         </div>
 

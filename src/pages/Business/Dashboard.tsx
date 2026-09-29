@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchDashboard, type DashboardData, type DashboardProject } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../supabaseClient'
+import { API_URL as API } from '../../config/api'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Dashboard.css'
 
@@ -112,7 +112,7 @@ function RadarChart({ treesFunded }: { treesFunded: number }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { signOut, user } = useAuth()
+  const { signOut, user, session } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -146,15 +146,20 @@ export default function Dashboard() {
 
   const loadTreeRecords = useCallback(async () => {
     setTreeLoading(true)
-    const { data: records } = await supabase
-      .from('tree_records')
-      .select('id, photo_url, latitude, longitude, species, health_status, notes, submitted_at, synced, project_id')
-      .eq('user_id', '5be2e23c-22a2-4c5e-adf9-1a764bf85f5f')
-      .order('submitted_at', { ascending: false })
-      .limit(50)
-    setTreeRecords(records ?? [])
+    try {
+      // Same fixed user_id this widget has always shown — pre-existing, not
+      // scoped to whichever business user is logged in. Left unchanged here;
+      // only the transport moved from a direct Supabase query to the API.
+      const res = await fetch(`${API}/api/dashboard/tree-records?user_id=5be2e23c-22a2-4c5e-adf9-1a764bf85f5f`, {
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      })
+      const json = await res.json()
+      setTreeRecords(res.ok ? (json.records ?? []) : [])
+    } catch {
+      setTreeRecords([])
+    }
     setTreeLoading(false)
-  }, [])
+  }, [session?.access_token])
 
   useEffect(() => { load() }, [load])
   useEffect(() => { loadTreeRecords() }, [loadTreeRecords])

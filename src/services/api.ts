@@ -1,200 +1,60 @@
 import type { ProjectFilters, ProjectsResponse, Project, LedgerEntry, Profile } from '../types'
-import { supabase } from '../supabaseClient'
 import { API_URL as BASE_URL } from '../config/api'
+import { getValidAccessToken } from './authTokens'
 
 // ── Auth token helper ─────────────────────────────────────────────────────────
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token
+  const token = await getValidAccessToken()
   return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
 }
 
-// ── Generic Supabase REST helper (uses supabase-js client — no env vars needed) ──
-async function sbFetch<T>(table: string, params: Record<string, string> = {}): Promise<T> {
-  let query = supabase.from(table).select(params.select || '*')
-
-  // Apply filters from params (skip 'select', 'order', 'limit', 'offset')
-  for (const [key, val] of Object.entries(params)) {
-    if (key === 'select' || key === 'order' || key === 'limit' || key === 'offset') continue
-    // Parse Supabase filter syntax: "eq.value", "gte.value", "ilike.%value%", "gt.value"
-    const dotIdx = val.indexOf('.')
-    if (dotIdx === -1) continue
-    const op  = val.slice(0, dotIdx)
-    const v   = val.slice(dotIdx + 1)
-    if      (op === 'eq')    query = (query as any).eq(key, v)
-    else if (op === 'gte')   query = (query as any).gte(key, v)
-    else if (op === 'lte')   query = (query as any).lte(key, v)
-    else if (op === 'gt')    query = (query as any).gt(key, v)
-    else if (op === 'ilike') query = (query as any).ilike(key, v)
-  }
-
-  // Order
-  if (params.order) {
-    const [col, dir] = params.order.split('.')
-    query = (query as any).order(col, { ascending: dir !== 'desc' })
-  }
-
-  // Limit
-  if (params.limit) query = (query as any).limit(Number(params.limit))
-
-  // Offset
-  if (params.offset) query = (query as any).range(Number(params.offset), Number(params.offset) + Number(params.limit || 50) - 1)
-
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
-  return (data ?? []) as T
-}
-
-// ── DB row type (snake_case from Supabase) ────────────────────────────────────
-interface ProjectRow {
-  id: string
-  slug: string
-  name: string
-  element: string
-  category: string
-  location: string
-  country: string
-  partner: string
-  certification: string | null
-  certification_id: string | null
-  price_per_tree: number
-  total_trees: number
-  funded_trees: number
-  funders_count: number
-  last_evidence_date: string | null
-  evidence_count: number
-  tco2e: number
-  description: string | null
-  verified: boolean
-  status: string
-  created_at: string
-  cover_image: string | null
-}
-
-function rowToProject(p: ProjectRow): Project {
-  return {
-    id:              p.id,
-    slug:            p.slug,
-    name:            p.name,
-    element:         p.element as Project['element'],
-    category:        p.category,
-    location:        p.location,
-    country:         p.country,
-    partner:         p.partner,
-    certification:   p.certification ?? '',
-    certificationId: p.certification_id ?? '',
-    pricePerTree:    p.price_per_tree,
-    totalTrees:      p.total_trees,
-    fundedTrees:     p.funded_trees,
-    fundersCount:    p.funders_count,
-    lastEvidenceDate: p.last_evidence_date ?? '',
-    evidenceCount:   p.evidence_count,
-    tCO2e:           Number(p.tco2e),
-    description:     p.description ?? '',
-    verified:        p.verified,
-    status:          p.status as Project['status'],
-    createdAt:       p.created_at,
-    coverImage:      p.cover_image ?? null,
-  }
-}
-
 // ── Projects ─────────────────────────────────────────────────────────────────
+// GET /api/projects already returns camelCase, normalised rows — same shape
+// this used to build client-side from a raw Supabase select.
 
 export async function fetchProjects(params: ProjectFilters = {}): Promise<ProjectsResponse> {
-  const qs: Record<string, string> = {
-    status: 'eq.active',
-    select: 'id,slug,name,element,category,location,country,partner,certification,certification_id,price_per_tree,total_trees,funded_trees,funders_count,last_evidence_date,evidence_count,tco2e,description,verified,status,created_at,cover_image',
-  }
+  const qs = new URLSearchParams()
+  if (params.element) qs.set('element', params.element)
+  if (params.category && params.category !== 'All') qs.set('category', params.category)
+  if (params.country  && params.country  !== 'All') qs.set('country', params.country)
+  if (params.minPrice !== undefined) qs.set('minPrice', String(params.minPrice))
+  if (params.maxPrice !== undefined) qs.set('maxPrice', String(params.maxPrice))
+  if (params.progress) qs.set('progress', params.progress)
+  qs.set('sort', params.sort || 'newest')
+  qs.set('limit', '50')
 
-  if (params.element) qs['element'] = `eq.${params.element}`
-  if (params.category && params.category !== 'All') qs['category'] = `eq.${params.category}`
-  if (params.country  && params.country  !== 'All') qs['country']  = `ilike.%${params.country}%`
-  if (params.minPrice !== undefined) qs['price_per_tree'] = `gte.${params.minPrice}`
-  if (params.maxPrice !== undefined) qs['price_per_tree'] = `lte.${params.maxPrice}`
-
-  // Sorting
-  if (params.sort === 'price')    qs['order'] = 'price_per_tree.asc'
-  else if (params.sort === 'progress') qs['order'] = 'funded_trees.desc'
-  else                            qs['order'] = 'created_at.desc'
-
-  qs['limit'] = '50'
-
-  const rows = await sbFetch<ProjectRow[]>('projects', qs)
-  let projects = rows.map(rowToProject)
-
-  // Post-fetch progress filter
-  if (params.progress === 'under50') {
-    projects = projects.filter(p => p.fundedTrees / p.totalTrees < 0.5)
-  } else if (params.progress === 'over50') {
-    projects = projects.filter(p => p.fundedTrees / p.totalTrees >= 0.5)
-  }
-
-  return { data: projects, count: projects.length }
+  const res = await fetch(`${BASE_URL}/api/projects?${qs.toString()}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const json = await res.json()
+  const projects: Project[] = (json.data || []).map((p: Project) => ({ ...p, tCO2e: Number(p.tCO2e) }))
+  return { data: projects, count: json.count ?? projects.length }
 }
 
 export async function fetchProject(slugOrId: string): Promise<Project> {
-  // Try by slug first
-  const bySlug = await sbFetch<ProjectRow[]>('projects', {
-    select: '*',
-    slug: `eq.${slugOrId}`,
-    limit: '1',
-  })
-  if (bySlug && bySlug.length > 0) return rowToProject(bySlug[0])
-
-  // Fallback: try by id
-  const byId = await sbFetch<ProjectRow[]>('projects', {
-    select: '*',
-    id: `eq.${slugOrId}`,
-    limit: '1',
-  })
-  if (byId && byId.length > 0) return rowToProject(byId[0])
-
-  throw new Error('Project not found')
+  const res = await fetch(`${BASE_URL}/api/projects/${encodeURIComponent(slugOrId)}`)
+  if (res.status === 404) throw new Error('Project not found')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const p = await res.json()
+  return { ...p, tCO2e: Number(p.tCO2e) }
 }
 
 export async function fetchProjectCategories(): Promise<{ categories: string[] }> {
-  const rows = await sbFetch<{ category: string }[]>('projects', {
-    select: 'category',
-    status: 'eq.active',
-  })
-  const cats = ['All', ...Array.from(new Set(rows.map(r => r.category).filter(Boolean)))]
-  return { categories: cats }
+  const res = await fetch(`${BASE_URL}/api/projects/meta/categories`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }
 
 // ── Ledger ────────────────────────────────────────────────────────────────────
 
-interface LedgerRow {
-  id: string
-  date: string
-  project: string
-  funder: string
-  trees: number
-  t_co2e: number
-  verified: boolean
-  tx_hash: string
-}
-
 export async function fetchLedgerEntries(params: { search?: string; limit?: number; offset?: number } = {}): Promise<{ data: LedgerEntry[]; count: number }> {
-  const qs: Record<string, string> = {
-    select: 'id,date,project,funder,trees,t_co2e,verified,tx_hash',
-    order:  'created_at.desc',
-    limit:  String(params.limit || 200),  // fetch more so client-side search works across all entries
-  }
-  if (params.offset) qs['offset'] = String(params.offset)
+  const qs = new URLSearchParams()
+  qs.set('limit', String(params.limit || 200))  // fetch more so client-side search works across all entries
+  if (params.offset) qs.set('offset', String(params.offset))
 
-  const rows = await sbFetch<LedgerRow[]>('ledger_entries', qs)
-
-  // Map snake_case DB fields to camelCase LedgerEntry type
-  const mapped: LedgerEntry[] = rows.map(r => ({
-    id:       r.id,
-    date:     r.date,
-    project:  r.project,
-    funder:   r.funder,
-    trees:    r.trees,
-    tCO2e:    r.t_co2e,
-    verified: r.verified,
-    txHash:   r.tx_hash,
-  }))
+  const res = await fetch(`${BASE_URL}/api/ledger?${qs.toString()}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const json = await res.json()
+  const mapped: LedgerEntry[] = json.data || []
 
   // Client-side search: filter by project, funder, or entry ID
   const filtered = params.search
@@ -212,59 +72,20 @@ export async function fetchLedgerEntries(params: { search?: string; limit?: numb
 }
 
 export async function fetchPlatformStats(): Promise<{ treesFunded: number; tCO2eVerified: number; projectsActive: number }> {
-  const rows = await sbFetch<{ trees_funded: number; t_co2e_verified: number; projects_active: number }[]>('platform_stats', {
-    select: 'trees_funded,t_co2e_verified,projects_active',
-    limit:  '1',
-  })
-  const r = rows[0] || { trees_funded: 0, t_co2e_verified: 0, projects_active: 0 }
-  return { treesFunded: r.trees_funded, tCO2eVerified: Number(r.t_co2e_verified), projectsActive: r.projects_active }
+  const res = await fetch(`${BASE_URL}/api/stats`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }
 
 // ── Profiles ──────────────────────────────────────────────────────────────────
 
-interface ProfileRow {
-  id: string
-  name: string
-  type: string
-  location: string
-  avatar: string
-  trees: number
-  t_co2e: string | number
-  created_at: string
-}
-
 export async function fetchProfiles(params: { type?: string } = {}): Promise<{ data: Profile[] }> {
-  const qs: Record<string, string> = {
-    select: 'id,name,type,location,avatar,trees,t_co2e,created_at',
-    order:  'trees.desc',
-    // Only show profiles with trees > 0 (real users with actual impact)
-    trees:  'gt.0',
-  }
-  if (params.type && params.type !== 'All') qs['type'] = `eq.${params.type}`
-  const rows = await sbFetch<ProfileRow[]>('profiles', qs)
+  const qs = new URLSearchParams()
+  if (params.type && params.type !== 'All') qs.set('type', params.type)
 
-  // Map snake_case t_co2e → camelCase tCO2e, and normalize type casing
-  const mapped: Profile[] = rows.map(r => ({
-    id:       r.id,
-    name:     r.name,
-    type:     (r.type?.toLowerCase() === 'business' ? 'organisation' : 'individual') as Profile['type'],
-    location: r.location,
-    avatar:   r.avatar || '',
-    trees:    r.trees,
-    tCO2e:    Number(r.t_co2e) || 0,
-  }))
-
-  return { data: mapped }
-}
-
-export async function fetchProfileRaw(id: string): Promise<Profile> {
-  const rows = await sbFetch<Profile[]>('profiles', {
-    select: '*',
-    id:     `eq.${id}`,
-    limit:  '1',
-  })
-  if (!rows || rows.length === 0) throw new Error('Profile not found')
-  return rows[0]
+  const res = await fetch(`${BASE_URL}/api/profiles?${qs.toString()}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }
 
 // ── Fund flow ─────────────────────────────────────────────────────────────────
@@ -544,62 +365,16 @@ export interface UserImpactData {
   stats: UserImpactStats
 }
 
-// ── individual_fundings row type ──────────────────────────────────────────────
-interface IndividualFundingRow {
-  id: string
-  user_id: string
-  project_id: string
-  trees_funded: number
-  amount_paid: number
-  funded_at: string
-  verification_status: string
-  public_attribution: boolean
-  funder_name: string | null
-  // joined project name (Supabase returns array for foreign table joins)
-  projects?: { name: string }[] | null
-}
-
 /**
- * Fetch all funding records for the currently logged-in user.
- * Queries individual_fundings by user_id (UUID) — reliable, not name-based.
- * Joins project name from projects table.
- * Returns derived stats (trees, tCO2e, unique projects, funds invested).
+ * Fetch all funding records for the currently logged-in user, from
+ * GET /api/my-impact — an authed route that scopes the query to req.userId
+ * server-side (used to query individual_fundings directly, relying on RLS
+ * to do that same scoping in the browser instead).
  */
 export async function fetchUserImpact(userId: string): Promise<UserImpactData> {
   if (!userId) return { entries: [], stats: { trees: 0, tCO2e: 0, projects: 0, fundsInvested: 0 } }
 
-  const { data, error } = await supabase
-    .from('individual_fundings')
-    .select('id,user_id,project_id,trees_funded,amount_paid,funded_at,verification_status,public_attribution,funder_name,projects(name)')
-    .eq('user_id', userId)
-    .order('funded_at', { ascending: false })
-    .limit(200)
-
-  if (error) throw new Error(error.message)
-  const rows = (data ?? []) as IndividualFundingRow[]
-
-  const entries: UserImpactEntry[] = rows.map(r => ({
-    id:       r.id,
-    date:     r.funded_at ? r.funded_at.split('T')[0] : '',
-    project:  r.projects?.[0]?.name ?? r.project_id,
-    trees:    r.trees_funded,
-    tCO2e:    Math.round(r.trees_funded * 0.017 * 10) / 10,
-    verified: r.verification_status === 'verified',
-    txHash:   '',
-  }))
-
-  const uniqueProjects  = new Set(entries.map(e => e.project)).size
-  const totalTrees      = entries.reduce((s, e) => s + (e.trees || 0), 0)
-  const totalTCO2e      = entries.reduce((s, e) => s + (e.tCO2e || 0), 0)
-  const totalFunds      = rows.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0)
-
-  return {
-    entries,
-    stats: {
-      trees:         totalTrees,
-      tCO2e:         Math.round(totalTCO2e * 10) / 10,
-      projects:      uniqueProjects,
-      fundsInvested: Math.round(totalFunds),
-    },
-  }
+  const res = await fetch(`${BASE_URL}/api/my-impact`, { headers: await getAuthHeaders() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }

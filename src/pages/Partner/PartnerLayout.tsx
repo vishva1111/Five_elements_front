@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import NotificationBell from '../../components/ui/NotificationBell'
 import { useAuth } from '../../contexts/AuthContext'
@@ -26,14 +26,28 @@ interface PartnerLayoutProps {
 }
 
 export default function PartnerLayout({ children, title, subtitle }: PartnerLayoutProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed]       = useState(false)
+  const [mobileOpen, setMobileOpen]     = useState(false)
+  const [isMobile, setIsMobile]         = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const { signOut, user } = useAuth()
 
+  // Detect mobile breakpoint
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    setIsMobile(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  // Close mobile sidebar on route change
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
+
   const sidebarW  = collapsed ? '64px' : '240px'
-  const labelDisp = collapsed ? 'none' : 'block'
+  const labelDisp = isMobile ? 'block' : (collapsed ? 'none' : 'block')
 
   async function handleLogout() {
     await signOut()
@@ -44,11 +58,27 @@ export default function PartnerLayout({ children, title, subtitle }: PartnerLayo
     ? user.displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
     : 'PA'
 
+  function handleToggle() {
+    if (isMobile) setMobileOpen(o => !o)
+    else setCollapsed(c => !c)
+  }
+
   return (
     <div className="db-shell">
 
+      {/* Mobile overlay backdrop */}
+      {isMobile && (
+        <div
+          className={`db-sidebar-overlay${mobileOpen ? ' db-sidebar-overlay--visible' : ''}`}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       {/* SIDEBAR */}
-      <aside className="db-sidebar" style={{ width: sidebarW }}>
+      <aside
+        className={`db-sidebar${isMobile && mobileOpen ? ' db-sidebar--open' : ''}`}
+        style={isMobile ? undefined : { width: sidebarW }}
+      >
         <div className="db-sidebar__logo">
           <FiveElementsIcon size={26} />
           <span className="db-sidebar__brand" style={{ display: labelDisp }}>
@@ -66,6 +96,7 @@ export default function PartnerLayout({ children, title, subtitle }: PartnerLayo
                 key={n.to}
                 to={n.to}
                 className={`db-nav${isActive ? ' db-nav--active' : ''}`}
+                onClick={() => isMobile && setMobileOpen(false)}
               >
                 <span className="db-nav__icon">{n.icon}</span>
                 <span className="db-nav__label" style={{ display: labelDisp }}>{n.label}</span>
@@ -113,7 +144,7 @@ export default function PartnerLayout({ children, title, subtitle }: PartnerLayo
           <button
             type="button"
             className="db-topbar__toggle"
-            onClick={() => setCollapsed(c => !c)}
+            onClick={handleToggle}
             aria-label="Toggle sidebar"
           >☰</button>
           <div className="db-topbar__title-wrap">
