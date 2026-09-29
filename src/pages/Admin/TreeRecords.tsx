@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { supabase } from '../../supabaseClient'
+import { useAuth } from '../../contexts/AuthContext'
+import { API_URL as API } from '../../config/api'
 import AdminLayout from './AdminLayout'
 import './TreeRecords.css'
 
@@ -31,7 +32,13 @@ const HEALTH_LABELS: Record<string, string> = {
   unknown: '❓ Unknown',
 }
 
+// Refetch on this interval instead of a live push subscription — new
+// captures show up within POLL_MS instead of instantly, in exchange for the
+// admin gallery not needing its own Supabase realtime connection.
+const POLL_MS = 20_000
+
 export default function TreeRecords() {
+  const { session } = useAuth()
   const [records, setRecords] = useState<TreeRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,23 +46,18 @@ export default function TreeRecords() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const [stats, setStats] = useState({ total: 0, healthy: 0, sick: 0, dead: 0 })
 
-  const fetchRecords = useCallback(async () => {
-    setLoading(true)
+  const fetchRecords = useCallback(async (showSpinner = true) => {
+    if (showSpinner) setLoading(true)
     setError(null)
     try {
-      let query = supabase
-        .from('tree_records')
-        .select('*')
-        .order('submitted_at', { ascending: false })
+      const qs = filter !== 'all' ? `?health_status=${encodeURIComponent(filter)}` : ''
+      const res = await fetch(`${API}/api/admin/tree-records${qs}`, {
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to load tree records')
 
-      if (filter !== 'all') {
-        query = query.eq('health_status', filter)
-      }
-
-      const { data, error: err } = await query
-      if (err) throw err
-
-      const all = data || []
+      const all: TreeRecord[] = json.records || []
       setRecords(all)
       setStats({
         total: all.length,
@@ -66,33 +68,14 @@ export default function TreeRecords() {
     } catch (err: any) {
       setError(err.message || 'Failed to load tree records')
     } finally {
-      setLoading(false)
+      if (showSpinner) setLoading(false)
     }
-  }, [filter])
+  }, [filter, session?.access_token])
 
   useEffect(() => {
     fetchRecords()
-
-    // Realtime subscription — live updates when mobile app submits
-    const channel = supabase
-      .channel('tree_records_admin')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'tree_records',
-      }, (payload) => {
-        setRecords(prev => [payload.new as TreeRecord, ...prev])
-        setStats(prev => ({
-          ...prev,
-          total: prev.total + 1,
-          healthy: payload.new.health_status === 'healthy' ? prev.healthy + 1 : prev.healthy,
-          sick: payload.new.health_status === 'sick' ? prev.sick + 1 : prev.sick,
-          dead: payload.new.health_status === 'dead' ? prev.dead + 1 : prev.dead,
-        }))
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    const interval = setInterval(() => fetchRecords(false), POLL_MS)
+    return () => clearInterval(interval)
   }, [fetchRecords])
 
   const formatDate = (iso: string) => {
@@ -109,7 +92,7 @@ export default function TreeRecords() {
             <h1 className="tr-title">🌳 Tree Records</h1>
             <p className="tr-subtitle">Live field captures from mobile app — synced in real-time</p>
           </div>
-          <button className="tr-refresh-btn" onClick={fetchRecords} disabled={loading}>
+          <button className="tr-refresh-btn" onClick={() => fetchRecords()} disabled={loading}>
             {loading ? '⟳ Loading...' : '⟳ Refresh'}
           </button>
         </div>

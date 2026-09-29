@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import { API_URL as API_BASE } from '../../config/api'
 
 export interface SubmitProjectDraft {
   // DB draft id (set after first save to backend)
@@ -47,7 +48,6 @@ export interface EvidenceFile {
 }
 
 const STORAGE_KEY = 'fe_submit_draft'
-const API_BASE    = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 const DEFAULT_DRAFT: SubmitProjectDraft = {
   draftId:             '',

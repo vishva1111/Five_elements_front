@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
 // ── Stepper steps ─────────────────────────────────────────────────────────────
@@ -20,6 +21,36 @@ export default function PartnerOnboarding() {
   const [appStatus,   setAppStatus]   = useState<AppStatus>('draft')
   const [submitting,  setSubmitting]  = useState(false)
   const [error,       setError]       = useState<string | null>(null)
+  const [checking,    setChecking]    = useState(true)
+
+  const token = session?.access_token
+
+  // An application already exists for most returning visitors — read its real
+  // status so the pending / needs-info / rejected / approved banners can show.
+  // Without this the banners below were unreachable: appStatus never left 'draft'.
+  useEffect(() => {
+    if (!token) return
+    fetch(`${API}/api/partner/profile`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async r => {
+        if (r.status === 404) return null          // no application yet — show the form
+        if (r.status === 403) return null          // not a partner account yet
+        const json = await r.json()
+        return r.ok ? json.profile : null
+      })
+      .then(profile => {
+        if (!profile) return
+        const serverStatus = String(profile.status || 'pending')
+        const mapped: AppStatus =
+          serverStatus === 'approved'   ? 'approved'
+          : serverStatus === 'rejected' ? 'rejected'
+          : serverStatus === 'needs_info' || serverStatus === 'more_info' ? 'needs_info'
+          : 'pending'
+        setAppStatus(mapped)
+        setStep(2)
+      })
+      .catch(() => { /* leave the blank form in place */ })
+      .finally(() => setChecking(false))
+  }, [token])
 
   // Form fields — step 0
   const [orgName,     setOrgName]     = useState('')
@@ -42,7 +73,7 @@ export default function PartnerOnboarding() {
     setError(null)
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/partner/apply`,
+        `${API}/api/partner/apply`,
         {
           method: 'POST',
           headers: {
@@ -65,6 +96,16 @@ export default function PartnerOnboarding() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (checking) {
+    return (
+      <div className="p1-shell">
+        <div className="p1-card" style={{ padding: 40, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1, 2, 3].map(i => <div key={i} className="pl-skel" style={{ height: 44 }} />)}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -214,6 +255,14 @@ export default function PartnerOnboarding() {
         )}
 
         {/* Step 2: In review */}
+        {step === 2 && appStatus !== 'pending' && (
+          <div style={{ padding: '32px 30px', textAlign: 'center' }}>
+            <button type="button" className="pl-btn pl-btn--primary" onClick={() => navigate('/partner/dashboard')}>
+              Go to dashboard →
+            </button>
+          </div>
+        )}
+
         {step === 2 && appStatus === 'pending' && (
           <div style={{ padding: '32px 30px', textAlign: 'center' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>⏳</div>

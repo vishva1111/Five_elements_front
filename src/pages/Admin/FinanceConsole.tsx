@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL as API } from '../../config/api'
 import './Admin.css'
 
 interface Transaction {
@@ -38,7 +39,6 @@ export default function FinanceConsole() {
   const [loading, setLoading] = useState(true)
   const [filter,  setFilter]  = useState<'all' | 'funding' | 'payout' | 'refund' | 'fee'>('all')
 
-  const API     = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const headers = { Authorization: `Bearer ${session?.access_token || ''}` }
 
   useEffect(() => {

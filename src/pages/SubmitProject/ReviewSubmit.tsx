@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import SubmitProjectLayout from './SubmitProjectLayout'
 import { useSubmitProject } from './useSubmitProject'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL } from '../../config/api'
 import './SubmitProject.css'
 
 type ReviewState = 'draft' | 'inreview' | 'moreinfo' | 'verified' | 'selfreported' | 'rejected'
@@ -59,7 +60,7 @@ export default function ReviewSubmit() {
     setError(null)
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/submit-project`,
+        `${API_URL}/api/submit-project`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },

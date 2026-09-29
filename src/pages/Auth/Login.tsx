@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { supabase } from '../../supabaseClient'
+import { signInWithOAuth } from '../../services/oauth'
 import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
 import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './Login.css'
@@ -94,14 +94,14 @@ export default function Login() {
     // Navigation handled by useEffect once user state updates
   }
 
-  async function handleGoogle() {
-    await supabase.auth.signInWithOAuth({ provider: 'google',  options: { redirectTo: window.location.origin + '/welcome' } })
+  function handleGoogle() {
+    signInWithOAuth('google', window.location.origin + '/welcome')
   }
-  async function handleMicrosoft() {
-    await supabase.auth.signInWithOAuth({ provider: 'azure',   options: { redirectTo: window.location.origin + '/welcome' } })
+  function handleMicrosoft() {
+    signInWithOAuth('azure', window.location.origin + '/welcome')
   }
-  async function handleApple() {
-    await supabase.auth.signInWithOAuth({ provider: 'apple',   options: { redirectTo: window.location.origin + '/welcome' } })
+  function handleApple() {
+    signInWithOAuth('apple', window.location.origin + '/welcome')
   }
 
   return (

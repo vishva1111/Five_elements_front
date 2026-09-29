@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '../supabaseClient'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { API_URL as BACKEND } from '../config/api'
+import { setTokens, getTokens, clearTokens, getValidAccessToken } from '../services/authTokens'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type UserRole = 'individual' | 'business' | 'partner' | 'admin'
+export type UserRole = 'individual' | 'business' | 'partner' | 'admin' | 'field_user'
 
 export interface AuthUser {
   id: string
@@ -15,9 +15,16 @@ export interface AuthUser {
   status: string          // 'active' | 'pending' | etc.
 }
 
+// Every page that reads `session` only ever uses `session.access_token` for
+// the Authorization header — this is the full shape that's actually needed,
+// not the full Supabase Session type this used to carry.
+export interface AuthSession {
+  access_token: string
+}
+
 interface AuthContextValue {
   user: AuthUser | null
-  session: Session | null
+  session: AuthSession | null
   loading: boolean
   signIn:        (email: string, password: string) => Promise<{ error: string | null }>
   signUp:        (fullName: string, email: string, password: string, role?: UserRole) => Promise<{ error: string | null; emailConfirmationRequired?: boolean; roleAdded?: boolean }>
@@ -42,136 +49,161 @@ export const ROLE_HOME: Record<UserRole, string> = {
   business:   '/business',
   partner:    '/partner',
   admin:      '/admin',
+  // Field users work in the mobile app; the web app has no console for them,
+  // so send them somewhere real rather than to an undefined route.
+  field_user: '/impact',
 }
 
-// ── Helper: fetch profile row ─────────────────────────────────────────────────
-async function fetchProfile(userId: string): Promise<{
+interface MeResponse {
+  id: string
+  email: string
   role: UserRole
   roles: UserRole[]
   displayName: string
   isFirstLogin: boolean
   status: string
-} | null> {
-  // Try auth_id column first
-  const { data: byAuthId } = await supabase
-    .from('profiles')
-    .select('role, roles, display_name, is_first_login, status')
-    .eq('auth_id', userId)
-    .maybeSingle()
+}
 
-  if (byAuthId) {
-    const roles = (byAuthId.roles as UserRole[]) || [(byAuthId.role as UserRole) || 'individual']
-    return {
-      role:         (byAuthId.role as UserRole) || 'individual',
-      roles:        roles.length > 0 ? roles : [(byAuthId.role as UserRole) || 'individual'],
-      displayName:  byAuthId.display_name || '',
-      isFirstLogin: byAuthId.is_first_login ?? false,
-      status:       byAuthId.status || 'pending',
-    }
-  }
-
-  // Fallback: some profiles (test users) have UUID stored as id
-  const { data: byId } = await supabase
-    .from('profiles')
-    .select('role, roles, display_name, is_first_login, status')
-    .eq('id', userId)
-    .maybeSingle()
-
-  if (!byId) return null
-
-  const roles = (byId.roles as UserRole[]) || [(byId.role as UserRole) || 'individual']
+function toAuthUser(me: MeResponse): AuthUser {
   return {
-    role:         (byId.role as UserRole) || 'individual',
-    roles:        roles.length > 0 ? roles : [(byId.role as UserRole) || 'individual'],
-    displayName:  byId.display_name || '',
-    isFirstLogin: byId.is_first_login ?? false,
-    status:       byId.status || 'pending',
+    id:           me.id,
+    email:        me.email,
+    role:         me.role,
+    roles:        me.roles?.length ? me.roles : [me.role],
+    displayName:  me.displayName,
+    isFirstLogin: me.isFirstLogin,
+    status:       me.status,
   }
+}
+
+// Supabase drops the session in the URL fragment after an OAuth redirect
+// (#access_token=...&refresh_token=...&expires_in=...) — the SDK used to
+// auto-detect and consume this; now this does it by hand, once, on load.
+function consumeOAuthCallbackHash(): boolean {
+  const hash = window.location.hash
+  if (!hash || !hash.includes('access_token=')) return false
+
+  const params = new URLSearchParams(hash.slice(1))
+  const access_token  = params.get('access_token')
+  const refresh_token = params.get('refresh_token')
+  const expires_in    = params.get('expires_in')
+  if (!access_token || !refresh_token) return false
+
+  setTokens({ access_token, refresh_token, expires_in: expires_in ? Number(expires_in) : undefined })
+  // Drop the tokens out of the URL/history — they shouldn't linger visibly.
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  return true
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]       = useState<AuthUser | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [session, setSession] = useState<AuthSession | null>(null)
   const [loading, setLoading] = useState(true)
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function hydrateUser(supabaseUser: User, supabaseSession: Session) {
-    // Retry profile fetch up to 2 times — avoids stale/null profile on slow DB
-    let profile = await fetchProfile(supabaseUser.id)
-    if (!profile) {
-      await new Promise(r => setTimeout(r, 500))
-      profile = await fetchProfile(supabaseUser.id)
+  // Mirrors what the Supabase SDK's autoRefreshToken did: refresh a couple of
+  // minutes before the access token actually expires, and keep `session` (the
+  // thing ~30 pages read for their Authorization header) up to date.
+  function scheduleRefresh(expiresAt: number) {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    const now = Math.floor(Date.now() / 1000)
+    const delayMs = Math.max((expiresAt - now - 120) * 1000, 5000)
+    refreshTimerRef.current = setTimeout(runScheduledRefresh, delayMs)
+  }
+
+  async function runScheduledRefresh() {
+    const stored = getTokens()
+    if (!stored) return
+    try {
+      const res = await fetch(`${BACKEND}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: stored.refreshToken }),
+      })
+      if (!res.ok) {
+        clearTokens()
+        setUser(null)
+        setSession(null)
+        return
+      }
+      const json = await res.json()
+      setTokens(json.session)
+      setSession({ access_token: json.session.access_token })
+      scheduleRefresh(json.session.expires_at)
+    } catch {
+      // Network blip — try again shortly rather than signing the user out.
+      refreshTimerRef.current = setTimeout(runScheduledRefresh, 30_000)
+    }
+  }
+
+  async function hydrateFromStoredTokens(): Promise<void> {
+    const accessToken = await getValidAccessToken()
+    if (!accessToken) {
+      setUser(null)
+      setSession(null)
+      return
     }
 
-    // If profile still null, do NOT default to 'individual' — use empty roles
-    // so ProtectedRoute stays in loading state rather than wrong-role redirect.
-    const activeRole = (profile?.role ?? 'individual') as UserRole
-    const roles      = profile?.roles?.length
-      ? profile.roles as UserRole[]
-      : [activeRole]
+    setSession({ access_token: accessToken })
+    const stored = getTokens()
+    if (stored) scheduleRefresh(stored.expiresAt)
 
-    setSession(supabaseSession)
-    setUser({
-      id:           supabaseUser.id,
-      email:        supabaseUser.email ?? '',
-      role:         activeRole,
-      roles,
-      displayName:  profile?.displayName ?? supabaseUser.email ?? '',
-      isFirstLogin: profile?.isFirstLogin ?? false,
-      status:       profile?.status ?? 'pending',
-    })
+    try {
+      const res = await fetch(`${BACKEND}/api/auth/me`, { headers: { Authorization: `Bearer ${accessToken}` } })
+      if (!res.ok) {
+        clearTokens()
+        setUser(null)
+        setSession(null)
+        return
+      }
+      setUser(toAuthUser(await res.json()))
+    } catch {
+      // Backend unreachable — keep the session (it may just be a network
+      // blip) but no profile to show; ProtectedRoute stays in loading state
+      // rather than bouncing to a wrong-role redirect.
+    }
   }
 
   useEffect(() => {
-    let initialised = false
+    let cancelled = false
 
-    // Step 1: getSession gives us the current session immediately on mount.
-    // We await hydrateUser fully before setLoading(false) so ProtectedRoute
-    // always sees the correct role on hard refresh.
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      if (s?.user) {
-        await hydrateUser(s.user, s)
-      }
-      initialised = true
-      setLoading(false)
-    })
+    async function init() {
+      consumeOAuthCallbackHash()
+      await hydrateFromStoredTokens()
+      if (!cancelled) setLoading(false)
+    }
 
-    // Step 2: onAuthStateChange handles subsequent sign-in / sign-out events.
-    // Skip INITIAL_SESSION (getSession already handled it) and TOKEN_REFRESHED
-    // (token refresh should not re-hydrate user — it would overwrite the active
-    // role the user selected and cause spurious redirects).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      if (event === 'INITIAL_SESSION') return
-      if (event === 'TOKEN_REFRESHED') {
-        // Just update the session token, don't re-fetch profile from DB
-        if (s) setSession(s)
-        return
-      }
+    init()
 
-      if (s?.user) {
-        await hydrateUser(s.user, s)
-      } else {
-        setUser(null)
-        setSession(null)
-      }
-
-      // If getSession somehow hasn't finished yet, mark loading done here too
-      if (!initialised) {
-        initialised = true
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    }
   }, [])
 
   async function signIn(email: string, password: string): Promise<{ error: string | null }> {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return { error: error.message }
-    if (data.session?.user) {
-      await hydrateUser(data.session.user, data.session)
+    try {
+      const res = await fetch(`${BACKEND}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const json = await res.json()
+      if (!res.ok) return { error: json.error ?? 'Login failed' }
+
+      setTokens(json.session)
+      setSession({ access_token: json.session.access_token })
+      const expiresAt = json.session.expires_at ?? Math.floor(Date.now() / 1000) + (json.session.expires_in ?? 3600)
+      scheduleRefresh(expiresAt)
+
+      const meRes = await fetch(`${BACKEND}/api/auth/me`, { headers: { Authorization: `Bearer ${json.session.access_token}` } })
+      if (meRes.ok) setUser(toAuthUser(await meRes.json()))
+
+      return { error: null }
+    } catch (err: any) {
+      return { error: err?.message ?? 'Network error — could not reach server' }
     }
-    return { error: null }
   }
 
   async function signUp(
@@ -180,7 +212,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     role: UserRole = 'individual'
   ): Promise<{ error: string | null; emailConfirmationRequired?: boolean; roleAdded?: boolean }> {
-    const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5000'
     try {
       const res = await fetch(`${BACKEND}/api/auth/signup`, {
         method: 'POST',
@@ -194,20 +225,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailConfirmationRequired: json.emailConfirmationRequired,
         roleAdded: json.roleAdded,
       }
-    } catch {
-      // Fallback: call Supabase directly if backend is unreachable
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { display_name: fullName.trim() } },
-      })
-      if (error) return { error: error.message }
-      return { error: null, emailConfirmationRequired: !data.session }
+    } catch (err: any) {
+      return { error: err?.message ?? 'Network error — could not reach server' }
     }
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    const stored = getTokens()
+    if (stored) {
+      // Best-effort — sign-out must never hang on a network round trip.
+      fetch(`${BACKEND}/api/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${stored.accessToken}` },
+      }).catch(() => {})
+    }
+    clearTokens()
     setUser(null)
     setSession(null)
   }
@@ -219,10 +252,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Update local state immediately for snappy UI
     setUser({ ...user, role })
     // Await DB update so that a hard refresh reads the correct role
-    await supabase
-      .from('profiles')
-      .update({ role })
-      .eq('auth_id', user.id)
+    const accessToken = await getValidAccessToken()
+    await fetch(`${BACKEND}/api/auth/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken ?? ''}` },
+      body: JSON.stringify({ role }),
+    })
   }
 
   return (

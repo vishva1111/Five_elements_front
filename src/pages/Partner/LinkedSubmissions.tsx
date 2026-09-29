@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useCallback, useEffect, useState } from 'react'
+import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL } from '../../config/api'
 
 interface EvidenceFile {
   id: string
@@ -46,12 +47,12 @@ export default function LinkedSubmissions() {
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState<string | null>(null)
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/partner/linked-submissions`,
+        `${API_URL}/api/partner/linked-submissions`,
         { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
       )
       const data = await res.json()
@@ -62,20 +63,13 @@ export default function LinkedSubmissions() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [session])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F5F0EC', fontFamily: 'Inter, sans-serif' }}>
-      {/* Header */}
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #EDE6DF', padding: '16px 32px', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <Link to="/partner" style={{ fontSize: 13, color: '#6B7B6E', textDecoration: 'none' }}>← Partner dashboard</Link>
-        <span style={{ color: '#D8CFC6' }}>|</span>
-        <h1 style={{ fontSize: 17, fontWeight: 800, color: '#112121', margin: 0 }}>Submissions linked to you</h1>
-      </div>
-
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 24px' }}>
+    <PartnerLayout title="Submissions linked to you">
+      <div style={{ maxWidth: 860 }}>
         <p style={{ fontSize: 13.5, color: '#6B7B6E', lineHeight: 1.6, marginBottom: 24 }}>
           These are project submissions where the submitter has named you as the executing partner.
           You can corroborate or raise a concern — the admin reviewer sees your response.
@@ -177,7 +171,7 @@ export default function LinkedSubmissions() {
           )
         })}
       </div>
-    </div>
+    </PartnerLayout>
   )
 }
 
@@ -208,7 +202,7 @@ function PartnerReviewActions({
     setError(null)
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/partner/linked-submissions/${submissionId}/review`,
+        `${API_URL}/api/partner/linked-submissions/${submissionId}/review`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

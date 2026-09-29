@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL as API } from '../../config/api'
 import './Admin.css'
 
 interface EvidenceDetail {
@@ -35,7 +36,6 @@ export default function EvidenceReview() {
   const [done,        setDone]        = useState<'approved' | 'rejected' | null>(null)
   const [error,       setError]       = useState('')
 
-  const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
 
   useEffect(() => {

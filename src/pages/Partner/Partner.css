@@ -233,6 +233,87 @@
   margin-bottom: 12px;
 }
 
+/* ── Form fields ──────────────────────────────────────────────────────────── */
+/* Same primitives as SubmitProject.css (sp-*) — Partner forms use the sp-*
+   classes too, so this console needs its own copy rather than a cross-page
+   import. Keep these two in sync if the shared look changes. */
+.sp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sp-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2B5341;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sp-label--required::after {
+  content: ' *';
+  color: #8B3A00;
+}
+
+.sp-input,
+.sp-select,
+.sp-textarea {
+  border: 1px solid #D8CFC6;
+  border-radius: 10px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #112121;
+  outline: none;
+}
+
+.sp-input,
+.sp-select {
+  height: 42px;
+  padding: 0 12px;
+}
+
+.sp-textarea {
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.sp-input:focus,
+.sp-select:focus,
+.sp-textarea:focus {
+  border-color: #2B5341;
+  box-shadow: 0 0 0 3px rgba(43,83,65,0.1);
+}
+
+.sp-input--error,
+.sp-select--error,
+.sp-textarea--error {
+  border-color: #8B3A00;
+}
+
+.sp-field-hint {
+  font-size: 11.5px;
+  color: #9AA79C;
+  line-height: 1.4;
+}
+
+.sp-field-error {
+  font-size: 11.5px;
+  color: #8B3A00;
+}
+
+.sp-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 700px) {
+  .sp-grid-2 { grid-template-columns: 1fr; }
+}
+
 /* ── Stats strip ─────────────────────────────────────────────────────────── */
 .pl-stats {
   display: grid;

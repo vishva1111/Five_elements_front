@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../../supabaseClient'
+import { signInWithOAuth } from '../../services/oauth'
 import { useAuth } from '../../contexts/AuthContext'
 import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './Signup.css'
@@ -116,14 +116,14 @@ export default function Signup() {
     navigate('/welcome', { replace: true })
   }
 
-  async function handleGoogle() {
-    await supabase.auth.signInWithOAuth({ provider: 'google',  options: { redirectTo: window.location.origin + '/welcome' } })
+  function handleGoogle() {
+    signInWithOAuth('google', window.location.origin + '/welcome')
   }
-  async function handleMicrosoft() {
-    await supabase.auth.signInWithOAuth({ provider: 'azure',   options: { redirectTo: window.location.origin + '/welcome' } })
+  function handleMicrosoft() {
+    signInWithOAuth('azure', window.location.origin + '/welcome')
   }
-  async function handleApple() {
-    await supabase.auth.signInWithOAuth({ provider: 'apple',   options: { redirectTo: window.location.origin + '/welcome' } })
+  function handleApple() {
+    signInWithOAuth('apple', window.location.origin + '/welcome')
   }
 
   // ── Role added screen (existing account, new role added) ───────────────────

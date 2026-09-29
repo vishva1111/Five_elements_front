@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL } from '../../config/api'
 
 interface EvidenceFile {
   id: string
@@ -56,7 +57,7 @@ export default function SubmissionQueue() {
     setError(null)
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/submissions?status=${status}`,
+        `${API_URL}/api/admin/submissions?status=${status}`,
         { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
       )
       const data = await res.json()
@@ -219,7 +220,7 @@ function SubmissionActions({
     setError(null)
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/submissions/${submissionId}/review`,
+        `${API_URL}/api/admin/submissions/${submissionId}/review`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

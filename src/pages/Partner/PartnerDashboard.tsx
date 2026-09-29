@@ -2,7 +2,51 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL } from '../../config/api'
 import './Partner.css'
+
+// project_submissions.status carries values like pending_review / in_review /
+// needs_more_info, none of which have a .pl-badge-- class. Map them onto the
+// six that Partner.css actually defines.
+function badgeClass(s: string) {
+  if (s === 'approved')        return 'approved'
+  if (s === 'rejected')        return 'rejected'
+  if (s === 'in_review')       return 'info'
+  if (s === 'needs_more_info') return 'progress'
+  return 'pending'
+}
+
+interface Alert {
+  id:          string
+  tone:        'warn' | 'info'
+  message:     string
+  actionLabel: string
+  href:        string
+}
+
+interface ActiveProject {
+  id:           string
+  name:         string
+  element:      string
+  location:     string
+  target:       number
+  delivered:    number
+  funded:       number
+  owed:         number
+  progressPct:  number
+  fundersCount: number
+  lastCapture:  string | null
+}
+
+interface FieldActivityItem {
+  id:         string
+  capturedBy: string
+  project:    string
+  species:    string | null
+  quantity:   number
+  eventType:  string
+  capturedAt: string
+}
 
 interface DashboardData {
   stats: {
@@ -12,7 +56,12 @@ interface DashboardData {
     treesFunded:       number
     tco2eVerified:     string
     fundersCount:      number
+    unitsDelivered:    number
+    unitsOwed:         number
   }
+  alerts:         Alert[]
+  activeProjects: ActiveProject[]
+  fieldActivity:  FieldActivityItem[]
   recentSubmissions: {
     id:        string
     title:     string
@@ -35,7 +84,7 @@ export default function PartnerDashboard() {
 
   useEffect(() => {
     fetch(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/partner/dashboard`,
+      `${API_URL}/api/partner/dashboard`,
       { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
     )
       .then(r => r.json())
@@ -54,14 +103,20 @@ export default function PartnerDashboard() {
         {[
           { label: 'Active projects',    val: loading ? '—' : String(stats?.projectsActive ?? 0) },
           { label: 'Evidence pending',   val: loading ? '—' : String(stats?.evidencePending ?? 0) },
-          { label: 'Submissions',        val: loading ? '—' : String(stats?.submissionsTotal ?? 0) },
-          { label: 'Trees funded',       val: loading ? '—' : (stats?.treesFunded ?? 0).toLocaleString() },
+          { label: 'Units funded',       val: loading ? '—' : (stats?.treesFunded ?? 0).toLocaleString('en-IN') },
+          { label: 'Delivered (approved)', val: loading ? '—' : (stats?.unitsDelivered ?? 0).toLocaleString('en-IN') },
+          // P2-01: the Partner's core obligation, and the platform's promise to
+          // funders — it is never hidden behind a click.
+          { label: 'Units owed to funders', val: loading ? '—' : (stats?.unitsOwed ?? 0).toLocaleString('en-IN'), owed: true },
           { label: 'tCO₂e verified',     val: loading ? '—' : (stats?.tco2eVerified ?? '0') },
-          { label: 'Funders',            val: loading ? '—' : String(stats?.fundersCount ?? 0) },
         ].map(s => (
-          <div key={s.label} className="pl-stat">
-            <div className="pl-stat__num">{s.val}</div>
-            <div className="pl-stat__label">{s.label}</div>
+          <div
+            key={s.label}
+            className="pl-stat"
+            style={s.owed ? { background: '#112121', borderColor: '#112121' } : undefined}
+          >
+            <div className="pl-stat__num" style={s.owed ? { color: '#F09125' } : undefined}>{s.val}</div>
+            <div className="pl-stat__label" style={s.owed ? { color: '#AACBA7' } : undefined}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -69,6 +124,72 @@ export default function PartnerDashboard() {
       {error && (
         <div style={{ background: '#FEF0E3', border: '0.5px solid #F5C27A', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#8B3A00', marginBottom: 20 }}>
           {error}
+        </div>
+      )}
+
+      {/* Alert strip — every alert links to where it is resolved (P2-02). */}
+      {!loading && (data?.alerts?.length ?? 0) > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+          {data!.alerts.map(a => (
+            <div
+              key={a.id}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                background: a.tone === 'warn' ? '#FEF0E3' : '#EAF2FA',
+                border: `1px solid ${a.tone === 'warn' ? '#F5C27A' : '#A8C8E8'}`,
+                borderRadius: 10, padding: '11px 16px',
+                fontSize: 13, color: a.tone === 'warn' ? '#8B3A00' : '#185FA5',
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>{a.tone === 'warn' ? '⚑' : 'ℹ'}</span>
+              <span style={{ flex: 1, minWidth: 200 }}>{a.message}</span>
+              <Link
+                to={a.href}
+                style={{ fontWeight: 700, color: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap' }}
+              >
+                {a.actionLabel} →
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Active projects — delivery against target, per project */}
+      {!loading && (data?.activeProjects?.length ?? 0) > 0 && (
+        <div className="pl-card" style={{ marginBottom: 20 }}>
+          <div className="pl-card__title" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            Active projects
+            <Link to="/partner/projects" style={{ fontSize: 12, color: '#185FA5', fontWeight: 600, textDecoration: 'none' }}>All projects →</Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+            {data!.activeProjects.map(p => (
+              <div key={p.id} style={{ border: '1px solid #EDE6DF', borderRadius: 12, padding: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#112121', lineHeight: 1.3 }}>{p.name}</div>
+                  <span className="pl-badge pl-badge--approved" style={{ textTransform: 'capitalize' }}>{p.element}</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: '#9AA79C', margin: '4px 0 12px' }}>📍 {p.location || '—'}</div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#6B7B6E', marginBottom: 4 }}>
+                  <span>{p.delivered.toLocaleString('en-IN')} / {p.target.toLocaleString('en-IN')} delivered</span>
+                  <span style={{ fontWeight: 700, color: '#2B5341' }}>{p.progressPct}%</span>
+                </div>
+                <div style={{ height: 7, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${p.progressPct}%`, background: '#2B5341' }} />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginTop: 10, color: '#6B7B6E' }}>
+                  <span>{p.fundersCount} funder{p.fundersCount === 1 ? '' : 's'}</span>
+                  {p.owed > 0
+                    ? <span style={{ color: '#8B3A00', fontWeight: 700 }}>{p.owed.toLocaleString('en-IN')} owed</span>
+                    : <span style={{ color: '#2B5341', fontWeight: 700 }}>Up to date</span>}
+                </div>
+                {p.lastCapture && (
+                  <div style={{ fontSize: 11, color: '#9AA79C', marginTop: 6 }}>last capture {p.lastCapture}</div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -80,6 +201,7 @@ export default function PartnerDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
               { to: '/partner/projects/new', label: '+ Register new project',  color: '#2B5341' },
+              { to: '/partner/trees/new',    label: '🌳 Add a tree',            color: '#2B5341' },
               { to: '/partner/evidence',     label: '📁 Upload evidence',       color: '#185FA5' },
               { to: '/partner/submissions',  label: '📋 View submissions',      color: '#6B7B6E' },
               { to: '/partner/team',         label: '👥 Manage team',           color: '#6B7B6E' },
@@ -126,7 +248,7 @@ export default function PartnerDashboard() {
                 {data!.recentSubmissions.map(s => (
                   <tr key={s.id}>
                     <td style={{ fontWeight: 600 }}>{s.title}</td>
-                    <td><span className={`pl-badge pl-badge--${s.status}`}>{s.status}</span></td>
+                    <td><span className={`pl-badge pl-badge--${badgeClass(s.status)}`}>{s.status.replace(/_/g, ' ')}</span></td>
                     <td style={{ color: '#9AA79C', fontSize: 12 }}>{s.updatedAt}</td>
                   </tr>
                 ))}
@@ -171,6 +293,40 @@ export default function PartnerDashboard() {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+
+        {/* Field activity — reassures the admin that work is flowing in */}
+        <div className="pl-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="pl-card__title">Field activity</div>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[1,2,3].map(i => <div key={i} className="pl-skel" style={{ height: 32 }} />)}
+            </div>
+          ) : (data?.fieldActivity?.length ?? 0) === 0 ? (
+            <div style={{ fontSize: 13, color: '#9AA79C', padding: '12px 0' }}>
+              No captures yet. Your field team's work will appear here as it arrives.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {data!.fieldActivity.map(a => (
+                <div
+                  key={a.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '9px 0', borderBottom: '0.5px solid #F0EDE8', fontSize: 13,
+                  }}
+                >
+                  <span style={{ fontSize: 15 }}>🌱</span>
+                  <span style={{ fontWeight: 600, color: '#112121' }}>{a.capturedBy}</span>
+                  <span style={{ color: '#6B7B6E' }}>
+                    {a.eventType.toLowerCase()} · {a.quantity}{a.species ? ` ${a.species}` : ''}
+                  </span>
+                  <span style={{ color: '#9AA79C', fontSize: 12 }}>{a.project}</span>
+                  <span style={{ marginLeft: 'auto', color: '#9AA79C', fontSize: 12 }}>{a.capturedAt}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

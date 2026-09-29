@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { supabase } from '../../supabaseClient'
+import { useAuth } from '../../contexts/AuthContext'
 import './SignupModal.css'
 
 interface SignupModalProps {
@@ -13,6 +13,7 @@ interface SignupModalProps {
  * can proceed with the payment.
  */
 export default function SignupModal({ onSuccess, onClose }: SignupModalProps) {
+  const { signIn, signUp } = useAuth()
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [name,     setName]     = useState('')
@@ -27,25 +28,16 @@ export default function SignupModal({ onSuccess, onClose }: SignupModalProps) {
     setError(null)
 
     if (mode === 'signup') {
-      const { data, error: err } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { display_name: name } },
-      })
-      if (err) { setError(err.message); setBusy(false); return }
-
-      // Insert profile row with role = 'individual'
-      if (data.user) {
-        await supabase.from('profiles').upsert({
-          id:             data.user.id,
-          display_name:   name || email.split('@')[0],
-          role:           'individual',
-          is_first_login: false, // they're completing a payment — skip welcome screen
-        })
-      }
+      const { error: err } = await signUp(name || email.split('@')[0], email, password)
+      if (err) { setError(err); setBusy(false); return }
+      // signUp() doesn't sign the account in — mirror the old direct-Supabase
+      // flow (which returned an active session from signUp itself) with an
+      // explicit sign-in, so onSuccess() below hands back a logged-in user.
+      const { error: signInErr } = await signIn(email, password)
+      if (signInErr) { setError(signInErr); setBusy(false); return }
     } else {
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-      if (err) { setError(err.message); setBusy(false); return }
+      const { error: err } = await signIn(email, password)
+      if (err) { setError(err); setBusy(false); return }
     }
 
     setBusy(false)

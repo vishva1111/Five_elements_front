@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { API_URL } from '../../config/api'
 import './Certificate.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -55,7 +56,7 @@ export default function Certificate() {
     const headers: Record<string, string> = {}
     if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`
 
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/certificate/${id}`, { headers })
+    fetch(`${API_URL}/api/certificate/${id}`, { headers })
       .then(r => r.json())
       .then(data => {
         if (data.error) throw new Error(data.error)
