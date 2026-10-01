@@ -189,8 +189,7 @@ export default function App(): React.JSX.Element {
           <Route path="/admin/health"       element={<ProtectedRoute allowedRoles={['admin']}><PlatformHealth /></ProtectedRoute>} />
           <Route path="/admin/config"       element={<ProtectedRoute allowedRoles={['admin']}><Configuration /></ProtectedRoute>} />
           <Route path="/admin/tree-records" element={<ProtectedRoute allowedRoles={['admin']}><TreeRecords /></ProtectedRoute>} />
-
-          {/* ── Fallback ── */}
+{/* ── Fallback ── */}
           <Route path="*" element={<Landing />} />
         </Routes>
         </Suspense>

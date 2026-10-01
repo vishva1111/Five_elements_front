@@ -206,11 +206,46 @@ function SubmissionActions({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [expanded, setExpanded]   = useState(false)
+  // Shown once right after an approval that auto-created a default User for
+  // the project — never re-fetchable, so it has to be caught here before
+  // onDone() reloads the list and this row collapses to "has been approved."
+  const [defaultUserCreds, setDefaultUserCreds] = useState<{ email: string; tempPassword: string; name: string } | null>(null)
 
-  if (['approved', 'rejected'].includes(currentStatus)) {
+  if (['approved', 'rejected'].includes(currentStatus) && !defaultUserCreds) {
     return (
       <div style={{ padding: '10px 20px', borderTop: '1px solid #EDE6DF', fontSize: 12, color: '#9AA79C' }}>
         This submission has been {currentStatus}.
+      </div>
+    )
+  }
+
+  if (defaultUserCreds) {
+    return (
+      <div style={{ margin: '14px 20px', background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '14px 18px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#27500A', marginBottom: 6 }}>
+              Project approved — a default User was created for it ✓
+            </div>
+            <div style={{ fontSize: 12.5, color: '#2B5341', lineHeight: 1.6 }}>
+              <strong>{defaultUserCreds.email}</strong> ({defaultUserCreds.name}) can sign in with this password:
+            </div>
+            <div style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 15, fontWeight: 700, color: '#112121', background: '#fff', border: '1px solid #AACBA7', borderRadius: 6, padding: '6px 12px', display: 'inline-block' }}>
+              {defaultUserCreds.tempPassword}
+            </div>
+            <div style={{ fontSize: 11.5, color: '#6B7B6E', marginTop: 6 }}>
+              Shown once — copy it now. The partner can rename this account to a real person later from Team.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setDefaultUserCreds(null); onDone() }}
+            style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: '#6B7B6E' }}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
       </div>
     )
   }
@@ -229,7 +264,11 @@ function SubmissionActions({
       )
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Action failed')
-      onDone()
+      if (action === 'approve' && data.defaultUser) {
+        setDefaultUserCreds(data.defaultUser)
+      } else {
+        onDone()
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Action failed')
     } finally {
