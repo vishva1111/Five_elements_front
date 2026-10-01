@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Pencil, Trash2 } from 'lucide-react'
 import PartnerLayout from './PartnerLayout'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
@@ -120,8 +123,14 @@ export default function FundersView() {
     f.project.toLowerCase().includes(search.toLowerCase())
   )
 
+  const pg = usePagination(filtered)
+
   const totalTrees  = funders.reduce((s, f) => s + f.treesFunded, 0)
   const totalFunders = funders.length
+
+  // Esc closes the open pop-up; the page behind stays put.
+  useModalBehavior(() => setEditing(null), !!editing)
+  useModalBehavior(() => setConfirmDelete(null), !!confirmDelete)
 
   return (
     <PartnerLayout title="Funders view">
@@ -173,7 +182,7 @@ export default function FundersView() {
           type="text"
           className="sp-input"
           style={{ maxWidth: 320 }}
-          placeholder="Search by name or project…"
+          placeholder="Search by name or project"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -204,7 +213,7 @@ export default function FundersView() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(f => (
+              {pg.items.map(f => (
                 <tr key={f.id}>
                   <td style={{ fontWeight: 600 }}>
                     {f.anonymous ? (
@@ -222,8 +231,8 @@ export default function FundersView() {
                   <td style={{ color: '#9AA79C', fontSize: 12 }}>{f.fundedAt}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button type="button" className="pl-btn pl-btn--ghost" style={{ height: 26, fontSize: 11, padding: '0 8px' }} onClick={() => openEdit(f)}>Edit</button>
-                      <button type="button" className="pl-btn pl-btn--ghost" style={{ height: 26, fontSize: 11, padding: '0 8px', color: '#A32020' }} onClick={() => setConfirmDelete(f)}>Delete</button>
+                      <button type="button" className="pl-btn pl-btn--ghost" style={{ height: 30, width: 30, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => openEdit(f)} title="Edit" aria-label="Edit"><Pencil size={14} /></button>
+                      <button type="button" className="pl-btn pl-btn--ghost" style={{ height: 30, width: 30, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#A32020' }} onClick={() => setConfirmDelete(f)} title="Delete" aria-label="Delete"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -231,6 +240,7 @@ export default function FundersView() {
             </tbody>
           </table>
         )}
+        {!loading && <Pagination {...pg} noun="funder" />}
       </div>
 
       {editing && (

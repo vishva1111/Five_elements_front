@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
@@ -42,6 +43,8 @@ export default function Projects() {
       .finally(() => setLoading(false))
   }, [session])
 
+  const pg = usePagination(projects, 12)
+
   return (
     <PartnerLayout title="Projects" subtitle="Your approved, active projects and their live progress">
 
@@ -68,8 +71,9 @@ export default function Projects() {
           </div>
         </div>
       ) : (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-          {projects.map(p => (
+          {pg.items.map(p => (
             <div key={p.id} className="pl-card" style={{ padding: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                 <div style={{ fontWeight: 700, fontSize: 15.5, color: '#112121', lineHeight: 1.3 }}>{p.name}</div>
@@ -111,6 +115,8 @@ export default function Projects() {
             </div>
           ))}
         </div>
+        <Pagination {...pg} noun="project" />
+        </>
       )}
     </PartnerLayout>
   )

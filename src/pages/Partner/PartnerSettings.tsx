@@ -122,17 +122,17 @@ export default function PartnerSettings() {
 
           <div className="sp-field" style={{ marginBottom: 14 }}>
             <label className="sp-label" htmlFor="ps-type">Organisation type</label>
-            <input id="ps-type" type="text" className="sp-input" placeholder="NGO, Trust, Co-operative…" value={orgType} onChange={e => setOrgType(e.target.value)} />
+            <input id="ps-type" type="text" className="sp-input" placeholder="Enter organisation type" value={orgType} onChange={e => setOrgType(e.target.value)} />
           </div>
 
           <div className="sp-field" style={{ marginBottom: 14 }}>
             <label className="sp-label" htmlFor="ps-web">Website</label>
-            <input id="ps-web" type="url" className="sp-input" placeholder="https://terraroots.org" value={website} onChange={e => setWebsite(e.target.value)} />
+            <input id="ps-web" type="url" className="sp-input" placeholder="Enter website URL" value={website} onChange={e => setWebsite(e.target.value)} />
           </div>
 
           <div className="sp-field" style={{ marginBottom: 14 }}>
             <label className="sp-label" htmlFor="ps-bio">Description</label>
-            <textarea id="ps-bio" className="sp-textarea" rows={3} placeholder="Describe your organisation's mission and work…" value={description} onChange={e => setDescription(e.target.value)} />
+            <textarea id="ps-bio" className="sp-textarea" rows={3} placeholder="Enter organisation description" value={description} onChange={e => setDescription(e.target.value)} />
           </div>
         </div>
 

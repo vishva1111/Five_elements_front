@@ -157,8 +157,10 @@ export default function App(): React.JSX.Element {
           <Route path="/partner/dashboard"  element={<ProtectedRoute allowedRoles={['partner']}><PartnerDashboard /></ProtectedRoute>} />
           <Route path="/partner/projects"     element={<ProtectedRoute allowedRoles={['partner']}><PartnerProjects /></ProtectedRoute>} />
           <Route path="/partner/projects/new" element={<ProtectedRoute allowedRoles={['partner']}><ProjectRegistration /></ProtectedRoute>} />
-          <Route path="/partner/trees"        element={<ProtectedRoute allowedRoles={['partner']}><MyTrees /></ProtectedRoute>} />
-          <Route path="/partner/trees/new"    element={<ProtectedRoute allowedRoles={['partner']}><AddTree /></ProtectedRoute>} />
+          <Route path="/partner/trees"        element={<ProtectedRoute allowedRoles={['partner']}><MyTrees compact /></ProtectedRoute>} />
+          <Route path="/partner/actions"      element={<ProtectedRoute allowedRoles={['partner']}><MyTrees title="Assign action" showAdd /></ProtectedRoute>} />
+          <Route path="/partner/actions/new"  element={<ProtectedRoute allowedRoles={['partner']}><AddTree /></ProtectedRoute>} />
+          <Route path="/partner/trees/new"   element={<ProtectedRoute allowedRoles={['partner']}><AddTree /></ProtectedRoute>} />
           <Route path="/partner/funders/import" element={<ProtectedRoute allowedRoles={['partner']}><ImportFunders /></ProtectedRoute>} />
           {/* Field capture (P4) and the sync queue (P5) are mobile-app screens —
               /app/capture and /app/queue in the TreeApp. They are deliberately

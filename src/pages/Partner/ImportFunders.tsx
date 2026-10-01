@@ -9,6 +9,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useGoBack } from '../../hooks/useGoBack'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
@@ -37,6 +38,7 @@ interface ImportSummary {
 export default function ImportFunders() {
   const { session } = useAuth()
   const navigate    = useNavigate()
+  const goBack      = useGoBack('/partner/funders')
   const fileRef     = useRef<HTMLInputElement>(null)
   const token       = session?.access_token
 
@@ -295,7 +297,7 @@ export default function ImportFunders() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <button type="button" className="pl-btn pl-btn--ghost" onClick={() => navigate('/partner/funders')}>← Back to funders</button>
+          <button type="button" className="pl-btn pl-btn--ghost" onClick={goBack}>← Back</button>
         </div>
       </div>
     </PartnerLayout>

@@ -607,3 +607,6 @@
   .p1-form { grid-template-columns: 1fr; padding: 16px 18px 24px; gap: 14px; }
   .p1-banner { margin: 14px 18px 0; }
 }
+/* Spinning icon for in-progress icon buttons */
+@keyframes pl-spin { to { transform: rotate(360deg); } }
+.spin { animation: pl-spin 0.9s linear infinite; }

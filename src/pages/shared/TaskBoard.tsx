@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 
@@ -312,6 +313,11 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
   // Jump back to page 1 whenever the filters change the result set
   useEffect(() => { setPage(1) }, [filterStatus, filterProject, pageSize])
 
+  // Esc closes the open pop-up; the page behind stays put.
+  useModalBehavior(() => setShowModal(false), showModal)
+  useModalBehavior(() => setShowBulkModal(false), showBulkModal)
+  useModalBehavior(() => { setReviewingId(null); setReviewAction(null); setReviewNotes('') }, reviewingId !== null)
+
   return (
     <Layout title="Task Management" subtitle="One task per tree — assign to Admin or Partner accounts">
       <div style={{ padding: '24px' }}>
@@ -325,10 +331,10 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
           </select>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            <button onClick={() => { setBulkResult(null); setShowBulkModal(true) }} style={btnSecondary}>
+            <button onClick={() => { setBulkResult(null); setBulkForm({ project_id: '', assignee_id: '', priority: 'medium' }); setShowBulkModal(true) }} style={btnSecondary}>
               🌳 Generate from project trees
             </button>
-            <button onClick={() => setShowModal(true)} style={btnPrimary}>+ Create Task</button>
+            <button onClick={() => { setForm({ name: '', project_id: '', assignee_id: '', tree_id: '', target_count: 10, location: '', priority: 'medium', due_date: '' }); setShowModal(true) }} style={btnPrimary}>+ Create Task</button>
           </div>
         </div>
 
@@ -613,7 +619,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
                   value={reviewNotes}
                   onChange={e => setReviewNotes(e.target.value)}
                   rows={3}
-                  placeholder="Add a note about this decision…"
+                  placeholder="Enter a note"
                   style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
@@ -651,7 +657,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
             <form onSubmit={handleCreate}>
               <div style={fieldGroup}>
                 <label style={labelStyle}>Task Name *</label>
-                <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Tree Survey — Phase 1" style={inputStyle} />
+                <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Enter task name" style={inputStyle} />
               </div>
 
               <div style={fieldGroup}>
@@ -703,7 +709,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
 
               <div style={fieldGroup}>
                 <label style={labelStyle}>Location</label>
-                <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. Sector 12, Ahmedabad" style={inputStyle} />
+                <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Enter location" style={inputStyle} />
               </div>
 
               <div style={fieldGroup}>
