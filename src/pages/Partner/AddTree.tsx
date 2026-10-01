@@ -23,6 +23,8 @@ const LAND_TYPES   = ['Roadside', 'Farmland', 'Forest', 'Urban park', 'Riverbank
 interface TeamUser {
   teamMemberId: string
   authId:       string | null
+  /** authId when available, otherwise "member:<teamMemberId>" sentinel */
+  effectiveId:  string
   name:         string
   email:        string
   roleLabel:    string
@@ -102,9 +104,9 @@ export default function AddTree() {
         // really are on this partner's team and can own a record.
         const wanted = searchParams.get('user')
         if (wanted) {
-          const match = list.find(m => m.authId === wanted && m.canRecord)
+          const match = list.find(m => (m.authId === wanted || m.effectiveId === wanted) && m.canRecord)
           if (match) {
-            setUserId(wanted)
+            setUserId(match.effectiveId)
             if (match.projectId) setProjectId(match.projectId)
           }
         }
@@ -259,7 +261,7 @@ export default function AddTree() {
   }
 
   const recordable = users.filter(u => u.canRecord)
-  const selectedUser = users.find(u => u.authId === userId)
+  const selectedUser = users.find(u => u.effectiveId === userId)
 
   return (
     <PartnerLayout title="Add tree" subtitle="Record a tree on behalf of one of your users">
@@ -315,7 +317,7 @@ export default function AddTree() {
                 onChange={e => {
                   const nextId = e.target.value
                   setUserId(nextId)
-                  const chosen = recordable.find(u => u.authId === nextId)
+                  const chosen = recordable.find(u => u.effectiveId === nextId)
                   // A User created for a project always stays on it here — the
                   // assignment made at creation time is what "assigned to a
                   // project" means; this form doesn't get to quietly override it.
@@ -325,7 +327,7 @@ export default function AddTree() {
               >
                 <option value="">Select a user…</option>
                 {recordable.map(u => (
-                  <option key={u.teamMemberId} value={u.authId as string}>
+                  <option key={u.teamMemberId} value={u.effectiveId}>
                     {u.name} — {u.roleLabel}
                   </option>
                 ))}
@@ -359,10 +361,9 @@ export default function AddTree() {
             </div>
           </div>
 
-          {users.some(u => !u.canRecord) && (
+          {users.some(u => !u.authId) && (
             <div style={{ fontSize: 11.5, color: '#9AA79C', lineHeight: 1.5 }}>
-              {users.filter(u => !u.canRecord).length} team member(s) have no sign-in account yet, so work can't be
-              recorded against them.
+              {users.filter(u => !u.authId).length} team member(s) have no sign-in account yet — trees recorded for them will be attributed to the partner account.
             </div>
           )}
         </div>

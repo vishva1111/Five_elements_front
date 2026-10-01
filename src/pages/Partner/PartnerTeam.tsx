@@ -22,6 +22,8 @@ interface TeamMember {
   /** Set for Users (Business/Individual) — the project they were created for. */
   projectId?:   string | null
   projectName?: string | null
+  /** Last password set by the partner — shown in edit modal for reference. */
+  tempPassword?: string | null
 }
 
 /**
@@ -83,7 +85,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
   // Compulsory for Users (Business/Individual) — the project they're being
   // onboarded for. Org-role members (admin/field officer/viewer) don't need one.
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
-  const [inviteProjectId, setInviteProjectId] = useState('')
+  const [inviteProjectIds, setInviteProjectIds] = useState<string[]>([])
   // Optional — if left blank, one is generated and emailed as before.
   const [invitePassword, setInvitePassword] = useState('')
   const [showPassword,   setShowPassword]   = useState(false)
@@ -91,10 +93,12 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
 
   // Edit is a modal rather than an inline row: changing someone's role changes
   // what they can reach, so it deserves a deliberate confirm step.
-  const [editing,    setEditing]    = useState<TeamMember | null>(null)
-  const [editName,   setEditName]   = useState('')
-  const [editRole,   setEditRole]   = useState<TeamRole>('field_officer')
-  const [savingEdit, setSavingEdit] = useState(false)
+  const [editing,          setEditing]          = useState<TeamMember | null>(null)
+  const [editName,         setEditName]         = useState('')
+  const [editRole,         setEditRole]         = useState<TeamRole>('field_officer')
+  const [editPassword,     setEditPassword]     = useState('')
+  const [showEditPassword, setShowEditPassword] = useState(false)
+  const [savingEdit,       setSavingEdit]       = useState(false)
   const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null)
   const [notice,     setNotice]     = useState<string | null>(null)
   // Shown once after a successful invite so the partner can pass the password on
@@ -136,8 +140,8 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
 
   async function handleInvite() {
     if (!inviteEmail) return
-    if (scope === 'users' && !inviteProjectId) {
-      setError('Choose a project for this user.')
+    if (scope === 'users' && inviteProjectIds.length === 0) {
+      setError('Choose at least one project for this user.')
       return
     }
     if (invitePassword && invitePassword.length < 8) {
@@ -157,7 +161,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
           email: inviteEmail,
           role: inviteRole,
           name: inviteName,
-          ...(scope === 'users' ? { project_id: inviteProjectId } : {}),
+          ...(scope === 'users' ? { project_ids: inviteProjectIds } : {}),
           ...(invitePassword ? { password: invitePassword } : {}),
         }),
       })
@@ -172,7 +176,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
       })
       setInviteEmail('')
       setInviteName('')
-      setInviteProjectId('')
+      setInviteProjectIds([])
       setInvitePassword('')
       setShowInvite(false)
       await reload()
@@ -187,24 +191,34 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
     setEditing(m)
     setEditName(m.name || '')
     setEditRole(m.role)
+    setEditPassword(m.tempPassword || '')
+    setShowEditPassword(!!m.tempPassword)
     setError(null)
   }
 
   async function saveEdit() {
     if (!editing) return
     if (!editName.trim()) { setError('Name cannot be empty'); return }
+    if (editPassword && editPassword.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
     setSavingEdit(true)
     setError(null)
     try {
+      const body: Record<string, string> = { name: editName.trim(), role: editRole }
+      if (editPassword.trim()) body.password = editPassword.trim()
       const res = await fetch(`${API}/api/partner/team/${editing.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-        body: JSON.stringify({ name: editName.trim(), role: editRole }),
+        body: JSON.stringify(body),
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to save changes')
       if (d.warning) setNotice(d.warning)
       setEditing(null)
+      setEditPassword('')
+      setShowEditPassword(false)
       await reload()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to save changes')
@@ -379,18 +393,48 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
               </div>
             </div>
             {scope === 'users' && (
-              <div className="sp-field">
-                <label className="sp-label sp-label--required" htmlFor="tm-project">Project</label>
-                <select id="tm-project" className="sp-select" value={inviteProjectId} onChange={e => setInviteProjectId(e.target.value)}>
-                  <option value="">Select a project…</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <div style={{ fontSize: 11.5, color: '#6B7B6E', marginTop: 5, lineHeight: 1.5 }}>
-                  Required — trees recorded for this user stay on this project.
-                </div>
-                {projects.length === 0 && (
-                  <div style={{ fontSize: 11.5, color: '#8B3A00', marginTop: 5 }}>
+              <div className="sp-field" style={{ gridColumn: '1 / -1' }}>
+                <label className="sp-label sp-label--required">Projects</label>
+                {projects.length === 0 ? (
+                  <div style={{ fontSize: 11.5, color: '#8B3A00', marginTop: 4 }}>
                     You have no approved projects yet — register one first.
+                  </div>
+                ) : (
+                  <div style={{
+                    border: '1px solid #D1D9CE',
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    maxHeight: 180,
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                    background: '#fff',
+                  }}>
+                    {projects.map(p => {
+                      const checked = inviteProjectIds.includes(p.id)
+                      return (
+                        <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13.5, color: '#1a3a2a' }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => setInviteProjectIds(prev =>
+                              checked ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                            )}
+                            style={{ accentColor: '#2d6a4f', width: 15, height: 15, cursor: 'pointer' }}
+                          />
+                          {p.name}
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+                <div style={{ fontSize: 11.5, color: '#6B7B6E', marginTop: 5, lineHeight: 1.5 }}>
+                  Select one or more projects — trees recorded for this user roll up to all selected projects.
+                </div>
+                {inviteProjectIds.length > 0 && (
+                  <div style={{ fontSize: 11.5, color: '#2d6a4f', marginTop: 3, fontWeight: 600 }}>
+                    {inviteProjectIds.length} project{inviteProjectIds.length > 1 ? 's' : ''} selected
                   </div>
                 )}
               </div>
@@ -435,7 +479,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
               type="button"
               className="pl-btn pl-btn--primary"
               onClick={handleInvite}
-              disabled={inviting || !inviteEmail || (scope === 'users' && !inviteProjectId)}
+              disabled={inviting || !inviteEmail || (scope === 'users' && inviteProjectIds.length === 0)}
             >
               {inviting ? (scope === 'users' ? 'Creating…' : 'Sending…') : (scope === 'users' ? 'Create user' : 'Send invite')}
             </button>
@@ -619,6 +663,33 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
                 Changing the account type changes what this person can reach as soon as they next sign in.
               </div>
             )}
+
+            <div className="sp-field" style={{ marginTop: 14 }}>
+              <label className="sp-label" htmlFor="ed-password">New password</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  id="ed-password"
+                  type={showEditPassword ? 'text' : 'password'}
+                  className="sp-input"
+                  placeholder="Leave blank to keep current password"
+                  value={editPassword}
+                  onChange={e => setEditPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="pl-btn pl-btn--ghost"
+                  style={{ padding: '0 12px', fontSize: 12 }}
+                  onClick={() => setShowEditPassword(v => !v)}
+                  tabIndex={-1}
+                >
+                  {showEditPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <div style={{ fontSize: 11.5, color: '#6B7B6E', marginTop: 5, lineHeight: 1.5 }}>
+                Optional, min 8 characters — leave blank to keep the current password unchanged.
+              </div>
+            </div>
 
             <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 12 }}>
               {editing.email} · joined {editing.joinedAt}
