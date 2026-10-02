@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Pencil, Trash2 } from 'lucide-react'
 import PartnerLayout from './PartnerLayout'
+import { useToast } from '../../components/ui/Toast'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
@@ -36,7 +37,13 @@ export default function FundersView() {
   const [editError,  setEditError]  = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Funder | null>(null)
   const [deleting,      setDeleting]      = useState(false)
-  const [notice,        setNotice]        = useState<string | null>(null)
+  const toast = useToast()
+  // Success messages show as a snackbar; partial successes as a warning.
+  const setNotice = (m: string | null) => {
+    if (!m) return
+    if (/\bbut\b|not (saved|uploaded)/i.test(m)) toast.warning(m)
+    else toast.success(m)
+  }
 
   const token = session?.access_token
 
@@ -135,12 +142,6 @@ export default function FundersView() {
   return (
     <PartnerLayout title="Funders view">
 
-      {notice && (
-        <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#27500A', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-          <span>✓ {notice}</span>
-          <button type="button" onClick={() => setNotice(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>✕</button>
-        </div>
-      )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
         <button type="button" className="pl-btn pl-btn--primary" onClick={() => navigate('/partner/funders/import')}>

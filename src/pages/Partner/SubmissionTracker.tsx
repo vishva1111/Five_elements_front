@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
+import { useToast } from '../../components/ui/Toast'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
@@ -87,6 +88,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export default function SubmissionTracker() {
   const { session } = useAuth()
+  const toast = useToast()
   const navigate    = useNavigate()
 
   const [submissions, setSubmissions] = useState<Submission[]>([])
@@ -179,12 +181,13 @@ export default function SubmissionTracker() {
         body: JSON.stringify({ review_notes: reviewNotes }),
       })
       if (!res.ok) throw new Error('Failed')
+      toast.success(action === 'approve' ? 'Task approved.' : 'Task rejected.')
       setReviewingId(null)
       setReviewNotes('')
       setReviewAction(null)
       loadPendingTasks()
     } catch {
-      alert('Failed to submit review. Please try again.')
+      toast.error('Failed to submit review. Please try again.')
     } finally {
       setSubmittingReview(false)
     }

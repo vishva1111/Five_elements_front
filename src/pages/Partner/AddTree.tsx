@@ -11,11 +11,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useGoBack } from '../../hooks/useGoBack'
 import PartnerLayout from './PartnerLayout'
+import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import { useSpecies } from '../../constants/treeSpecies'
 import { TREE_STAGES, DEFAULT_STAGE, STAGE_STYLE } from '../../constants/treeStages'
-import { Users, TreePine, FileSpreadsheet, Download, Upload, Leaf, CheckCircle2 } from 'lucide-react'
+import { Users, TreePine, FileSpreadsheet, Download, Upload, Leaf } from 'lucide-react'
 import './Partner.css'
 import '../SubmitProject/SubmitProject.css'
 
@@ -77,11 +78,10 @@ export default function AddTree() {
   const [importing,    setImporting]    = useState(false)
   const [summary,      setSummary]      = useState<ImportSummary | null>(null)
   const [importError,  setImportError]  = useState<string | null>(null)
-  const [importResult, setImportResult] = useState<string | null>(null)
 
   const [saving,    setSaving]    = useState(false)
   const [error,     setError]     = useState<string | null>(null)
-  const [success,   setSuccess]   = useState<string | null>(null)
+  const toast = useToast()
   const [errors,    setErrors]    = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -120,7 +120,6 @@ export default function AddTree() {
     }
     setChecking(true)
     setImportError(null)
-    setImportResult(null)
     setSummary(null)
     try {
       const form = new FormData()
@@ -166,12 +165,9 @@ export default function AddTree() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Import failed')
 
-      setImportResult(
-        data.message
-          ? data.tasksCreated > 0
-            ? `${data.message} ${data.tasksCreated} field verification task${data.tasksCreated > 1 ? 's were' : ' was'} created — assign them to a Field Operator from Team.`
-            : data.message
-          : `${data.imported} records imported.`
+      toast.success(
+        (data.message || `${data.imported} records imported.`)
+        + (data.tasksCreated > 0 ? ` ${data.tasksCreated} verification task${data.tasksCreated > 1 ? 's are' : ' is'} in Tasks.` : '')
       )
       setSummary(null)
       setSheet(null)
@@ -216,7 +212,6 @@ export default function AddTree() {
 
     setSaving(true)
     setError(null)
-    setSuccess(null)
     try {
       const form = new FormData()
       form.append('user_id', userId)
@@ -237,19 +232,16 @@ export default function AddTree() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to record tree')
 
-      setSuccess(
-        data.message
-          ? data.tasksCreated > 0
-            ? `${data.message} A field verification task was created — assign it to a Field Operator from Team.`
-            : data.message
-          : 'Tree recorded.'
+      toast.success(
+        (data.message || 'Tree recorded.')
+        + (data.tasksCreated > 0 ? ' Its verification task is in Tasks — assign a field operator there.' : '')
       )
       // Keep user, project and event type — a partner usually files several in
       // a row for the same person. Clear what changes per tree.
       setSpecies(''); setSciName('')
       setQuantity('1')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to record tree')
+      toast.error(err instanceof Error ? err.message : 'Failed to record tree')
     } finally {
       setSaving(false)
     }
@@ -267,15 +259,6 @@ export default function AddTree() {
   return (
     <PartnerLayout title="Assign action" subtitle="Record a tree on behalf of one of your users">
       <div style={{ maxWidth: 1120 }}>
-
-        {success && (
-          <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 12, padding: '12px 16px', fontSize: 13.5, color: '#27500A', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><CheckCircle2 size={18} /> {success} The form is ready for the next one.</span>
-            <button type="button" onClick={() => navigate('/partner/trees')} style={{ background: 'none', border: 'none', color: '#27500A', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit', fontSize: 13 }}>
-              View Action listing →
-            </button>
-          </div>
-        )}
 
         {error && (
           <div style={{ background: '#FEF0E3', border: '0.5px solid #F5C27A', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#8B3A00', marginBottom: 16 }}>
@@ -400,8 +383,11 @@ export default function AddTree() {
 
               <div className="sp-grid-2">
                 <div className="sp-field" style={{ minWidth: 0 }}>
-                  <label className="sp-label" htmlFor="at-qty">Quantity</label>
-                  <input id="at-qty" type="number" min={1} className="sp-input" style={{ width: '100%' }} value={quantity} onChange={e => setQuantity(e.target.value)} />
+                  <label className="sp-label" htmlFor="at-qty">Number of trees</label>
+                  <input id="at-qty" type="number" min={1} max={500} className="sp-input" style={{ width: '100%' }} value={quantity} onChange={e => setQuantity(e.target.value)} />
+                  <div style={{ fontSize: 11.5, color: '#7A867C', marginTop: 4 }}>
+                    {qtyNum > 1 ? `${qtyNum} separate trees — each gets its own Tree ID and task.` : 'Each tree gets its own Tree ID.'}
+                  </div>
                 </div>
                 <div className="sp-field" style={{ minWidth: 0 }}>
                   <label className="sp-label" htmlFor="at-co2">CO₂ absorbed</label>
@@ -462,11 +448,6 @@ export default function AddTree() {
                 }
               />
 
-              {importResult && (
-                <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '11px 15px', fontSize: 13.5, color: '#27500A', marginBottom: 14 }}>
-                  ✓ {importResult}
-                </div>
-              )}
 
               {importError && (
                 <div style={{ background: '#FEF0E3', border: '1px solid #F5C27A', borderRadius: 10, padding: '11px 15px', fontSize: 13, color: '#8B3A00', marginBottom: 14 }}>
@@ -500,8 +481,7 @@ export default function AddTree() {
                   const f = e.target.files?.[0] || null
                   setSheet(f)
                   setSummary(null)
-                  setImportResult(null)
-                  setImportError(null)
+                                setImportError(null)
                   if (f) checkSheet(f)
                 }}
               />
@@ -583,7 +563,7 @@ export default function AddTree() {
                 <SummaryRow label="Project"         value={selectedProject?.name} />
                 <SummaryRow label="Species"         value={species || undefined} />
                 <SummaryRow label="Scientific name" value={sciName || undefined} italic />
-                <SummaryRow label="Quantity"        value={String(qtyNum)} />
+                <SummaryRow label="Trees"           value={`${qtyNum} (${qtyNum === 1 ? '1 Tree ID' : `${qtyNum} Tree IDs`})`} />
                 <SummaryRow label="Stage"           value={stage} />
               </div>
 
@@ -606,7 +586,7 @@ export default function AddTree() {
                   onClick={handleSubmit}
                   disabled={!canSubmit}
                 >
-                  {saving ? 'Saving…' : 'Record tree'}
+                  {saving ? 'Saving…' : qtyNum > 1 ? `Record ${qtyNum} trees` : 'Record tree'}
                 </button>
               </div>
             </div>

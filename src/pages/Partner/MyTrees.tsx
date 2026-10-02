@@ -10,10 +10,11 @@
  */
 import React, { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Pencil, Trash2, Lock, TreePine, X } from 'lucide-react'
+import { Pencil, Trash2, Lock, TreePine, X, Sprout, Loader2, ChevronDown, Check, Leaf, UserCog, Search, ArrowRight } from 'lucide-react'
 import PartnerLayout from './PartnerLayout'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import RecordModal from '../../components/ui/Modal'
+import { useToast } from '../../components/ui/Toast'
 import { TREE_STAGES, DEFAULT_STAGE, STAGE_STYLE } from '../../constants/treeStages'
 import { useSpecies, type TreeSpecies } from '../../constants/treeSpecies'
 import { useAuth } from '../../contexts/AuthContext'
@@ -42,15 +43,28 @@ interface TreeRow {
   submittedAt: string
   surveyDate?: string | null
   taskStatus: string | null
+  taskNeedsAssignee?: boolean
   taskId: string | null
 }
 
+// Under plantation → Planted (task created) → Field Operator assigned → in
+// progress → completed → approved (ledger) / rejected (redo).
 const TASK_STATUS_LABEL: Record<string, { label: string; badge: string }> = {
-  assigned:    { label: 'Awaiting verification', badge: 'pending' },
-  in_progress: { label: 'Verification in progress', badge: 'progress' },
-  completed:   { label: 'Verified — awaiting approval', badge: 'info' },
-  approved:    { label: 'On the ledger', badge: 'approved' },
-  rejected:    { label: 'Verification rejected', badge: 'rejected' },
+  assigned:    { label: 'Assigned to field operator', badge: 'pending' },
+  in_progress: { label: 'Survey in progress', badge: 'progress' },
+  completed:   { label: 'Awaiting your review', badge: 'info' },
+  approved:    { label: 'Verified · on ledger', badge: 'approved' },
+  rejected:    { label: 'Rejected · redo survey', badge: 'rejected' },
+}
+
+function verificationLabel(t: { taskStatus: string | null; taskNeedsAssignee?: boolean; stage?: string }) {
+  if (!t.taskStatus) {
+    return (t.stage || DEFAULT_STAGE) === DEFAULT_STAGE
+      ? { label: 'Not planted yet', badge: '' }
+      : { label: 'No task', badge: '' }
+  }
+  if (t.taskStatus === 'assigned' && t.taskNeedsAssignee) return { label: 'Needs field operator', badge: 'pending' }
+  return TASK_STATUS_LABEL[t.taskStatus] || { label: t.taskStatus, badge: '' }
 }
 
 export default function MyTrees({ title = 'Action listing', showAdd = false, compact = false }: { title?: string; showAdd?: boolean; compact?: boolean }) {
@@ -61,13 +75,26 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
   const [trees,   setTrees]   = useState<TreeRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
-  const [notice,  setNotice]  = useState<string | null>(null)
+  const toast = useToast()
+  // Success messages show as a snackbar; partial successes as a warning.
+  const setNotice = (m: string | null) => {
+    if (!m) return
+    if (/\bbut\b|not (saved|uploaded)/i.test(m)) toast.warning(m)
+    else toast.success(m)
+  }
 
   const [editing,    setEditing]    = useState<TreeRow | null>(null)
   const [editForm,   setEditForm]   = useState<Record<string, string>>({})
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError,  setEditError]  = useState<string | null>(null)
 
+  const [plantingId,    setPlantingId]    = useState<string | null>(null)
+  // Assign action: filter by stage, and select several trees to mark planted at once.
+  const [stageFilter,   setStageFilter]   = useState<string>('all')
+  const [search,        setSearch]        = useState('')
+  const [projectFilter, setProjectFilter] = useState('all')
+  const [selected,      setSelected]      = useState<Set<string>>(new Set())
+  const [bulkPlanting,  setBulkPlanting]  = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<TreeRow | null>(null)
   const [deleting,      setDeleting]      = useState(false)
 
@@ -202,6 +229,55 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
     }))
   }
 
+  const codeOf = (t: TreeRow) => t.treeCode || `TREE-${t.id.slice(0, 8).toUpperCase()}`
+
+  async function patchStage(id: string, stage: string) {
+    const res = await fetch(`${API}/api/partner/trees/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ stage }),
+    })
+    const d = await res.json()
+    if (!res.ok) throw new Error(d.error || 'Failed to update stage')
+    return d as { taskCreated?: unknown }
+  }
+
+  /** Changes one tree's stage; Planted creates its verification task on the server. */
+  async function changeStage(t: TreeRow, stage: string) {
+    if ((t.stage || DEFAULT_STAGE) === stage) return
+    setPlantingId(t.id)
+    try {
+      const d = await patchStage(t.id, stage)
+      setNotice(d.taskCreated
+        ? `${codeOf(t)} marked ${stage.toLowerCase()} — its verification task is now in Tasks. Assign a field operator there.`
+        : `${codeOf(t)} moved to ${stage}.`)
+      setSelected(prev => { const n = new Set(prev); n.delete(t.id); return n })
+      await load()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update stage')
+    } finally {
+      setPlantingId(null)
+    }
+  }
+
+  /** Marks every selected tree as planted. */
+  async function bulkMarkPlanted() {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    setBulkPlanting(true)
+    let ok = 0
+    const failed: string[] = []
+    for (const id of ids) {
+      try { await patchStage(id, 'Planted'); ok++ }
+      catch { failed.push(trees.find(x => x.id === id)?.treeCode || id.slice(0, 8)) }
+    }
+    setBulkPlanting(false)
+    setSelected(new Set())
+    if (ok > 0) toast.success(`${ok} tree${ok > 1 ? 's' : ''} marked planted — ${ok > 1 ? 'their verification tasks are' : 'its verification task is'} now in Tasks.`)
+    if (failed.length > 0) toast.error(`Could not mark ${failed.join(', ')} as planted.`)
+    await load()
+  }
+
   async function saveEdit() {
     if (!editing) return
     setSavingEdit(true)
@@ -217,7 +293,9 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
 
       // CO₂ lives on the species — add a species that is not in the list yet.
       const co2 = Number(editForm.co2)
-      let notice = 'Record updated.'
+      let notice = d.taskCreated
+        ? 'Record updated — the tree is planted, so its verification task is now in Tasks.'
+        : 'Record updated.'
       if (editForm.co2 !== '' && Number.isFinite(co2) && !findSpecies(editForm.species)) {
         try {
           await addSpecies({ name: editForm.species.trim(), scientific: editForm.scientific_name.trim(), co2PerYear: co2 })
@@ -249,7 +327,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
       setConfirmDelete(null)
       await load()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to delete')
+      toast.error(e instanceof Error ? e.message : 'Failed to delete')
       setConfirmDelete(null)
     } finally {
       setDeleting(false)
@@ -260,8 +338,27 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
 
   // Records first, then (on Action listing) the built-in species — one list, one pager.
   type Row = { kind: 'tree'; t: TreeRow } | { kind: 'default'; s: TreeSpecies }
+  const stageOf = (t: TreeRow) => t.stage || DEFAULT_STAGE
+  const co2Of = (t: TreeRow) => { const sp = findSpecies(t.species); return sp ? sp.co2PerYear * t.quantity : 0 }
+  const q = search.trim().toLowerCase()
+  // Search + project narrow the list first; the stage tabs count within that.
+  const searchedTrees = compact ? trees : trees.filter(t =>
+    (projectFilter === 'all' || t.projectId === projectFilter) &&
+    (!q || [codeOf(t), t.species, t.scientificName || '', t.recordedFor, t.projectName].some(v => v.toLowerCase().includes(q)))
+  )
+  const visibleTrees = compact || stageFilter === 'all' ? searchedTrees : searchedTrees.filter(t => stageOf(t) === stageFilter)
+  const projectOptions = [...new Map(trees.map(t => [t.projectId, t.projectName])).entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  const summary = {
+    trees:     trees.reduce((n, t) => n + (t.quantity || 1), 0),
+    records:   trees.length,
+    planted:   trees.filter(t => stageOf(t) !== DEFAULT_STAGE).length,
+    co2:       Math.round(trees.reduce((n, t) => n + co2Of(t), 0) * 10) / 10,
+    needsOp:   trees.filter(t => t.taskNeedsAssignee).length,
+    toReview:  trees.filter(t => t.taskStatus === 'completed').length,
+  }
+  const stageCounts = TREE_STAGES.map(st => ({ st, n: searchedTrees.filter(t => stageOf(t) === st).length })).filter(x => x.n > 0)
   const rows: Row[] = [
-    ...trees.map(t => ({ kind: 'tree' as const, t })),
+    ...visibleTrees.map(t => ({ kind: 'tree' as const, t })),
     ...(compact ? speciesList.map(s => ({ kind: 'default' as const, s })) : []),
   ]
   const pg = usePagination(rows)
@@ -269,21 +366,109 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
   return (
     <PartnerLayout title={title} subtitle={compact ? "Tree species and the CO₂ each one absorbs per year" : "Trees assigned to your users, by project — fix mistakes before they're verified"}>
       <div>
-        {notice && (
-          <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#27500A', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-            <span>✓ {notice}</span>
-            <button type="button" onClick={() => setNotice(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>✕</button>
-          </div>
-        )}
         {error && (
           <div style={{ background: '#FEF0E3', border: '0.5px solid #F5C27A', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#8B3A00', marginBottom: 16 }}>
             {error}
           </div>
         )}
 
+        {!compact && !loading && trees.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 18 }}>
+            <SummaryCard icon={<TreePine size={18} />} label="Total trees" value={summary.trees.toLocaleString('en-IN')} hint={`${summary.records} record${summary.records === 1 ? '' : 's'}`} />
+            <SummaryCard icon={<Sprout size={18} />} label="Planted" value={`${summary.planted} / ${summary.records}`} hint={`${summary.records - summary.planted} under plantation`} />
+            <SummaryCard icon={<Leaf size={18} />} label="CO₂ absorbed" value={summary.co2.toLocaleString('en-IN')} unit="kg/yr" hint="from species in Action listing" />
+            <SummaryCard
+              icon={<UserCog size={18} />}
+              label="Need a field operator"
+              value={String(summary.needsOp)}
+              hint={summary.toReview > 0 ? `${summary.toReview} awaiting your review` : 'Assign them in Tasks'}
+              tone={summary.needsOp > 0 ? 'warn' : 'default'}
+              to="/partner/tasks"
+            />
+          </div>
+        )}
+
+        {!compact && trees.length > 0 && (
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: 420 }}>
+              <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9AA79C', pointerEvents: 'none' }} />
+              <input
+                type="search"
+                className="sp-input"
+                aria-label="Search trees"
+                placeholder="Search by tree ID, species, user or project"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setSelected(new Set()) }}
+                style={{ width: '100%', paddingLeft: 36 }}
+              />
+            </div>
+            {projectOptions.length > 1 && (
+              <select
+                className="sp-select"
+                aria-label="Filter by project"
+                value={projectFilter}
+                onChange={e => { setProjectFilter(e.target.value); setSelected(new Set()) }}
+                style={{ flex: '0 1 260px', minWidth: 180 }}
+              >
+                <option value="all">All projects</option>
+                {projectOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </select>
+            )}
+          </div>
+        )}
+
         {showAdd && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+            {!compact && trees.length > 0 ? (
+              <div role="tablist" aria-label="Filter by stage" style={{ display: 'inline-flex', gap: 4, padding: 4, background: '#EFEAE3', borderRadius: 12, flexWrap: 'wrap' }}>
+                {[{ st: 'all', n: searchedTrees.length }, ...stageCounts].map(({ st, n }) => {
+                  const on = stageFilter === st
+                  const c  = st === 'all' ? null : STAGE_STYLE[st]
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      onClick={() => { setStageFilter(st); setSelected(new Set()) }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 12px', borderRadius: 9, border: 'none',
+                        background: on ? '#fff' : 'transparent', boxShadow: on ? '0 1px 3px rgba(17,33,33,0.12)' : 'none',
+                        color: on ? '#1C2B22' : '#6B7B6E', fontFamily: 'inherit', fontSize: 12.5, fontWeight: on ? 700 : 600, cursor: 'pointer',
+                      }}
+                    >
+                      {c && <span style={{ width: 8, height: 8, borderRadius: 4, background: c.fg }} />}
+                      {st === 'all' ? 'All' : st}
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 999, background: on ? '#EAF3DE' : '#E3DDD4', color: on ? '#27500A' : '#7A867C' }}>{n}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : <span />}
             <Link to="/partner/actions/new" className="pl-btn pl-btn--primary">+ Add trees</Link>
+          </div>
+        )}
+
+        {!compact && selected.size > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#1C3A2B', color: '#fff', borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600 }}>{selected.size} tree{selected.size > 1 ? 's' : ''} selected</span>
+            <button
+              type="button"
+              onClick={bulkMarkPlanted}
+              disabled={bulkPlanting}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 999, border: 'none', background: '#8FD19E', color: '#10301E', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            >
+              {bulkPlanting ? <Loader2 size={15} className="spin" /> : <Sprout size={15} />}
+              {bulkPlanting ? 'Marking…' : 'Mark planted'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              disabled={bulkPlanting}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer' }}
+            >
+              Clear
+            </button>
           </div>
         )}
         {compact && (
@@ -296,6 +481,13 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[1,2,3].map(i => <div key={i} className="pl-skel" style={{ height: 44 }} />)}
+            </div>
+          ) : !compact && trees.length > 0 && visibleTrees.length === 0 ? (
+            <div className="pl-empty">
+              <div className="pl-empty__icon">🔍</div>
+              <div className="pl-empty__title">No trees match</div>
+              <div className="pl-empty__sub">Try another search, project or stage.</div>
+              <button type="button" className="pl-btn pl-btn--ghost" onClick={() => { setSearch(''); setProjectFilter('all'); setStageFilter('all') }}>Clear filters</button>
             </div>
           ) : trees.length === 0 && !compact ? (
             <div className="pl-empty">
@@ -316,9 +508,29 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                     </>
                   ) : (
                     <>
+                      <th style={{ width: 36 }}>
+                        {(() => {
+                          const selectable = pg.items.filter(r => r.kind === 'tree' && stageOf(r.t) === DEFAULT_STAGE).map(r => (r as { t: TreeRow }).t.id)
+                          if (selectable.length === 0) return null
+                          const all = selectable.every(id => selected.has(id))
+                          return (
+                            <input
+                              type="checkbox"
+                              aria-label="Select all trees under plantation on this page"
+                              title="Select all under plantation"
+                              checked={all}
+                              onChange={() => setSelected(prev => {
+                                const n = new Set(prev)
+                                selectable.forEach(id => all ? n.delete(id) : n.add(id))
+                                return n
+                              })}
+                              style={{ width: 16, height: 16, accentColor: '#2B5341', cursor: 'pointer' }}
+                            />
+                          )
+                        })()}
+                      </th>
                       <th>Tree ID</th>
-                      <th>Assigned to</th>
-                      <th>Project</th>
+                      <th>Assigned to · Project</th>
                       <th>Species</th>
                       <th style={{ textAlign: 'right' }}>Qty</th>
                       <th style={{ textAlign: 'right' }}>CO₂ (kg/yr)</th>
@@ -345,7 +557,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                     )
                   }
                   const t = row.t
-                  const st  = t.taskStatus ? TASK_STATUS_LABEL[t.taskStatus] : null
+                  const st  = verificationLabel(t)
                   const sp  = findSpecies(t.species)
                   const sci = t.scientificName || sp?.scientific || '—'
                   const co2 = sp ? +(sp.co2PerYear * t.quantity).toFixed(1) : undefined
@@ -360,6 +572,19 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                       ) : (
                         <>
                           <td>
+                            {stageOf(t) === DEFAULT_STAGE ? (
+                              <input
+                                type="checkbox"
+                                aria-label={`Select ${codeOf(t)}`}
+                                checked={selected.has(t.id)}
+                                onChange={() => setSelected(prev => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })}
+                                style={{ width: 16, height: 16, accentColor: '#2B5341', cursor: 'pointer' }}
+                              />
+                            ) : (
+                              <input type="checkbox" disabled aria-label={`${codeOf(t)} is already planted`} title="Already planted" style={{ width: 16, height: 16, opacity: 0.35 }} />
+                            )}
+                          </td>
+                          <td>
                             <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12, fontWeight: 700, color: '#2B5341', background: '#F2F6EE', border: '1px solid #DCE8D3', borderRadius: 6, padding: '3px 7px', whiteSpace: 'nowrap' }}>
                               {t.treeCode || `TREE-${t.id.slice(0, 8).toUpperCase()}`}
                             </span>
@@ -369,28 +594,57 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                               <span style={{ width: 30, height: 30, borderRadius: 15, background: '#EAF3DE', color: '#2B5341', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 {initials(t.recordedFor)}
                               </span>
-                              <span style={{ fontWeight: 600, color: '#1C2B22' }}>{t.recordedFor}</span>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, color: '#1C2B22', whiteSpace: 'nowrap' }}>{t.recordedFor}</div>
+                                <div style={{ fontSize: 11.5, color: '#7A867C', marginTop: 1 }}>{t.projectName}</div>
+                              </div>
                             </div>
                           </td>
-                          <td style={{ color: '#6B7B6E', fontSize: 12.5 }}>{t.projectName}</td>
                           <td>
                             <div style={{ fontWeight: 600, color: '#1C2B22' }}>{t.species}</div>
                             {sci !== '—' && <div style={{ fontSize: 11.5, color: '#9AA79C', fontStyle: 'italic', marginTop: 1 }}>{sci}</div>}
                           </td>
                           <td style={{ textAlign: 'right', fontWeight: 600 }}>{t.quantity}</td>
-                          <td style={{ textAlign: 'right' }}>{co2 ?? '—'}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            {co2 ?? <span title="This species is not in Action listing — add it there to see its CO₂" style={{ color: '#B5BDB6', cursor: 'help' }}>—</span>}
+                          </td>
                           <td>
                             {(() => {
                               const stg = t.stage || DEFAULT_STAGE
                               const c   = STAGE_STYLE[stg] || { bg: '#F2EFEA', fg: '#6B7B6E' }
-                              return <span className="pl-badge" style={{ background: c.bg, color: c.fg, whiteSpace: 'nowrap' }}>{stg}</span>
+                              return (
+                                <div>
+                                  <StageMenu
+                                    value={stg}
+                                    busy={plantingId === t.id}
+                                    // Verified records are locked; once field work starts it can't go back.
+                                    disabled={locked(t)}
+                                    // Planting is one-way — a planted tree never goes back.
+                                    blocked={stg !== DEFAULT_STAGE ? [DEFAULT_STAGE] : []}
+                                    onChange={next => changeStage(t, next)}
+                                    colors={c}
+                                  />
+                                </div>
+                              )
                             })()}
                           </td>
                           <td>
-                            {st ? (
-                              <span className={`pl-badge pl-badge--${st.badge}`}>{st.label}</span>
+                            {!t.taskStatus && stageOf(t) === DEFAULT_STAGE ? (
+                              // The stage already says it isn't planted — nothing to verify yet.
+                              <span style={{ color: '#B5BDB6' }}>—</span>
+                            ) : t.taskId && (t.taskNeedsAssignee || t.taskStatus === 'completed') ? (
+                              <Link
+                                to="/partner/tasks"
+                                className={`pl-badge pl-badge--${st.badge || 'pending'}`}
+                                title={t.taskNeedsAssignee ? 'Open Tasks to assign a field operator' : 'Open Tasks to review'}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', textDecoration: 'none' }}
+                              >
+                                {st.label} <ArrowRight size={12} />
+                              </Link>
+                            ) : st.badge ? (
+                              <span className={`pl-badge pl-badge--${st.badge}`} style={{ whiteSpace: 'nowrap' }}>{st.label}</span>
                             ) : (
-                              <span className="pl-badge" style={{ background: '#F2EFEA', color: '#6B7B6E' }}>Recorded</span>
+                              <span className="pl-badge" style={{ background: '#F2EFEA', color: '#6B7B6E', whiteSpace: 'nowrap' }}>{st.label}</span>
                             )}
                           </td>
                         </>
@@ -514,12 +768,10 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                 <div className="sp-field" style={{ minWidth: 0 }}>
                   <label className="sp-label" htmlFor="er-stage">Stage</label>
                   <select id="er-stage" className="sp-select" style={FULL} value={editForm.stage} onChange={e => setEditForm(f => ({ ...f, stage: e.target.value }))}>
-                    {TREE_STAGES.map(v => <option key={v}>{v}</option>)}
+                    {TREE_STAGES.map(v => (
+                      <option key={v} disabled={v === DEFAULT_STAGE && (editing.stage || DEFAULT_STAGE) !== DEFAULT_STAGE}>{v}</option>
+                    ))}
                   </select>
-                </div>
-                <div className="sp-field" style={{ minWidth: 0 }}>
-                  <label className="sp-label" htmlFor="er-qty">Quantity</label>
-                  <input id="er-qty" type="number" min={1} className="sp-input" style={FULL} value={editForm.quantity} onChange={e => setEditForm(f => ({ ...f, quantity: e.target.value }))} />
                 </div>
                 <div className="sp-field" style={{ minWidth: 0 }}>
                   <label className="sp-label" htmlFor="er-event">Event type</label>
@@ -591,6 +843,115 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
 }
 
 const FULL: React.CSSProperties = { width: '100%', minWidth: 0 }
+
+function SummaryCard({ icon, label, value, unit, hint, tone = 'default', to }: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  unit?: string
+  hint?: string
+  tone?: 'default' | 'warn'
+  to?: string
+}) {
+  const warn = tone === 'warn'
+  const body = (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderRadius: 14, height: '100%',
+      background: warn ? '#FFF8EC' : '#fff', border: `1px solid ${warn ? '#F5D9A8' : '#EEE9E1'}`,
+    }}>
+      <span style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: warn ? '#FFE9C2' : '#EAF3DE', color: warn ? '#8B5A00' : '#2B5341' }}>
+        {icon}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#7A867C' }}>{label}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#1C2B22', lineHeight: 1.2, marginTop: 2 }}>
+          {value}{unit && <span style={{ fontSize: 12, fontWeight: 600, color: '#7A867C', marginLeft: 4 }}>{unit}</span>}
+        </div>
+        {hint && <div style={{ fontSize: 11.5, color: warn ? '#8B5A00' : '#9AA79C', marginTop: 2 }}>{hint}{to && ' →'}</div>}
+      </div>
+    </div>
+  )
+  return to ? <Link to={to} style={{ textDecoration: 'none' }}>{body}</Link> : body
+}
+
+/** Stage badge that opens a small menu to move the tree to another stage. */
+function StageMenu({ value, colors, onChange, busy, disabled, blocked }: {
+  value: string
+  colors: { bg: string; fg: string }
+  onChange: (stage: string) => void
+  busy: boolean
+  disabled: boolean
+  blocked: string[]
+}) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    const onKey  = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        disabled={disabled || busy}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={disabled ? 'Verified — the stage can no longer change' : 'Change stage'}
+        className="pl-badge"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4, background: colors.bg, color: colors.fg, whiteSpace: 'nowrap',
+          border: 'none', fontFamily: 'inherit', cursor: disabled ? 'default' : 'pointer',
+        }}
+      >
+        {value}
+        {!disabled && (busy ? <Loader2 size={12} className="spin" /> : <ChevronDown size={12} />)}
+      </button>
+
+      {open && (
+        <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30, minWidth: 190, background: '#fff', borderRadius: 12, boxShadow: '0 12px 32px rgba(17,33,33,0.18)', border: '1px solid #EEE9E1', padding: 6 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9AA79C', padding: '6px 10px 4px' }}>Move to stage</div>
+          {TREE_STAGES.map(st => {
+            const c = STAGE_STYLE[st]
+            const isCurrent = st === value
+            const isBlocked = blocked.includes(st)
+            return (
+              <button
+                key={st}
+                type="button"
+                role="menuitem"
+                disabled={isCurrent || isBlocked}
+                title={isBlocked ? 'Already planted — it cannot go back to Under plantation' : undefined}
+                onClick={() => { setOpen(false); onChange(st) }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 8, border: 'none',
+                  background: isCurrent ? '#F5F2EC' : 'transparent', fontFamily: 'inherit', fontSize: 13, textAlign: 'left',
+                  color: isBlocked ? '#B5BDB6' : '#1C2B22', fontWeight: isCurrent ? 700 : 500,
+                  cursor: isCurrent || isBlocked ? 'default' : 'pointer',
+                }}
+                onMouseEnter={e => { if (!isCurrent && !isBlocked) e.currentTarget.style.background = '#F7F5F0' }}
+                onMouseLeave={e => { e.currentTarget.style.background = isCurrent ? '#F5F2EC' : 'transparent' }}
+              >
+                <span style={{ width: 9, height: 9, borderRadius: 5, background: c?.fg || '#9AA79C', opacity: isBlocked ? 0.4 : 1 }} />
+                <span style={{ flex: 1 }}>{st}</span>
+                {isCurrent && <Check size={14} style={{ color: '#2B5341' }} />}
+              </button>
+            )
+          })}
+          <div style={{ fontSize: 11, color: '#9AA79C', padding: '6px 10px 4px', borderTop: '1px solid #F0ECE6', marginTop: 4, lineHeight: 1.4 }}>
+            Planted and later stages create a verification task in Tasks.
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9AA79C', marginBottom: 10 }}>{children}</div>

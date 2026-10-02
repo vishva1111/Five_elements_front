@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
@@ -14,6 +14,9 @@ interface PartnerProject {
   location:         string
   description:      string | null
   totalTrees:       number | null
+  /** Trees the partner has recorded in this project, and how many are planted. */
+  treesRecorded?:   number
+  treesPlanted?:    number
   fundedTrees:      number | null
   progressPct:      number
   tco2e:            number | null
@@ -91,6 +94,21 @@ export default function Projects() {
               <div style={{ height: 8, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden', marginBottom: 16 }}>
                 <div style={{ height: '100%', width: `${p.progressPct}%`, background: '#2B5341', borderRadius: 999 }} />
               </div>
+
+              {/* Trees recorded through Add trees / Assign action */}
+              <Link
+                to="/partner/actions"
+                title="See these trees in Assign action"
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: '#F5F8F1', border: '1px solid #E1EBD8', marginBottom: 14, textDecoration: 'none' }}
+              >
+                <span style={{ fontSize: 16 }}>🌳</span>
+                <span style={{ fontSize: 12.5, color: '#2B5341' }}>
+                  <strong style={{ fontSize: 14 }}>{(p.treesRecorded ?? 0).toLocaleString('en-IN')}</strong> trees added
+                  <span style={{ color: '#7A867C' }}> · </span>
+                  <strong>{(p.treesPlanted ?? 0).toLocaleString('en-IN')}</strong> planted
+                </span>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#2B5341', fontWeight: 700 }}>→</span>
+              </Link>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 12 }}>
                 <div>

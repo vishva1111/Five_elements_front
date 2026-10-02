@@ -4,6 +4,7 @@ import PageLoading from './components/ui/PageLoading'
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 import { AuthProvider } from './contexts/AuthContext'
+import { ToastProvider } from './components/ui/Toast'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 const Login = lazy(() => import('./pages/Auth/Login'))
 const Signup = lazy(() => import('./pages/Auth/Signup'))
@@ -91,6 +92,7 @@ export default function App(): React.JSX.Element {
   // AuthProvider wraps the entire app so useAuth() works everywhere
   return (
     <AuthProvider>
+      <ToastProvider>
       <Router>
         <Suspense fallback={<PageLoading />}>
         <Routes>
@@ -196,6 +198,7 @@ export default function App(): React.JSX.Element {
         </Routes>
         </Suspense>
       </Router>
+      </ToastProvider>
     </AuthProvider>
   )
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Pencil, Trash2, TreePine, UserCheck, UserX, Loader2, UserPlus, Info, Check, Plus, Building2, User as UserIcon, ShieldCheck, Sprout, Eye, EyeOff, Wand2, FileText, Upload, X } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
+import { useToast } from '../../components/ui/Toast'
 import PartnerLayout from './PartnerLayout'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
@@ -139,7 +140,12 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
   const [editDocs,         setEditDocs]         = useState<File[]>([])
   const [removingDoc,      setRemovingDoc]      = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null)
-  const [notice,     setNotice]     = useState<string | null>(null)
+  const toast = useToast()
+  const setNotice = (m: string | null) => {
+    if (!m) return
+    if (/\bbut\b|not (saved|uploaded)/i.test(m)) toast.warning(m)
+    else toast.info(m)
+  }
   const [roleFilter, setRoleFilter] = useState<'all' | TeamRole>('all')
   // Shown once after a successful invite so the partner can pass the password on
   // if the email doesn't arrive. Never re-fetchable.
@@ -248,6 +254,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
         const docError = await uploadDocs(d.id, inviteDocs)
         if (docError) setNotice(`User created, but the documents were not uploaded: ${docError}. You can add them from Edit.`)
       }
+      toast.success(scope === 'users' ? `${roleLabel(inviteRole)} user created.` : 'Invite sent.')
       setNewCredentials({
         email: inviteEmail,
         tempPassword: d.tempPassword || null,
@@ -294,6 +301,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
       if (!res.ok) throw new Error(d.error || 'Failed to remove document')
       const docs = (editing.business?.documents || []).filter(x => x.path !== doc.path)
       setEditing({ ...editing, business: { ...(editing.business as BusinessDetails), documents: docs } })
+      toast.success(`${doc.name} removed.`)
       await reload()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to remove document')
@@ -337,7 +345,8 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
         const docError = await uploadDocs(editing.id, editDocs)
         if (docError) throw new Error(docError)
       }
-      if (d.warning) setNotice(d.warning)
+      if (d.warning) toast.warning(d.warning)
+      toast.success('Changes saved.')
       setEditing(null)
       setEditPassword('')
       setShowEditPassword(false)
@@ -360,9 +369,10 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to update member')
+      toast.success(`${m.name || m.email} ${status === 'active' ? 'reactivated' : 'deactivated'}.`)
       await reload()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to update member')
+      toast.error(e instanceof Error ? e.message : 'Failed to update member')
     } finally {
       setBusyId(null)
     }
@@ -378,11 +388,11 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to remove member')
-      setNotice(d.message || 'Removed from your team.')
+      toast.success(d.message || 'Removed from your team.')
       setConfirmRemove(null)
       await reload()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to remove member')
+      toast.error(e instanceof Error ? e.message : 'Failed to remove member')
     } finally {
       setBusyId(null)
     }
@@ -433,12 +443,6 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
         </div>
       )}
 
-      {notice && (
-        <div style={{ background: '#EAF2FA', border: '1px solid #A8C8E8', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#185FA5', marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-          <span>{notice}</span>
-          <button type="button" onClick={() => setNotice(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 15 }} aria-label="Dismiss">✕</button>
-        </div>
-      )}
 
       {newCredentials && (
         <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '14px 18px', marginBottom: 16 }}>

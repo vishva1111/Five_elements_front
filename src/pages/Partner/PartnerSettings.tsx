@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PartnerLayout from './PartnerLayout'
+import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
@@ -22,7 +23,7 @@ export default function PartnerSettings() {
   const [status,       setStatus]       = useState('')
 
   const [saving, setSaving] = useState(false)
-  const [saved,  setSaved]  = useState(false)
+  const toast = useToast()
 
   const token = session?.access_token
 
@@ -50,7 +51,6 @@ export default function PartnerSettings() {
 
   async function handleSave() {
     setSaving(true)
-    setSaved(false)
     setError(null)
     try {
       const res = await fetch(`${API}/api/partner/profile`, {
@@ -60,8 +60,7 @@ export default function PartnerSettings() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to save')
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      toast.success('Settings saved.')
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -97,11 +96,6 @@ export default function PartnerSettings() {
     <PartnerLayout title="Partner settings">
       <div style={{ maxWidth: 680 }}>
 
-        {saved && (
-          <div style={{ background: '#EAF3DE', border: '0.5px solid #AACBA7', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#2B5341', marginBottom: 20 }}>
-            ✓ Settings saved successfully.
-          </div>
-        )}
         {error && (
           <div style={{ background: '#FEF0E3', border: '0.5px solid #F5C27A', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#8B3A00', marginBottom: 20 }}>
             {error}
