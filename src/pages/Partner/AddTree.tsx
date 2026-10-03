@@ -377,7 +377,7 @@ export default function AddTree() {
                 </div>
                 <div className="sp-field" style={{ minWidth: 0 }}>
                   <label className="sp-label" htmlFor="at-sci">Scientific name</label>
-                  <input id="at-sci" type="text" className="sp-input" placeholder="Filled from the species" value={sciName} readOnly style={{ width: '100%', background: '#FAF8F4', fontStyle: sciName ? 'italic' : 'normal' }} />
+                  <input id="at-sci" type="text" className="sp-input" placeholder="Filled from the species" value={sciName} readOnly style={{ width: '100%', background: '#FAF8F4' }} />
                 </div>
               </div>
 
@@ -562,7 +562,7 @@ export default function AddTree() {
                 <SummaryRow label="User"            value={selectedUser?.name} />
                 <SummaryRow label="Project"         value={selectedProject?.name} />
                 <SummaryRow label="Species"         value={species || undefined} />
-                <SummaryRow label="Scientific name" value={sciName || undefined} italic />
+                <SummaryRow label="Scientific name" value={sciName || undefined} />
                 <SummaryRow label="Trees"           value={`${qtyNum} (${qtyNum === 1 ? '1 Tree ID' : `${qtyNum} Tree IDs`})`} />
                 <SummaryRow label="Stage"           value={stage} />
               </div>

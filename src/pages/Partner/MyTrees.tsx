@@ -44,6 +44,8 @@ interface TreeRow {
   surveyDate?: string | null
   taskStatus: string | null
   taskNeedsAssignee?: boolean
+  /** Older record with nobody named on it — its person can still be set. */
+  canSetAssignee?: boolean
   taskId: string | null
 }
 
@@ -105,7 +107,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
   const [addForm,   setAddForm]   = useState(emptyAdd)
   const [addError,  setAddError]  = useState<string | null>(null)
   const [savingAdd, setSavingAdd] = useState(false)
-  const [teamUsers, setTeamUsers] = useState<{ effectiveId: string; name: string; email: string }[]>([])
+  const [teamUsers, setTeamUsers] = useState<{ effectiveId: string; teamMemberId: string; name: string; email: string }[]>([])
   const [projects,  setProjects]  = useState<{ id: string; name: string }[]>([])
 
   async function openAdd() {
@@ -205,6 +207,13 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
   function openEdit(t: TreeRow) {
     setEditing(t)
     setEditError(null)
+    // Records with nobody named on them can be given their person — load the team for that.
+    if (t.canSetAssignee && teamUsers.length === 0) {
+      fetch(`${API}/api/partner/team-users`, { headers: { Authorization: `Bearer ${token || ''}` } })
+        .then(r => r.json())
+        .then(u => setTeamUsers(u.users || []))
+        .catch(() => {})
+    }
     setEditForm({
       species: t.species || '',
       scientific_name: t.scientificName || '',
@@ -216,6 +225,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
       notes: t.notes || '',
       co2: String(findSpecies(t.species)?.co2PerYear ?? ''),
       survey_date: (t.surveyDate || t.submittedAt || '').slice(0, 10),
+      team_member_id: '',
     })
   }
 
@@ -549,7 +559,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                     return (
                       <tr key={`species-${s.id || s.name}`}>
                         <td style={{ fontWeight: 600 }}>{s.name}</td>
-                        <td style={{ color: '#6B7B6E', fontSize: 12.5, fontStyle: 'italic' }}>{s.scientific}</td>
+                        <td style={{ color: '#6B7B6E', fontSize: 12.5 }}>{s.scientific}</td>
                         <td>{s.co2PerYear}</td>
                         <td style={{ color: '#9AA79C', fontSize: 12 }}>—</td>
                         <td><span className="pl-badge" style={{ fontSize: 11 }}>{s.isDefault === false ? 'Added' : 'Default'}</span></td>
@@ -566,7 +576,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                       {compact ? (
                         <>
                           <td style={{ fontWeight: 600 }}>{t.species}</td>
-                          <td style={{ color: '#6B7B6E', fontSize: 12.5, fontStyle: 'italic' }}>{sci}</td>
+                          <td style={{ color: '#6B7B6E', fontSize: 12.5 }}>{sci}</td>
                           <td>{co2 ?? '—'}</td>
                         </>
                       ) : (
@@ -602,7 +612,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                           </td>
                           <td>
                             <div style={{ fontWeight: 600, color: '#1C2B22' }}>{t.species}</div>
-                            {sci !== '—' && <div style={{ fontSize: 11.5, color: '#9AA79C', fontStyle: 'italic', marginTop: 1 }}>{sci}</div>}
+                            {sci !== '—' && <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 1 }}>{sci}</div>}
                           </td>
                           <td style={{ textAlign: 'right', fontWeight: 600 }}>{t.quantity}</td>
                           <td style={{ textAlign: 'right' }}>
@@ -749,6 +759,18 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
             </button>
           </>}
         >
+          {editing.canSetAssignee && !compact && (
+            <div style={{ marginBottom: 18, padding: 14, borderRadius: 12, background: '#FFF8EC', border: '1px solid #F5D9A8' }}>
+              <label className="sp-label" htmlFor="er-assignee">Assigned to</label>
+              <select id="er-assignee" className="sp-select" style={FULL} value={editForm.team_member_id} onChange={e => setEditForm(f => ({ ...f, team_member_id: e.target.value }))}>
+                <option value="">Not set — shows as {editing.recordedFor}</option>
+                {teamUsers.map(u => <option key={u.teamMemberId} value={u.teamMemberId}>{u.name || u.email}</option>)}
+              </select>
+              <div style={{ fontSize: 11.5, color: '#8B5A00', marginTop: 6, lineHeight: 1.45 }}>
+                This tree was added before assignments were saved, so nobody is named on it. Pick the person it was recorded for.
+              </div>
+            </div>
+          )}
           <SectionLabel>Tree</SectionLabel>
           <SpeciesFields
             list={speciesList}
@@ -983,7 +1005,7 @@ function SpeciesFields({ list, idPrefix, species, scientific, co2, date, onSpeci
       </div>
       <div className="sp-field" style={{ minWidth: 0 }}>
         <label className="sp-label" htmlFor={`${idPrefix}-sci`}>Scientific name</label>
-        <input id={`${idPrefix}-sci`} className="sp-input" style={{ ...FULL, fontStyle: scientific ? 'italic' : 'normal' }} placeholder="Enter scientific name" value={scientific} onChange={e => onChange('scientific', e.target.value)} />
+        <input id={`${idPrefix}-sci`} className="sp-input" style={FULL} placeholder="Enter scientific name" value={scientific} onChange={e => onChange('scientific', e.target.value)} />
       </div>
       <div className="sp-field" style={{ minWidth: 0 }}>
         <label className="sp-label" htmlFor={`${idPrefix}-co2`}>CO₂ absorbed</label>
