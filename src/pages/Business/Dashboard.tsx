@@ -6,6 +6,7 @@ import { API_URL as API } from '../../config/api'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Dashboard.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import ProfileModal from '../../components/ui/ProfileModal'
 
 interface TreeRecord {
   id: string
@@ -117,6 +118,7 @@ export default function Dashboard() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
   useModalBehavior(() => setShowLogoutModal(false), showLogoutModal)
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -212,17 +214,13 @@ export default function Dashboard() {
           ))}
         </nav>
 
-        <div className="db-sidebar__user">
+        <div className="db-sidebar__user" role="button" tabIndex={0} title="View profile" style={{ cursor: 'pointer' }} onClick={() => setShowProfile(true)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowProfile(true) } }}>
           <div className="db-sidebar__avatar">{initials}</div>
           <div className="db-sidebar__user-info" style={{ display: labelDisp }}>
             <div className="db-sidebar__user-name">{user?.displayName || 'User'}</div>
             <div className="db-sidebar__user-org">{user?.email || ''}</div>
           </div>
         </div>
-        <button type="button" onClick={() => navigate('/account/password')} className="db-nav" title="Change password">
-          <span className="db-nav__icon">🔑</span>
-          <span className="db-nav__label" style={{ display: labelDisp }}>Change password</span>
-        </button>
         <button
           type="button"
           onClick={() => setShowLogoutModal(true)}
@@ -232,6 +230,8 @@ export default function Dashboard() {
           <span className="db-nav__icon">⏻</span>
           <span className="db-nav__label" style={{ display: labelDisp }}>Sign out</span>
         </button>
+
+        {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
         {/* Logout confirmation modal */}
         {showLogoutModal && (

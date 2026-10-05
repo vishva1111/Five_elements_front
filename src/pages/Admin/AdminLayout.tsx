@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import NotificationBell from '../../components/ui/NotificationBell'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Admin.css'
+import ProfileModal from '../../components/ui/ProfileModal'
 
 interface NavItem {
   icon:   string
@@ -41,6 +42,7 @@ export default function AdminLayout({ title, subtitle, children, pendingCounts =
   const [collapsed, setCollapsed]   = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile]     = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
 
   // Detect mobile breakpoint
   useEffect(() => {
@@ -122,21 +124,27 @@ export default function AdminLayout({ title, subtitle, children, pendingCounts =
         )}
 
         <div className="ad-sidebar__footer">
-          <div className="ad-sidebar__avatar">{initials}</div>
-          {showLabels && (
-            <div className="ad-sidebar__user">
-              <div className="ad-sidebar__uname">{email}</div>
-              <div className="ad-sidebar__urole">Super Admin</div>
-            </div>
-          )}
-          <button type="button" className="ad-sidebar__signout" title="Change password" onClick={() => navigate('/account/password')}>
-            🔑
-          </button>
+          <div
+            role="button" tabIndex={0} title="View profile"
+            style={{ display: 'flex', alignItems: 'center', gap: 'inherit', flex: 1, minWidth: 0, cursor: 'pointer' }}
+            onClick={() => setShowProfile(true)}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowProfile(true) } }}
+          >
+            <div className="ad-sidebar__avatar">{initials}</div>
+            {showLabels && (
+              <div className="ad-sidebar__user">
+                <div className="ad-sidebar__uname">{email}</div>
+                <div className="ad-sidebar__urole">Super Admin</div>
+              </div>
+            )}
+          </div>
           <button type="button" className="ad-sidebar__signout" title="Sign out" onClick={() => { signOut(); navigate('/login') }}>
             ↩
           </button>
         </div>
       </aside>
+
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
       {/* Main */}
       <main className="ad-main">

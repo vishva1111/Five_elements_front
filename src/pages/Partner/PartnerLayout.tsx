@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import '../Business/Dashboard.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import ProfileModal from '../../components/ui/ProfileModal'
 
 const NAV_ITEMS = [
   { icon: '⬡',  label: 'Dashboard',     to: '/partner/dashboard' },
@@ -12,10 +13,10 @@ const NAV_ITEMS = [
   { icon: '🧑‍🤝‍🧑', label: 'Users',         to: '/partner/users' },
   { icon: '🌳', label: 'Action listing', to: '/partner/trees' },
   { icon: '⚡', label: 'Assign action',  to: '/partner/actions' },
+  { icon: '✅', label: 'Tasks',         to: '/partner/tasks' },
   { icon: '📁', label: 'Evidence vault',to: '/partner/evidence' },
   { icon: '📋', label: 'Submissions',   to: '/partner/submissions' },
   { icon: '🔗', label: 'Linked to me',  to: '/partner/linked-submissions' },
-  { icon: '✅', label: 'Tasks',         to: '/partner/tasks' },
   { icon: '💰', label: 'Funders',       to: '/partner/funders' },
   { icon: '👥', label: 'Team',          to: '/partner/team' },
   { icon: '⚙',  label: 'Settings',      to: '/partner/settings' },
@@ -32,6 +33,7 @@ export default function PartnerLayout({ children, title, subtitle }: PartnerLayo
   const [mobileOpen, setMobileOpen]     = useState(false)
   const [isMobile, setIsMobile]         = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
   useModalBehavior(() => setShowLogoutModal(false), showLogoutModal)
   const location = useLocation()
   const navigate = useNavigate()
@@ -108,17 +110,13 @@ export default function PartnerLayout({ children, title, subtitle }: PartnerLayo
           })}
         </nav>
 
-        <div className="db-sidebar__user">
+        <div className="db-sidebar__user" role="button" tabIndex={0} title="View profile" style={{ cursor: 'pointer' }} onClick={() => setShowProfile(true)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowProfile(true) } }}>
           <div className="db-sidebar__avatar">{initials}</div>
           <div className="db-sidebar__user-info" style={{ display: labelDisp }}>
             <div className="db-sidebar__user-name">{user?.displayName || 'Partner'}</div>
             <div className="db-sidebar__user-org">{user?.email || ''}</div>
           </div>
         </div>
-        <button type="button" onClick={() => navigate('/account/password')} className="db-nav" title="Change password">
-          <span className="db-nav__icon">🔑</span>
-          <span className="db-nav__label" style={{ display: labelDisp }}>Change password</span>
-        </button>
         <button
           type="button"
           onClick={() => setShowLogoutModal(true)}
@@ -128,6 +126,8 @@ export default function PartnerLayout({ children, title, subtitle }: PartnerLayo
           <span className="db-nav__icon">⏻</span>
           <span className="db-nav__label" style={{ display: labelDisp }}>Sign out</span>
         </button>
+
+        {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
         {/* Logout confirmation modal */}
         {showLogoutModal && (
