@@ -24,6 +24,8 @@ export default function Maintenance() {
     return <Navigate to={ROLE_HOME[user.role]} replace />
   }
 
+  const suspended = user.status === 'suspended'
+
   return (
     <div className="maintenance-wrapper">
       <div className="maintenance-card">
@@ -41,19 +43,28 @@ export default function Maintenance() {
         </div>
 
         {/* Heading */}
-        <h1 className="maintenance-title">Under Maintenance</h1>
-        <p className="maintenance-subtitle">Your account is pending approval</p>
+        <h1 className="maintenance-title">{suspended ? 'Account Suspended' : 'Under Maintenance'}</h1>
+        <p className="maintenance-subtitle">{suspended ? 'Your account does not have access right now' : 'Your account is pending approval'}</p>
 
         {/* Message */}
         <div className="maintenance-message">
-          <p>
-            Thank you for registering with <strong>Five Elements CARM</strong>.
-          </p>
-          <p>
-            Your account is currently under review by our team. You will receive
-            an email notification once your account has been approved and you can
-            access the platform.
-          </p>
+          {suspended ? (
+            <p>
+              Your <strong>Five Elements CARM</strong> account has been suspended or
+              was not approved, so you can't use the platform at the moment.
+            </p>
+          ) : (
+            <>
+              <p>
+                Thank you for registering with <strong>Five Elements CARM</strong>.
+              </p>
+              <p>
+                Your account is currently under review by our team. You will receive
+                an email notification once your account has been approved and you can
+                access the platform.
+              </p>
+            </>
+          )}
           <p>
             If you have any questions, please contact us at{' '}
             <a href="mailto:support@fiveelements.com">support@fiveelements.com</a>.

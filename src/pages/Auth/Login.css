@@ -348,3 +348,14 @@
     font-size: 20px;
   }
 }
+
+/* ── Success (password pages) ────────────────────────────────────────────── */
+.li-success {
+  background: #EAF3DE;
+  border: 0.5px solid #B7D7A0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #2B5341;
+  line-height: 1.4;
+}

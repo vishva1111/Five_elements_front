@@ -27,7 +27,7 @@ export default function UsersAndTenants() {
   const [users,   setUsers]   = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [search,  setSearch]  = useState('')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'individual' | 'business' | 'partner' | 'admin'>('all')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'pending' | 'individual' | 'business' | 'partner' | 'admin'>('all')
   const [acting,  setActing]  = useState<string | null>(null)
   const [msg,     setMsg]     = useState('')
 
@@ -41,24 +41,32 @@ export default function UsersAndTenants() {
       .finally(() => setLoading(false))
   }, [session])
 
-  const filtered = users.filter(u => {
-    const matchRole   = roleFilter === 'all' || u.role === roleFilter
-    const matchSearch = !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.name.toLowerCase().includes(search.toLowerCase())
-    return matchRole && matchSearch
-  })
+  const filtered = users
+    .filter(u => {
+      const matchRole   = roleFilter === 'all' || (roleFilter === 'pending' ? u.status === 'pending' : u.role === roleFilter)
+      const matchSearch = !search || u.email.toLowerCase().includes(search.toLowerCase()) || u.name.toLowerCase().includes(search.toLowerCase())
+      return matchRole && matchSearch
+    })
+    // Sign-ups waiting for approval first — they can't use the app until then.
+    .sort((a, b) => Number(b.status === 'pending') - Number(a.status === 'pending'))
 
-  async function toggleSuspend(user: User) {
-    const newStatus = user.status === 'suspended' ? 'active' : 'suspended'
+  const pendingCount = users.filter(u => u.status === 'pending').length
+
+  async function setStatus(user: User, newStatus: User['status']) {
     setActing(user.id)
     try {
-      await fetch(`${API}/api/admin/users/${user.id}`, {
+      const res = await fetch(`${API}/api/admin/users/${user.id}`, {
         method: 'PATCH', headers,
         body: JSON.stringify({ status: newStatus }),
       })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Action failed.')
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u))
-      setMsg(`User ${user.email} ${newStatus === 'suspended' ? 'suspended' : 'reactivated'}.`)
-    } catch {
-      setMsg('Action failed.')
+      const verb = user.status === 'pending'
+        ? (newStatus === 'active' ? 'approved — they have been emailed' : 'rejected')
+        : (newStatus === 'suspended' ? 'suspended' : 'reactivated')
+      setMsg(`User ${user.email} ${verb}.`)
+    } catch (e: any) {
+      setMsg(e.message || 'Action failed.')
     } finally {
       setActing(null)
     }
@@ -97,9 +105,9 @@ export default function UsersAndTenants() {
           onChange={e => setSearch(e.target.value)}
         />
         <div className="ad-tabs" style={{ margin: 0 }}>
-          {(['all', 'individual', 'business', 'partner', 'admin'] as const).map(r => (
+          {(['all', 'pending', 'individual', 'business', 'partner', 'admin'] as const).map(r => (
             <button key={r} type="button" className={`ad-tab${roleFilter === r ? ' ad-tab--active' : ''}`} onClick={() => setRoleFilter(r)}>
-              {r === 'all' ? 'All' : r.charAt(0).toUpperCase() + r.slice(1)}
+              {r === 'all' ? 'All' : r === 'pending' ? `Pending approval (${pendingCount})` : r.charAt(0).toUpperCase() + r.slice(1)}
             </button>
           ))}
         </div>
@@ -148,14 +156,25 @@ export default function UsersAndTenants() {
                     </span>
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className={`ad-btn ad-btn--sm ${u.status === 'suspended' ? 'ad-btn--primary' : 'ad-btn--danger'}`}
-                      disabled={acting === u.id}
-                      onClick={() => toggleSuspend(u)}
-                    >
-                      {acting === u.id ? '…' : u.status === 'suspended' ? 'Reactivate' : 'Suspend'}
-                    </button>
+                    {u.status === 'pending' ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button type="button" className="ad-btn ad-btn--sm ad-btn--primary" disabled={acting === u.id} onClick={() => setStatus(u, 'active')}>
+                          {acting === u.id ? '…' : 'Approve'}
+                        </button>
+                        <button type="button" className="ad-btn ad-btn--sm ad-btn--danger" disabled={acting === u.id} onClick={() => setStatus(u, 'suspended')}>
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`ad-btn ad-btn--sm ${u.status === 'suspended' ? 'ad-btn--primary' : 'ad-btn--danger'}`}
+                        disabled={acting === u.id}
+                        onClick={() => setStatus(u, u.status === 'suspended' ? 'active' : 'suspended')}
+                      >
+                        {acting === u.id ? '…' : u.status === 'suspended' ? 'Reactivate' : 'Suspend'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

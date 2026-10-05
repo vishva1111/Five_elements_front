@@ -219,6 +219,10 @@ export default function Dashboard() {
             <div className="db-sidebar__user-org">{user?.email || ''}</div>
           </div>
         </div>
+        <button type="button" onClick={() => navigate('/account/password')} className="db-nav" title="Change password">
+          <span className="db-nav__icon">🔑</span>
+          <span className="db-nav__label" style={{ display: labelDisp }}>Change password</span>
+        </button>
         <button
           type="button"
           onClick={() => setShowLogoutModal(true)}

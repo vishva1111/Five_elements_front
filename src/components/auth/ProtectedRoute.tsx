@@ -43,7 +43,8 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   // Account pending approval → show maintenance page (admin users bypass this)
-  if (user.status === 'pending' && !user.roles.includes('admin')) {
+  // Not approved yet, or suspended/rejected by an admin — no access until active.
+  if ((user.status === 'pending' || user.status === 'suspended') && !user.roles.includes('admin')) {
     return <Navigate to="/maintenance" replace />
   }
 
