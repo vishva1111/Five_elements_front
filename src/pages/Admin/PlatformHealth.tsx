@@ -49,8 +49,11 @@ export default function PlatformHealth() {
   useEffect(() => {
     setLoading(true)
     fetch(`${API}/api/admin/health`, { headers })
-      .then(r => r.json())
-      .then(d => setData(d))
+      .then(async r => {
+        const d = await r.json()
+        // An error body ({ error }) has no metrics — rendering it would crash the page.
+        setData(r.ok ? d : null)
+      })
       .catch(() => setData(null))
       .finally(() => setLoading(false))
   }, [session, refresh])

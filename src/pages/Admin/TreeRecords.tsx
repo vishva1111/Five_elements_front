@@ -186,17 +186,24 @@ export default function TreeRecords() {
                   )}
 
                   <div className="tr-meta">
-                    <span className="tr-meta-item">
-                      📍 {record.latitude.toFixed(4)}, {record.longitude.toFixed(4)}
-                    </span>
-                    <a
-                      href={`https://www.openstreetmap.org/?mlat=${record.latitude}&mlon=${record.longitude}&zoom=17`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="tr-map-link"
-                    >
-                      View on Map ↗
-                    </a>
+                    {/* Desk-entered trees can be saved without coordinates */}
+                    {record.latitude != null && record.longitude != null ? (
+                      <>
+                        <span className="tr-meta-item">
+                          📍 {Number(record.latitude).toFixed(4)}, {Number(record.longitude).toFixed(4)}
+                        </span>
+                        <a
+                          href={`https://www.openstreetmap.org/?mlat=${record.latitude}&mlon=${record.longitude}&zoom=17`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="tr-map-link"
+                        >
+                          View on Map ↗
+                        </a>
+                      </>
+                    ) : (
+                      <span className="tr-meta-item">📍 No GPS location</span>
+                    )}
                   </div>
 
                   {record.project_id && (

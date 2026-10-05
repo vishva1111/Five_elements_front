@@ -68,9 +68,11 @@ type LayoutProps = { title: string; subtitle?: string; children: React.ReactNode
 interface TaskBoardProps {
   Layout: React.ComponentType<LayoutProps>
   roleLabel: string // shown in the assignee dropdown, e.g. "Admin / Partner"
+  /** Also list planting tasks, so they can be reviewed here. Partners review planting on Assign action. */
+  showPlanting?: boolean
 }
 
-export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
+export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: TaskBoardProps) {
   const { session } = useAuth()
   const toast = useToast()
   const [tasks, setTasks]           = useState<Task[]>([])
@@ -304,10 +306,11 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
 
   // The project selector sits above the summary cards, so it scopes everything below it —
   // the card counts included, not just the table.
-  // Only trees that are already planted belong here. Planting (and anything
-  // for a tree still under plantation) is handled on Assign action.
-  const plantedTasks = tasks.filter(t =>
-    (t.task_type || 'audit') !== 'planting' && (!t.tree_id || (t.tree_stage || 'Under plantation') !== 'Under plantation'))
+  // Audits only belong here once their tree is planted. Planting tasks are
+  // reviewed on Assign action by partners; admins (showPlanting) review them here.
+  const plantedTasks = tasks.filter(t => (t.task_type || 'audit') === 'planting'
+    ? showPlanting
+    : (!t.tree_id || (t.tree_stage || 'Under plantation') !== 'Under plantation'))
   const projectTasks = filterProject === 'all' ? plantedTasks : plantedTasks.filter(t => t.project_id === filterProject)
 
   const filteredTasks = projectTasks.filter(t => {
@@ -340,7 +343,9 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
   useModalBehavior(() => { setReviewingId(null); setReviewAction(null); setReviewNotes('') }, reviewingId !== null)
 
   return (
-    <Layout title="Task Management" subtitle="Audit tasks for planted trees — assign a field operator, then review their survey">
+    <Layout title="Task Management" subtitle={showPlanting
+      ? 'Planting and audit tasks — assign a field operator, then review their capture'
+      : 'Audit tasks for planted trees — assign a field operator, then review their survey'}>
       <div style={{ padding: '24px' }}>
 
         {/* Project selector — scopes everything below it (cards + table).
