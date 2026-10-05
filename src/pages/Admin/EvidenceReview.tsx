@@ -41,8 +41,10 @@ export default function EvidenceReview() {
   useEffect(() => {
     if (!id) return
     fetch(`${API}/api/admin/evidence/${id}`, { headers })
-      .then(r => r.json())
-      .then(d => {
+      .then(async r => {
+        const d = await r.json()
+        // An error body ({ error }) has no files list — rendering it would crash the page.
+        if (!r.ok) { setDetail(null); return }
         setDetail(d)
         setTreesVerified(String(d.treeCount || ''))
         setCo2eVerified(String(d.co2e || ''))

@@ -527,11 +527,13 @@ export default function Dashboard() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                             <span style={{ fontWeight: 700, fontSize: 14, color: '#112121' }}>{rec.species}</span>
                             <span style={{ fontSize: 12, fontWeight: 600, color: healthColor, background: healthColor + '18', borderRadius: 12, padding: '2px 8px' }}>
-                              {healthEmoji} {rec.health_status.charAt(0).toUpperCase() + rec.health_status.slice(1)}
+                              {healthEmoji} {rec.health_status ? rec.health_status.charAt(0).toUpperCase() + rec.health_status.slice(1) : 'Unknown'}
                             </span>
                           </div>
                           <div style={{ fontSize: 11.5, color: '#6B7B6E', marginBottom: 4 }}>
-                            📍 {rec.latitude.toFixed(5)}, {rec.longitude.toFixed(5)}
+                            📍 {rec.latitude != null && rec.longitude != null
+                              ? `${Number(rec.latitude).toFixed(5)}, ${Number(rec.longitude).toFixed(5)}`
+                              : 'No GPS location'}
                           </div>
                           {rec.notes && (
                             <div style={{ fontSize: 12, color: '#6B7B6E', marginBottom: 4, fontStyle: 'italic' }}>{rec.notes}</div>
