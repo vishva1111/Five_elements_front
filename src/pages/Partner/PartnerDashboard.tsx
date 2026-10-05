@@ -33,6 +33,9 @@ interface ActiveProject {
   delivered:    number
   funded:       number
   owed:         number
+  /** Same tree counts as the Projects page. */
+  treesRecorded?: number
+  treesPlanted?:  number
   progressPct:  number
   fundersCount: number
   lastCapture:  string | null
@@ -159,13 +162,37 @@ export default function PartnerDashboard() {
                 </div>
                 <div style={{ fontSize: 11.5, color: '#9AA79C', margin: '4px 0 12px' }}>📍 {p.location || '—'}</div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#6B7B6E', marginBottom: 4 }}>
-                  <span>{p.delivered.toLocaleString('en-IN')} / {p.target.toLocaleString('en-IN')} delivered</span>
-                  <span style={{ fontWeight: 700, color: '#2B5341' }}>{p.progressPct}%</span>
-                </div>
-                <div style={{ height: 7, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${p.progressPct}%`, background: '#2B5341' }} />
-                </div>
+                {/* Same figures as the Projects page: trees funded plus trees planted
+                    ("Under plantation" doesn't count yet), and trees added · planted. */}
+                {(() => {
+                  const count = (p.funded ?? 0) + (p.treesPlanted ?? 0)
+                  const pct = p.target ? Math.min(100, Math.round((count / p.target) * 100)) : 0
+                  return (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#6B7B6E', marginBottom: 4 }}>
+                        <span>{count.toLocaleString('en-IN')} / {p.target.toLocaleString('en-IN')} trees</span>
+                        <span style={{ fontWeight: 700, color: '#2B5341' }}>{pct}%</span>
+                      </div>
+                      <div style={{ height: 7, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: '#2B5341' }} />
+                      </div>
+                    </>
+                  )
+                })()}
+
+                <Link
+                  to="/partner/actions"
+                  title="See these trees in Assign action"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, background: '#F5F8F1', border: '1px solid #E1EBD8', marginTop: 10, textDecoration: 'none' }}
+                >
+                  <span style={{ fontSize: 14 }}>🌳</span>
+                  <span style={{ fontSize: 12, color: '#2B5341' }}>
+                    <strong style={{ fontSize: 13 }}>{(p.treesRecorded ?? 0).toLocaleString('en-IN')}</strong> trees added
+                    <span style={{ color: '#7A867C' }}> · </span>
+                    <strong>{(p.treesPlanted ?? 0).toLocaleString('en-IN')}</strong> planted
+                  </span>
+                  <span style={{ marginLeft: 'auto', fontSize: 12, color: '#2B5341', fontWeight: 700 }}>→</span>
+                </Link>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginTop: 10, color: '#6B7B6E' }}>
                   <span>{p.fundersCount} funder{p.fundersCount === 1 ? '' : 's'}</span>

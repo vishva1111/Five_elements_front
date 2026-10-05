@@ -86,14 +86,23 @@ export default function Projects() {
                 📍 {p.location} · <span style={{ textTransform: 'capitalize' }}>{p.element}</span>{p.category ? ` · ${p.category}` : ''}
               </div>
 
-              {/* Progress bar */}
-              <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6B7B6E' }}>
-                <span>{(p.fundedTrees ?? 0).toLocaleString()} / {(p.totalTrees ?? 0).toLocaleString()} trees funded</span>
-                <span style={{ fontWeight: 700, color: '#2B5341' }}>{p.progressPct}%</span>
-              </div>
-              <div style={{ height: 8, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden', marginBottom: 16 }}>
-                <div style={{ height: '100%', width: `${p.progressPct}%`, background: '#2B5341', borderRadius: 999 }} />
-              </div>
+              {/* Progress bar — trees funded by funders plus trees actually planted
+                  (still "Under plantation" doesn't count yet) */}
+              {(() => {
+                const count = (p.fundedTrees ?? 0) + (p.treesPlanted ?? 0)
+                const pct = p.totalTrees ? Math.min(100, Math.round((count / p.totalTrees) * 100)) : 0
+                return (
+                  <>
+                    <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6B7B6E' }}>
+                      <span>{count.toLocaleString()} / {(p.totalTrees ?? 0).toLocaleString()} trees</span>
+                      <span style={{ fontWeight: 700, color: '#2B5341' }}>{pct}%</span>
+                    </div>
+                    <div style={{ height: 8, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden', marginBottom: 16 }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: '#2B5341', borderRadius: 999 }} />
+                    </div>
+                  </>
+                )
+              })()}
 
               {/* Trees recorded through Add trees / Assign action */}
               <Link
