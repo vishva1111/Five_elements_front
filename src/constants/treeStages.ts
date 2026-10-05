@@ -1,5 +1,5 @@
 /** Lifecycle stage of a tree record — must match TREE_STAGES in backend/src/routes/partner.js. */
-export const TREE_STAGES = ['Under plantation', 'Planted', 'Growing', 'Established', 'Needs care', 'Dead'] as const
+export const TREE_STAGES = ['Under plantation', 'Planted'] as const
 
 export const DEFAULT_STAGE = 'Under plantation'
 

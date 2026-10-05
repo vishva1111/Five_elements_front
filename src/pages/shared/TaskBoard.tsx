@@ -27,6 +27,10 @@ interface Task {
   /** Human-readable tree ID (TREE-…) of the linked tree record. */
   tree_code?: string | null
   tree_species: string | null
+  /** planting — put the tree in the ground; audit — verify it for the ledger. */
+  task_type?: 'planting' | 'audit'
+  /** Stage of the linked tree — the board lists tasks for planted trees only. */
+  tree_stage?: string | null
   tree_health: string | null
 }
 
@@ -281,7 +285,10 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
         t.id === taskId ? { ...t, status: action === 'approve' ? 'approved' : 'rejected', review_notes: reviewNotes || null } : t
       ))
 
-      toast.success(action === 'approve' ? 'Task approved — published to the ledger.' : 'Task rejected — sent back for a redo.')
+      const wasPlanting = (tasks.find(t => t.id === taskId)?.task_type || 'audit') === 'planting'
+      toast.success(action === 'approve'
+        ? (wasPlanting ? 'Planting approved — the tree is now Planted and its audit task is in Tasks.' : 'Audit approved — published to the ledger.')
+        : 'Task rejected — sent back for a redo.')
       setReviewingId(null)
       setReviewAction(null)
       setReviewNotes('')
@@ -297,9 +304,11 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
 
   // The project selector sits above the summary cards, so it scopes everything below it —
   // the card counts included, not just the table.
-  const projectTasks = filterProject === 'all'
-    ? tasks
-    : tasks.filter(t => t.project_id === filterProject)
+  // Only trees that are already planted belong here. Planting (and anything
+  // for a tree still under plantation) is handled on Assign action.
+  const plantedTasks = tasks.filter(t =>
+    (t.task_type || 'audit') !== 'planting' && (!t.tree_id || (t.tree_stage || 'Under plantation') !== 'Under plantation'))
+  const projectTasks = filterProject === 'all' ? plantedTasks : plantedTasks.filter(t => t.project_id === filterProject)
 
   const filteredTasks = projectTasks.filter(t => {
     if (filterStatus !== 'all' && t.status !== filterStatus) return false
@@ -331,7 +340,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
   useModalBehavior(() => { setReviewingId(null); setReviewAction(null); setReviewNotes('') }, reviewingId !== null)
 
   return (
-    <Layout title="Task Management" subtitle="One task per tree — assign to Admin or Partner accounts">
+    <Layout title="Task Management" subtitle="Audit tasks for planted trees — assign a field operator, then review their survey">
       <div style={{ padding: '24px' }}>
 
         {/* Project selector — scopes everything below it (cards + table).
@@ -419,6 +428,9 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
                     <td style={{ ...tdStyle, fontWeight: 600, maxWidth: 240 }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.name}</div>
+                        {(task.task_type || 'audit') === 'planting'
+                          ? <span style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: '#FFF4E0', color: '#8B5A00' }}>🌱 Planting</span>
+                          : <span style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: '#E8F1FB', color: '#185FA5' }}>🔍 Audit</span>}
                         {task.location && LOCATION_VISIBLE.includes(task.status) && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>📍 {task.location}</div>}
                       </div>
                     </td>
@@ -598,7 +610,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
           <div style={overlayStyle} onClick={closeReview}>
             <div style={{ ...modalStyle, maxWidth: 460 }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: '#1a5c2a' }}>Review task</h2>
+                <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: '#1a5c2a' }}>{(task.task_type || 'audit') === 'planting' ? 'Review planting' : 'Review audit'}</h2>
                 <button onClick={closeReview} style={closeBtnStyle} title="Close">✕</button>
               </div>
 
@@ -656,7 +668,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
                   onClick={() => handleReview(task.id, 'approve')}
                   style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer', flex: 1 }}
                 >
-                  {reviewing && reviewAction === 'approve' ? 'Approving…' : '✓ Approve'}
+                  {reviewing && reviewAction === 'approve' ? 'Approving…' : (task.task_type || 'audit') === 'planting' ? '✓ Confirm planted' : '✓ Approve'}
                 </button>
                 <button
                   disabled={reviewing}

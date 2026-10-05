@@ -44,6 +44,13 @@ interface TreeRow {
   surveyDate?: string | null
   taskStatus: string | null
   taskNeedsAssignee?: boolean
+  /** planting | audit — which task the Task column is about. */
+  taskType?: string | null
+  taskAssigneeId?: string | null
+  taskAssignee?: string | null
+  /** Photo + location of the field capture that completed the current task. */
+  capturePhoto?: string | null
+  captureLocation?: string | null
   /** Older record with nobody named on it — its person can still be set. */
   canSetAssignee?: boolean
   taskId: string | null
@@ -59,14 +66,46 @@ const TASK_STATUS_LABEL: Record<string, { label: string; badge: string }> = {
   rejected:    { label: 'Rejected · redo survey', badge: 'rejected' },
 }
 
-function verificationLabel(t: { taskStatus: string | null; taskNeedsAssignee?: boolean; stage?: string }) {
+// Planting task while the tree is under plantation; audit task once it's planted.
+const PLANTING_STATUS_LABEL: Record<string, { label: string; badge: string }> = {
+  assigned:    { label: 'Planting assigned', badge: 'pending' },
+  in_progress: { label: 'Planting in progress', badge: 'progress' },
+  completed:   { label: 'Planted · awaiting your review', badge: 'info' },
+  approved:    { label: 'Planting approved', badge: 'approved' },
+  rejected:    { label: 'Planting rejected · redo', badge: 'rejected' },
+}
+
+/**
+ * One-word status for where the tree is in its whole life cycle:
+ * Pending → In planting → Planting review → In audit → Audit review → Verified.
+ */
+function overallStatus(t: { taskStatus: string | null; taskType?: string | null; taskNeedsAssignee?: boolean; stage?: string }) {
+  const stage = t.stage || DEFAULT_STAGE
+  if (stage === 'Dead') return { label: 'Dead', bg: '#F4E4E4', fg: '#A32020' }
+  if (t.taskStatus === 'rejected') return { label: 'Rejected', bg: '#FBE9E9', fg: '#A32020' }
+  if (t.taskType === 'planting' || (!t.taskType && stage === DEFAULT_STAGE)) {
+    if (!t.taskStatus || t.taskNeedsAssignee) return { label: 'Pending', bg: '#F2EFEA', fg: '#6B7B6E' }
+    if (t.taskStatus === 'completed')          return { label: 'Planting review', bg: '#E8F1FB', fg: '#185FA5' }
+    return { label: 'In planting', bg: '#FFF4E0', fg: '#8B5A00' }
+  }
+  if (t.taskStatus === 'approved')  return { label: 'Verified', bg: '#D9EBD2', fg: '#1C3A2B' }
+  if (t.taskStatus === 'completed') return { label: 'Audit review', bg: '#E8F1FB', fg: '#185FA5' }
+  if (!t.taskStatus || t.taskNeedsAssignee) return { label: 'Planted', bg: '#EAF3DE', fg: '#27500A' }
+  return { label: 'In audit', bg: '#EFE9FB', fg: '#5B3FA8' }
+}
+
+function verificationLabel(t: { taskStatus: string | null; taskNeedsAssignee?: boolean; taskType?: string | null; stage?: string }) {
+  const planting = t.taskType === 'planting'
   if (!t.taskStatus) {
     return (t.stage || DEFAULT_STAGE) === DEFAULT_STAGE
-      ? { label: 'Not planted yet', badge: '' }
-      : { label: 'No task', badge: '' }
+      ? { label: 'No planting task', badge: '' }
+      : { label: 'No audit task', badge: '' }
   }
-  if (t.taskStatus === 'assigned' && t.taskNeedsAssignee) return { label: 'Needs field operator', badge: 'pending' }
-  return TASK_STATUS_LABEL[t.taskStatus] || { label: t.taskStatus, badge: '' }
+  if (t.taskStatus === 'assigned' && t.taskNeedsAssignee) {
+    return { label: planting ? 'Planting · needs field operator' : 'Audit · needs field operator', badge: 'pending' }
+  }
+  const map = planting ? PLANTING_STATUS_LABEL : TASK_STATUS_LABEL
+  return map[t.taskStatus] || { label: t.taskStatus, badge: '' }
 }
 
 export default function MyTrees({ title = 'Action listing', showAdd = false, compact = false }: { title?: string; showAdd?: boolean; compact?: boolean }) {
@@ -97,6 +136,15 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
   const [projectFilter, setProjectFilter] = useState('all')
   const [selected,      setSelected]      = useState<Set<string>>(new Set())
   const [bulkPlanting,  setBulkPlanting]  = useState(false)
+  // "Assign planting" pop-up: which trees, which field operator.
+  const [plantFor,      setPlantFor]      = useState<string[] | null>(null)
+  // Reviewing a completed planting (Confirm planted / Reject).
+  const [reviewing,     setReviewing]     = useState<TreeRow | null>(null)
+  const [reviewNote,    setReviewNote]    = useState('')
+  const [reviewBusy,    setReviewBusy]    = useState<'approve' | 'reject' | null>(null)
+  const [plantAssignee, setPlantAssignee] = useState('')
+  const [plantError,    setPlantError]    = useState<string | null>(null)
+  const [fieldOps,      setFieldOps]      = useState<{ auth_id: string; display_name: string }[]>([])
   const [confirmDelete, setConfirmDelete] = useState<TreeRow | null>(null)
   const [deleting,      setDeleting]      = useState(false)
 
@@ -270,22 +318,71 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
     }
   }
 
-  /** Marks every selected tree as planted. */
-  async function bulkMarkPlanted() {
-    const ids = [...selected]
+  /**
+   * A tree becomes Planted only through the field: pick a field operator, they
+   * plant it and capture it in the app, you confirm it in Tasks, then its audit opens.
+   */
+  async function openAssignPlanting(ids: string[]) {
     if (ids.length === 0) return
-    setBulkPlanting(true)
-    let ok = 0
-    const failed: string[] = []
-    for (const id of ids) {
-      try { await patchStage(id, 'Planted'); ok++ }
-      catch { failed.push(trees.find(x => x.id === id)?.treeCode || id.slice(0, 8)) }
+    setPlantFor(ids)
+    setPlantAssignee('')
+    setPlantError(null)
+    if (fieldOps.length === 0) {
+      try {
+        const res = await fetch(`${API}/api/admin/tasks/assignable-users?pool=field`, { headers: { Authorization: `Bearer ${token || ''}` } })
+        const d = await res.json()
+        setFieldOps(d.users || [])
+      } catch {
+        setPlantError('Could not load field operators.')
+      }
     }
-    setBulkPlanting(false)
-    setSelected(new Set())
-    if (ok > 0) toast.success(`${ok} tree${ok > 1 ? 's' : ''} marked planted — ${ok > 1 ? 'their verification tasks are' : 'its verification task is'} now in Tasks.`)
-    if (failed.length > 0) toast.error(`Could not mark ${failed.join(', ')} as planted.`)
-    await load()
+  }
+
+  async function reviewPlanting(action: 'approve' | 'reject') {
+    if (!reviewing?.taskId) return
+    if (action === 'reject' && !reviewNote.trim()) { toast.error('Say why the planting is rejected'); return }
+    setReviewBusy(action)
+    try {
+      const res = await fetch(`${API}/api/admin/tasks/${reviewing.taskId}/${action}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
+        body: JSON.stringify({ review_notes: reviewNote.trim() || null }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Failed to submit review')
+      toast.success(action === 'approve'
+        ? `${codeOf(reviewing)} is now Planted — its audit task is in Tasks.`
+        : `Planting rejected — ${reviewing.taskAssignee || 'the field operator'} has to redo it.`)
+      setReviewing(null)
+      await load()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to submit review')
+    } finally {
+      setReviewBusy(null)
+    }
+  }
+
+  async function assignPlanting() {
+    if (!plantFor || !plantAssignee) { setPlantError('Choose a field operator'); return }
+    setBulkPlanting(true)
+    setPlantError(null)
+    try {
+      const res = await fetch(`${API}/api/partner/trees/assign-planting`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
+        body: JSON.stringify({ tree_ids: plantFor, assignee_id: plantAssignee }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Failed to assign planting')
+      toast.success(`${d.assigned} planting task${d.assigned === 1 ? '' : 's'} assigned to ${d.assignee}. The tree${d.assigned === 1 ? ' becomes' : 's become'} Planted when you confirm the planting in Tasks.`)
+      setPlantFor(null)
+      setSelected(new Set())
+      await load()
+    } catch (e: unknown) {
+      setPlantError(e instanceof Error ? e.message : 'Failed to assign planting')
+    } finally {
+      setBulkPlanting(false)
+    }
   }
 
   async function saveEdit() {
@@ -464,12 +561,12 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
             <span style={{ fontSize: 13.5, fontWeight: 600 }}>{selected.size} tree{selected.size > 1 ? 's' : ''} selected</span>
             <button
               type="button"
-              onClick={bulkMarkPlanted}
+              onClick={() => openAssignPlanting([...selected])}
               disabled={bulkPlanting}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 999, border: 'none', background: '#8FD19E', color: '#10301E', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             >
               {bulkPlanting ? <Loader2 size={15} className="spin" /> : <Sprout size={15} />}
-              {bulkPlanting ? 'Marking…' : 'Mark planted'}
+              Assign planting
             </button>
             <button
               type="button"
@@ -545,7 +642,8 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                       <th style={{ textAlign: 'right' }}>Qty</th>
                       <th style={{ textAlign: 'right' }}>CO₂ (kg/yr)</th>
                       <th>Stage</th>
-                      <th>Verification</th>
+                      <th>Status</th>
+                      <th>Current task</th>
                     </>
                   )}
                   <th>Date</th>
@@ -631,7 +729,8 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                                     disabled={locked(t)}
                                     // Planting is one-way — a planted tree never goes back.
                                     blocked={stg !== DEFAULT_STAGE ? [DEFAULT_STAGE] : []}
-                                    onChange={next => changeStage(t, next)}
+                                    // Under plantation → Planted happens through a field operator.
+                                    onChange={next => stg === DEFAULT_STAGE ? openAssignPlanting([t.id]) : changeStage(t, next)}
                                     colors={c}
                                   />
                                 </div>
@@ -639,9 +738,43 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                             })()}
                           </td>
                           <td>
-                            {!t.taskStatus && stageOf(t) === DEFAULT_STAGE ? (
-                              // The stage already says it isn't planted — nothing to verify yet.
-                              <span style={{ color: '#B5BDB6' }}>—</span>
+                            {(() => {
+                              const os = overallStatus(t)
+                              return (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: os.bg, color: os.fg, padding: '3px 10px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                  <span style={{ width: 7, height: 7, borderRadius: 4, background: os.fg }} />
+                                  {os.label}
+                                </span>
+                              )
+                            })()}
+                          </td>
+                          <td>
+                            {t.taskType === 'planting' && t.taskId ? (
+                              // Planting is handled here, not on the Tasks page.
+                              t.taskStatus === 'completed' ? (
+                                <button type="button" onClick={() => { setReviewing(t); setReviewNote('') }}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, border: '1.5px solid #C9DDF2', background: '#E8F1FB', color: '#185FA5', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                  <Check size={13} /> Review planting
+                                </button>
+                              ) : t.taskNeedsAssignee || t.taskStatus === 'rejected' ? (
+                                <button type="button" onClick={() => openAssignPlanting([t.id])}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, border: 'none', background: '#2B5341', color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                  <UserCog size={13} /> {t.taskStatus === 'rejected' ? 'Reassign planting' : 'Assign field operator'}
+                                </button>
+                              ) : (
+                                <div>
+                                  <span className={`pl-badge pl-badge--${st.badge || 'pending'}`} style={{ whiteSpace: 'nowrap' }}>{st.label}</span>
+                                  <div style={{ fontSize: 11.5, color: '#7A867C', marginTop: 4, whiteSpace: 'nowrap' }}>
+                                    {t.taskAssignee || 'Field operator'}
+                                    {t.taskStatus === 'assigned' && (
+                                      <button type="button" onClick={() => openAssignPlanting([t.id])}
+                                        style={{ marginLeft: 6, background: 'none', border: 'none', padding: 0, color: '#185FA5', fontFamily: 'inherit', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>
+                                        Change
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )
                             ) : t.taskId && (t.taskNeedsAssignee || t.taskStatus === 'completed') ? (
                               <Link
                                 to="/partner/tasks"
@@ -696,6 +829,81 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
           {!loading && <Pagination {...pg} noun="record" />}
         </div>
       </div>
+
+      {/* Review a completed planting */}
+      {reviewing && (
+        <RecordModal
+          icon={<Sprout size={18} />}
+          title="Review planting"
+          subtitle={`${codeOf(reviewing)} · ${reviewing.species} · ${reviewing.projectName}`}
+          onClose={() => setReviewing(null)}
+          width={520}
+          footer={<>
+            <button type="button" className="pl-btn pl-btn--ghost" style={{ color: '#A32020' }} onClick={() => reviewPlanting('reject')} disabled={!!reviewBusy}>
+              {reviewBusy === 'reject' ? 'Rejecting…' : 'Reject'}
+            </button>
+            <button type="button" className="pl-btn pl-btn--primary" onClick={() => reviewPlanting('approve')} disabled={!!reviewBusy}>
+              {reviewBusy === 'approve' ? 'Confirming…' : '✓ Confirm planted'}
+            </button>
+          </>}
+        >
+          {reviewing.capturePhoto ? (
+            <a href={reviewing.capturePhoto} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: 14 }}>
+              <img src={reviewing.capturePhoto} alt="Planting capture" style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 12, border: '1px solid #EEE9E1', display: 'block' }} />
+            </a>
+          ) : (
+            <div style={{ padding: 16, borderRadius: 12, background: '#FAF8F4', color: '#9AA79C', fontSize: 12.5, textAlign: 'center', marginBottom: 14 }}>No photo was captured.</div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12.5, marginBottom: 14 }}>
+            <div><div style={{ color: '#9AA79C' }}>Planted by</div><div style={{ fontWeight: 600, color: '#1C2B22' }}>{reviewing.taskAssignee || '—'}</div></div>
+            <div><div style={{ color: '#9AA79C' }}>Location</div><div style={{ fontWeight: 600, color: '#1C2B22' }}>{reviewing.captureLocation || '—'}</div></div>
+          </div>
+          <div className="sp-field">
+            <label className="sp-label" htmlFor="rp-note">Note</label>
+            <textarea id="rp-note" className="sp-textarea" rows={2} style={FULL} placeholder="Enter a note (required to reject)" value={reviewNote} onChange={e => setReviewNote(e.target.value)} />
+          </div>
+          <div style={{ fontSize: 11.5, color: '#7A867C', marginTop: 10, lineHeight: 1.5 }}>
+            Confirming makes the tree <strong>Planted</strong> and opens its <strong>audit task</strong> in Tasks. Rejecting sends it back to the field operator.
+          </div>
+        </RecordModal>
+      )}
+
+      {/* Assign planting */}
+      {plantFor && (
+        <RecordModal
+          icon={<Sprout size={18} />}
+          title={plantFor.length === 1 ? 'Assign planting' : `Assign planting · ${plantFor.length} trees`}
+          subtitle={plantFor.length === 1
+            ? (() => { const t = trees.find(x => x.id === plantFor[0]); return t ? `${codeOf(t)} · ${t.species} · ${t.projectName}` : '' })()
+            : 'The same field operator plants all of them.'}
+          error={plantError}
+          onClose={() => setPlantFor(null)}
+          width={520}
+          footer={<>
+            <button type="button" className="pl-btn pl-btn--ghost" onClick={() => setPlantFor(null)}>Cancel</button>
+            <button type="button" className="pl-btn pl-btn--primary" onClick={assignPlanting} disabled={bulkPlanting || !plantAssignee}>
+              {bulkPlanting ? 'Assigning…' : 'Assign planting'}
+            </button>
+          </>}
+        >
+          <div className="sp-field">
+            <label className="sp-label sp-label--required" htmlFor="ap-user">Field operator</label>
+            <select id="ap-user" className="sp-select" style={FULL} value={plantAssignee} onChange={e => setPlantAssignee(e.target.value)}>
+              <option value="">Select a field operator…</option>
+              {fieldOps.map(u => <option key={u.auth_id} value={u.auth_id}>{u.display_name}</option>)}
+            </select>
+            {fieldOps.length === 0 && !plantError && (
+              <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 6 }}>No field operators yet — add one in Team first.</div>
+            )}
+          </div>
+
+          <ol style={{ margin: '16px 0 0', paddingLeft: 18, fontSize: 12.5, color: '#6B7B6E', lineHeight: 1.7 }}>
+            <li>They get a <strong>planting task</strong> in the app.</li>
+            <li>They plant the tree and capture it (photo + GPS) to complete the task.</li>
+            <li>You confirm it in <strong>Tasks</strong> → the tree becomes <strong>Planted</strong> and its <strong>audit task</strong> opens.</li>
+          </ol>
+        </RecordModal>
+      )}
 
       {/* Add record modal */}
       {adding && (
@@ -791,7 +999,11 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                   <label className="sp-label" htmlFor="er-stage">Stage</label>
                   <select id="er-stage" className="sp-select" style={FULL} value={editForm.stage} onChange={e => setEditForm(f => ({ ...f, stage: e.target.value }))}>
                     {TREE_STAGES.map(v => (
-                      <option key={v} disabled={v === DEFAULT_STAGE && (editing.stage || DEFAULT_STAGE) !== DEFAULT_STAGE}>{v}</option>
+                      <option key={v} disabled={
+                        (v === DEFAULT_STAGE && (editing.stage || DEFAULT_STAGE) !== DEFAULT_STAGE) ||
+                        // Under plantation → planted only through a field operator (Stage menu → Assign planting).
+                        ((editing.stage || DEFAULT_STAGE) === DEFAULT_STAGE && v !== DEFAULT_STAGE)
+                      }>{v}</option>
                     ))}
                   </select>
                 </div>
@@ -967,7 +1179,9 @@ function StageMenu({ value, colors, onChange, busy, disabled, blocked }: {
             )
           })}
           <div style={{ fontSize: 11, color: '#9AA79C', padding: '6px 10px 4px', borderTop: '1px solid #F0ECE6', marginTop: 4, lineHeight: 1.4 }}>
-            Planted and later stages create a verification task in Tasks.
+            {value === DEFAULT_STAGE
+              ? 'Choosing Planted asks you for a field operator to plant it. It becomes Planted when you confirm their planting in Tasks.'
+              : 'A planted tree has an audit task in Tasks.'}
           </div>
         </div>
       )}
