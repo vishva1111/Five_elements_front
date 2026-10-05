@@ -178,7 +178,7 @@ export default function Login() {
 
         {/* Forgot password */}
         <div className="li-forgot-wrap">
-          <a href="#" className="li-forgot">Forgot password?</a>
+          <Link to="/forgot-password" className="li-forgot">Forgot password?</Link>
         </div>
 
         {/* Divider */}

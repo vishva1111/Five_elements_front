@@ -3,7 +3,7 @@ import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutGrid, AlignJustify, BookOpen, BarChart2, Award, CircleUser,
-  Bell, LogOut, Menu, X
+  Bell, LogOut, Menu, X, KeyRound
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import './ImpactHome.css'
@@ -105,6 +105,10 @@ export default function IndividualLayout({ children, title, topLabel = 'MY IMPAC
               <span className="ih-sidebar__user-email">{user?.email}</span>
             </div>
           </div>
+          <button className="ih-sidebar__signout" onClick={() => navigate('/account/password')}>
+            <KeyRound size={15} />
+            <span>Change password</span>
+          </button>
           <button className="ih-sidebar__signout" onClick={() => setShowLogoutModal(true)}>
             <LogOut size={15} />
             <span>Sign out</span>

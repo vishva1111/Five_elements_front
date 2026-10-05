@@ -129,6 +129,9 @@ export default function AdminLayout({ title, subtitle, children, pendingCounts =
               <div className="ad-sidebar__urole">Super Admin</div>
             </div>
           )}
+          <button type="button" className="ad-sidebar__signout" title="Change password" onClick={() => navigate('/account/password')}>
+            🔑
+          </button>
           <button type="button" className="ad-sidebar__signout" title="Sign out" onClick={() => { signOut(); navigate('/login') }}>
             ↩
           </button>

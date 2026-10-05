@@ -9,6 +9,9 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 const Login = lazy(() => import('./pages/Auth/Login'))
 const Signup = lazy(() => import('./pages/Auth/Signup'))
 const Welcome = lazy(() => import('./pages/Auth/Welcome'))
+const ForgotPassword = lazy(() => import('./pages/Auth/PasswordPages').then(m => ({ default: m.ForgotPassword })))
+const ResetPassword  = lazy(() => import('./pages/Auth/PasswordPages').then(m => ({ default: m.ResetPassword })))
+const ChangePassword = lazy(() => import('./pages/Auth/PasswordPages').then(m => ({ default: m.ChangePassword })))
 const RoleSelect = lazy(() => import('./pages/Auth/RoleSelect'))
 
 // ── Maintenance ──────────────────────────────────────────────────────────────
@@ -104,6 +107,9 @@ export default function App(): React.JSX.Element {
           <Route path="/signup" element={<Signup />} />
           <Route path="/maintenance" element={<Maintenance />} />
           <Route path="/welcome" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/account/password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
           <Route path="/role-select" element={<ProtectedRoute><RoleSelect /></ProtectedRoute>} />
 
           {/* ── Business info (public — for unauthenticated business users) ── */}

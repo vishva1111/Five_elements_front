@@ -1,6 +1,7 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import React, { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
+import { API_URL } from '../../config/api'
 import './Welcome.css'
 
 // ── Pentagon helper ───────────────────────────────────────────────────────────
@@ -50,9 +51,20 @@ function PathCard({
 
 export default function Welcome() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, session } = useAuth()
 
   const name = user?.displayName?.split(' ')[0] || 'there'
+  // Funding and submitting projects are individual/business journeys.
+  const showPaths = !user || user.role === 'individual' || user.role === 'business'
+
+  // Shown once: clear the first-login flag so the next sign-in goes straight to the dashboard.
+  useEffect(() => {
+    if (!session?.access_token) return
+    fetch(`${API_URL}/api/auth/first-login-done`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    }).catch(() => {})
+  }, [session?.access_token])
 
   return (
     <div className="welcome-page">
@@ -62,11 +74,19 @@ export default function Welcome() {
           <div className="welcome-badge">First time here</div>
           <h1 className="welcome-h1">Welcome, {name} 👋</h1>
           <p className="welcome-sub">
-            You're in. Choose how you'd like to start — you can always come back and do both.
+            {showPaths
+              ? "You're in. Choose how you'd like to start — you can always come back and do both."
+              : "You're in. Your dashboard is ready."}
           </p>
         </div>
 
+        {/* Accounts made by an admin or partner start on an emailed temporary password */}
+        <p className="welcome-sub" style={{ marginTop: -8 }}>
+          Signed in with a temporary password? <Link to="/account/password">Set your own password →</Link>
+        </p>
+
         {/* Two paths */}
+        {showPaths && (
         <div className="welcome-paths">
           <PathCard
             glyph="🌍"
@@ -87,14 +107,15 @@ export default function Welcome() {
             onClick={() => navigate('/submit-project')}
           />
         </div>
+        )}
 
         {/* Skip */}
         <button
           type="button"
           className="welcome-skip"
-          onClick={() => navigate(user ? (user.role === 'business' ? '/business' : '/impact') : '/')}
+          onClick={() => navigate(user ? ROLE_HOME[user.role] : '/')}
         >
-          Skip for now — take me to my dashboard
+          {showPaths ? 'Skip for now — take me to my dashboard' : 'Go to my dashboard →'}
         </button>
       </div>
     </div>
