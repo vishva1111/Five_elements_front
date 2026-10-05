@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
+import { useToast } from '../../components/ui/Toast'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
@@ -86,6 +88,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export default function SubmissionTracker() {
   const { session } = useAuth()
+  const toast = useToast()
   const navigate    = useNavigate()
 
   const [submissions, setSubmissions] = useState<Submission[]>([])
@@ -178,12 +181,13 @@ export default function SubmissionTracker() {
         body: JSON.stringify({ review_notes: reviewNotes }),
       })
       if (!res.ok) throw new Error('Failed')
+      toast.success(action === 'approve' ? 'Task approved.' : 'Task rejected.')
       setReviewingId(null)
       setReviewNotes('')
       setReviewAction(null)
       loadPendingTasks()
     } catch {
-      alert('Failed to submit review. Please try again.')
+      toast.error('Failed to submit review. Please try again.')
     } finally {
       setSubmittingReview(false)
     }
@@ -216,6 +220,9 @@ export default function SubmissionTracker() {
 
   const allApproved =
     submissions.length > 0 && submissions.every(s => s.status === 'approved')
+
+  // Esc closes the open pop-up; the page behind stays put.
+  useModalBehavior(closeSubmission, detailId !== null)
 
   return (
     <PartnerLayout title="Submission tracker">
@@ -506,7 +513,7 @@ export default function SubmissionTracker() {
                       <textarea
                         value={reviewNotes}
                         onChange={e => setReviewNotes(e.target.value)}
-                        placeholder={reviewAction === 'approve' ? 'Well done! (optional)' : 'Reason for rejection…'}
+                        placeholder={reviewAction === 'approve' ? 'Enter a note (optional)' : 'Enter reason for rejection'}
                         rows={2}
                         style={{
                           width: '100%', padding: '8px 10px', borderRadius: 8,

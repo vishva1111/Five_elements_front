@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useGoBack } from '../../hooks/useGoBack'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
@@ -14,6 +15,7 @@ const CATEGORIES = ['Afforestation & land', 'Soil restoration', 'Agroforestry', 
 
 export default function ProjectRegistration() {
   const navigate = useNavigate()
+  const goBack = useGoBack('/partner/projects')
   const { session } = useAuth()
 
   const [element,     setElement]     = useState('Earth')
@@ -140,19 +142,19 @@ export default function ProjectRegistration() {
             </div>
             <div className="sp-field">
               <label className="sp-label sp-label--required" htmlFor="p3-title">Project title</label>
-              <input id="p3-title" type="text" className={`sp-input ${errors.title ? 'sp-input--error' : ''}`} placeholder="e.g. Sahyadri Reforestation Phase 2" value={title} onChange={e => setTitle(e.target.value)} />
+              <input id="p3-title" type="text" className={`sp-input ${errors.title ? 'sp-input--error' : ''}`} placeholder="Enter project title" value={title} onChange={e => setTitle(e.target.value)} />
               {errors.title && <div className="sp-field-error">{errors.title}</div>}
             </div>
           </div>
 
           <div className="sp-field" style={{ marginBottom: 16 }}>
             <label className="sp-label" htmlFor="p3-desc">Description</label>
-            <textarea id="p3-desc" className="sp-textarea" rows={3} placeholder="Describe the project goals, methodology, and expected outcomes…" value={description} onChange={e => setDescription(e.target.value)} />
+            <textarea id="p3-desc" className="sp-textarea" rows={3} placeholder="Enter project description" value={description} onChange={e => setDescription(e.target.value)} />
           </div>
 
           <div className="sp-field" style={{ marginBottom: 16 }}>
             <label className="sp-label sp-label--required" htmlFor="p3-loc">Location</label>
-            <input id="p3-loc" type="text" className={`sp-input ${errors.location ? 'sp-input--error' : ''}`} placeholder="Village, district, state, country" value={location} onChange={e => setLocation(e.target.value)} />
+            <input id="p3-loc" type="text" className={`sp-input ${errors.location ? 'sp-input--error' : ''}`} placeholder="Enter location" value={location} onChange={e => setLocation(e.target.value)} />
             {errors.location && <div className="sp-field-error">{errors.location}</div>}
           </div>
 
@@ -171,17 +173,17 @@ export default function ProjectRegistration() {
           <div className="sp-grid-2">
             <div className="sp-field">
               <label className="sp-label" htmlFor="p3-trees">Target tree count</label>
-              <input id="p3-trees" type="number" className="sp-input" placeholder="e.g. 10000" min={0} value={targetTrees} onChange={e => setTargetTrees(e.target.value)} />
+              <input id="p3-trees" type="number" className="sp-input" placeholder="Enter target trees" min={0} value={targetTrees} onChange={e => setTargetTrees(e.target.value)} />
             </div>
             <div className="sp-field">
               <label className="sp-label" htmlFor="p3-area">Target area (hectares)</label>
-              <input id="p3-area" type="number" className="sp-input" placeholder="e.g. 25" min={0} value={targetArea} onChange={e => setTargetArea(e.target.value)} />
+              <input id="p3-area" type="number" className="sp-input" placeholder="Enter target area" min={0} value={targetArea} onChange={e => setTargetArea(e.target.value)} />
             </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <button type="button" className="pl-btn pl-btn--ghost" onClick={() => navigate('/partner/dashboard')}>
+          <button type="button" className="pl-btn pl-btn--ghost" onClick={goBack}>
             Cancel
           </button>
           <button type="button" className="pl-btn pl-btn--orange" onClick={handleSubmit} disabled={submitting}>

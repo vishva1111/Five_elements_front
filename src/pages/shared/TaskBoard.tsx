@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
+import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 
@@ -22,7 +24,13 @@ interface Task {
   review_notes: string | null
   // Joined from the linked tree record — this is what the field user actually captured
   photo_url: string | null
+  /** Human-readable tree ID (TREE-…) of the linked tree record. */
+  tree_code?: string | null
   tree_species: string | null
+  /** planting — put the tree in the ground; audit — verify it for the ledger. */
+  task_type?: 'planting' | 'audit'
+  /** Stage of the linked tree — the board lists tasks for planted trees only. */
+  tree_stage?: string | null
   tree_health: string | null
 }
 
@@ -37,6 +45,9 @@ interface Project {
   title: string
   treeCount: number
 }
+
+// Location is the field operator's GPS at completion — shown only once the task is done.
+const LOCATION_VISIBLE = ['completed', 'approved', 'rejected']
 
 const STATUS_COLORS: Record<string, string> = {
   assigned:    '#1a5c2a',
@@ -61,6 +72,7 @@ interface TaskBoardProps {
 
 export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
   const { session } = useAuth()
+  const toast = useToast()
   const [tasks, setTasks]           = useState<Task[]>([])
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
@@ -180,11 +192,12 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to create task')
+      toast.success('Task created.')
       setShowModal(false)
       setForm({ name: '', project_id: '', assignee_id: '', tree_id: '', target_count: 10, location: '', priority: 'medium', due_date: '' })
       loadTasks()
     } catch (e: any) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setSubmitting(false)
     }
@@ -204,9 +217,10 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to generate tasks')
       setBulkResult(json)
+      toast.success(`${json.created ?? 0} task${json.created === 1 ? '' : 's'} created.`)
       loadTasks()
     } catch (e: any) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setBulkSubmitting(false)
     }
@@ -217,9 +231,10 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
     try {
       const res = await fetch(`${API}/api/admin/tasks/${id}`, { method: 'DELETE', headers: authHeaders() })
       if (!res.ok) throw new Error('Failed to delete')
+      toast.success('Task deleted.')
       loadTasks()
     } catch (e: any) {
-      alert(e.message)
+      toast.error(e.message)
     }
   }
 
@@ -243,11 +258,12 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
         t.id === taskId ? { ...t, assignee_id: reassignUserId, assignee_name: newName } : t
       ))
 
+      toast.success(`Task assigned to ${newName}.`)
       setReassigningId(null)
       setReassignUserId('')
       loadTasks() // background refresh, keeps everything else (counts etc.) in sync
     } catch (e: any) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setReassigning(false)
     }
@@ -269,12 +285,16 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
         t.id === taskId ? { ...t, status: action === 'approve' ? 'approved' : 'rejected', review_notes: reviewNotes || null } : t
       ))
 
+      const wasPlanting = (tasks.find(t => t.id === taskId)?.task_type || 'audit') === 'planting'
+      toast.success(action === 'approve'
+        ? (wasPlanting ? 'Planting approved — the tree is now Planted and its audit task is in Tasks.' : 'Audit approved — published to the ledger.')
+        : 'Task rejected — sent back for a redo.')
       setReviewingId(null)
       setReviewAction(null)
       setReviewNotes('')
       loadTasks()
     } catch (e: any) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setReviewing(false)
     }
@@ -284,9 +304,11 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
 
   // The project selector sits above the summary cards, so it scopes everything below it —
   // the card counts included, not just the table.
-  const projectTasks = filterProject === 'all'
-    ? tasks
-    : tasks.filter(t => t.project_id === filterProject)
+  // Only trees that are already planted belong here. Planting (and anything
+  // for a tree still under plantation) is handled on Assign action.
+  const plantedTasks = tasks.filter(t =>
+    (t.task_type || 'audit') !== 'planting' && (!t.tree_id || (t.tree_stage || 'Under plantation') !== 'Under plantation'))
+  const projectTasks = filterProject === 'all' ? plantedTasks : plantedTasks.filter(t => t.project_id === filterProject)
 
   const filteredTasks = projectTasks.filter(t => {
     if (filterStatus !== 'all' && t.status !== filterStatus) return false
@@ -312,8 +334,13 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
   // Jump back to page 1 whenever the filters change the result set
   useEffect(() => { setPage(1) }, [filterStatus, filterProject, pageSize])
 
+  // Esc closes the open pop-up; the page behind stays put.
+  useModalBehavior(() => setShowModal(false), showModal)
+  useModalBehavior(() => setShowBulkModal(false), showBulkModal)
+  useModalBehavior(() => { setReviewingId(null); setReviewAction(null); setReviewNotes('') }, reviewingId !== null)
+
   return (
-    <Layout title="Task Management" subtitle="One task per tree — assign to Admin or Partner accounts">
+    <Layout title="Task Management" subtitle="Audit tasks for planted trees — assign a field operator, then review their survey">
       <div style={{ padding: '24px' }}>
 
         {/* Project selector — scopes everything below it (cards + table).
@@ -325,10 +352,10 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
           </select>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            <button onClick={() => { setBulkResult(null); setShowBulkModal(true) }} style={btnSecondary}>
+            <button onClick={() => { setBulkResult(null); setBulkForm({ project_id: '', assignee_id: '', priority: 'medium' }); setShowBulkModal(true) }} style={btnSecondary}>
               🌳 Generate from project trees
             </button>
-            <button onClick={() => setShowModal(true)} style={btnPrimary}>+ Create Task</button>
+            <button onClick={() => { setForm({ name: '', project_id: '', assignee_id: '', tree_id: '', target_count: 10, location: '', priority: 'medium', due_date: '' }); setShowModal(true) }} style={btnPrimary}>+ Create Task</button>
           </div>
         </div>
 
@@ -342,7 +369,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
             <div style={{ fontSize: 22, fontWeight: 800, color: '#112121' }}>{projectTasks.length}</div>
             <div style={{ fontSize: 11, fontWeight: 600, color: '#666' }}>All tasks</div>
           </div>
-          {['assigned', 'completed', 'approved', 'rejected'].map(s => (
+          {['assigned', 'in_progress', 'completed', 'approved', 'rejected'].map(s => (
             <div key={s} style={{
               background: '#fff', border: `2px solid ${STATUS_COLORS[s]}22`, borderRadius: 10,
               padding: '12px 20px', minWidth: 110, cursor: 'pointer',
@@ -378,7 +405,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f8faf8', borderBottom: '2px solid #e8f0e8' }}>
-                  {['Task Code', 'Name', 'Assigned To', 'Project', 'Priority', 'Status', 'Due Date', 'Actions'].map(h => (
+                  {['Task Code', 'Tree ID', 'Name', 'Assigned To', 'Project', 'Priority', 'Status', 'Due Date', 'Actions'].map(h => (
                     <th key={h} style={thStyle}>{h}</th>
                   ))}
                 </tr>
@@ -391,13 +418,30 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
                         {task.task_code || task.id.slice(0, 8).toUpperCase()}
                       </span>
                     </td>
+                    <td style={tdStyle}>
+                      {task.tree_code ? (
+                        <span style={{ fontFamily: 'monospace', fontSize: 12, background: '#F2F6EE', border: '1px solid #DCE8D3', color: '#2B5341', padding: '2px 6px', borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          {task.tree_code}
+                        </span>
+                      ) : <span style={{ color: '#bbb' }}>—</span>}
+                    </td>
                     <td style={{ ...tdStyle, fontWeight: 600, maxWidth: 240 }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.name}</div>
-                        {task.location && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>📍 {task.location}</div>}
+                        {(task.task_type || 'audit') === 'planting'
+                          ? <span style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: '#FFF4E0', color: '#8B5A00' }}>🌱 Planting</span>
+                          : <span style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: '#E8F1FB', color: '#185FA5' }}>🔍 Audit</span>}
+                        {task.location && LOCATION_VISIBLE.includes(task.status) && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>📍 {task.location}</div>}
                       </div>
                     </td>
-                    <td style={tdStyle}>{task.assignee_name}</td>
+                    <td style={tdStyle}>
+                      {task.status === 'assigned' && !fieldUsers.some(u => u.auth_id === task.assignee_id) ? (
+                        // Auto-created from a planted tree — still parked on the partner.
+                        <span style={{ background: '#FFF4E0', color: '#8B5A00', padding: '3px 9px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          Needs field operator
+                        </span>
+                      ) : task.assignee_name}
+                    </td>
                     <td style={{ ...tdStyle, fontSize: 12, color: '#555' }}>{task.project_name || '—'}</td>
                     <td style={tdStyle}>
                       <span style={{ background: PRIORITY_COLORS[task.priority] + '18', color: PRIORITY_COLORS[task.priority], padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, textTransform: 'capitalize' }}>
@@ -566,7 +610,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
           <div style={overlayStyle} onClick={closeReview}>
             <div style={{ ...modalStyle, maxWidth: 460 }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: '#1a5c2a' }}>Review task</h2>
+                <h2 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: '#1a5c2a' }}>{(task.task_type || 'audit') === 'planting' ? 'Review planting' : 'Review audit'}</h2>
                 <button onClick={closeReview} style={closeBtnStyle} title="Close">✕</button>
               </div>
 
@@ -597,7 +641,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
                   👤 {task.assignee_name}
                   {task.project_name && task.project_name !== '—' ? ` · 🌿 ${task.project_name}` : ''}
                 </div>
-                {task.location && (
+                {task.location && LOCATION_VISIBLE.includes(task.status) && (
                   <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>📍 {task.location}</div>
                 )}
                 {task.completed_at && (
@@ -613,7 +657,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
                   value={reviewNotes}
                   onChange={e => setReviewNotes(e.target.value)}
                   rows={3}
-                  placeholder="Add a note about this decision…"
+                  placeholder="Enter a note"
                   style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
@@ -624,7 +668,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
                   onClick={() => handleReview(task.id, 'approve')}
                   style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer', flex: 1 }}
                 >
-                  {reviewing && reviewAction === 'approve' ? 'Approving…' : '✓ Approve'}
+                  {reviewing && reviewAction === 'approve' ? 'Approving…' : (task.task_type || 'audit') === 'planting' ? '✓ Confirm planted' : '✓ Approve'}
                 </button>
                 <button
                   disabled={reviewing}
@@ -651,7 +695,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
             <form onSubmit={handleCreate}>
               <div style={fieldGroup}>
                 <label style={labelStyle}>Task Name *</label>
-                <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Tree Survey — Phase 1" style={inputStyle} />
+                <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Enter task name" style={inputStyle} />
               </div>
 
               <div style={fieldGroup}>
@@ -703,7 +747,7 @@ export default function TaskBoard({ Layout, roleLabel }: TaskBoardProps) {
 
               <div style={fieldGroup}>
                 <label style={labelStyle}>Location</label>
-                <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. Sector 12, Ahmedabad" style={inputStyle} />
+                <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Enter location" style={inputStyle} />
               </div>
 
               <div style={fieldGroup}>

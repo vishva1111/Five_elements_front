@@ -191,14 +191,14 @@ export default function PartnerOnboarding() {
         {step === 0 && (
           <div className="p1-form">
             {[
-              { id: 'p1-org',   label: 'Organisation name *', val: orgName,      set: setOrgName,      ph: 'Terra Roots Foundation' },
-              { id: 'p1-type',  label: 'Organisation type',   val: orgType,      set: setOrgType,      ph: 'NGO / Trust / Company / Cooperative' },
-              { id: 'p1-reg',   label: 'Registration number', val: regNumber,    set: setRegNumber,    ph: 'FCRA / CIN / Trust deed no.' },
-              { id: 'p1-web',   label: 'Website',             val: website,      set: setWebsite,      ph: 'https://terraroots.org' },
-              { id: 'p1-cname', label: 'Contact name *',      val: contactName,  set: setContactName,  ph: 'Priya Nair' },
-              { id: 'p1-email', label: 'Contact email *',     val: contactEmail, set: setContactEmail, ph: 'priya@terraroots.org' },
-              { id: 'p1-phone', label: 'Contact phone',       val: contactPhone, set: setContactPhone, ph: '+91 98765 43210' },
-              { id: 'p1-addr',  label: 'Registered address',  val: address,      set: setAddress,      ph: 'City, State, Country' },
+              { id: 'p1-org',   label: 'Organisation name *', val: orgName,      set: setOrgName,      ph: 'Enter organisation name' },
+              { id: 'p1-type',  label: 'Organisation type',   val: orgType,      set: setOrgType,      ph: 'Enter organisation type' },
+              { id: 'p1-reg',   label: 'Registration number', val: regNumber,    set: setRegNumber,    ph: 'Enter registration number' },
+              { id: 'p1-web',   label: 'Website',             val: website,      set: setWebsite,      ph: 'Enter website URL' },
+              { id: 'p1-cname', label: 'Contact name *',      val: contactName,  set: setContactName,  ph: 'Enter contact name' },
+              { id: 'p1-email', label: 'Contact email *',     val: contactEmail, set: setContactEmail, ph: 'Enter contact email' },
+              { id: 'p1-phone', label: 'Contact phone',       val: contactPhone, set: setContactPhone, ph: 'Enter contact phone' },
+              { id: 'p1-addr',  label: 'Registered address',  val: address,      set: setAddress,      ph: 'Enter registered address' },
             ].map(f => (
               <div key={f.id} className="sp-field">
                 <label className="sp-label" htmlFor={f.id}>{f.label}</label>
@@ -229,8 +229,8 @@ export default function PartnerOnboarding() {
         {step === 1 && (
           <div className="p1-form">
             {[
-              { id: 'p1-years', label: 'Years active in restoration', val: yearsActive, set: setYearsActive, ph: 'e.g. 7' },
-              { id: 'p1-trees', label: 'Approx. trees planted to date', val: treeCount, set: setTreeCount, ph: 'e.g. 250,000' },
+              { id: 'p1-years', label: 'Years active in restoration', val: yearsActive, set: setYearsActive, ph: 'Enter years active' },
+              { id: 'p1-trees', label: 'Approx. trees planted to date', val: treeCount, set: setTreeCount, ph: 'Enter trees planted' },
             ].map(f => (
               <div key={f.id} className="sp-field">
                 <label className="sp-label" htmlFor={f.id}>{f.label}</label>
@@ -239,11 +239,11 @@ export default function PartnerOnboarding() {
             ))}
             <div className="sp-field" style={{ gridColumn: '1 / -1' }}>
               <label className="sp-label" htmlFor="p1-refs">References (name + contact)</label>
-              <textarea id="p1-refs" className="sp-textarea" rows={3} placeholder="Two references who can vouch for your delivery record…" value={references} onChange={e => setReferences(e.target.value)} />
+              <textarea id="p1-refs" className="sp-textarea" rows={3} placeholder="Enter references" value={references} onChange={e => setReferences(e.target.value)} />
             </div>
             <div className="sp-field" style={{ gridColumn: '1 / -1' }}>
               <label className="sp-label" htmlFor="p1-desc">Tell us about your work</label>
-              <textarea id="p1-desc" className="sp-textarea" rows={4} placeholder="Describe your methodology, past projects, and why you want to join Five Elements…" value={description} onChange={e => setDescription(e.target.value)} />
+              <textarea id="p1-desc" className="sp-textarea" rows={4} placeholder="Enter organisation description" value={description} onChange={e => setDescription(e.target.value)} />
             </div>
             <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
               <button type="button" className="pl-btn pl-btn--ghost" onClick={() => setStep(0)}>← Back</button>

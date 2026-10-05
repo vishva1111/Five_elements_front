@@ -38,16 +38,6 @@ interface ActiveProject {
   lastCapture:  string | null
 }
 
-interface FieldActivityItem {
-  id:         string
-  capturedBy: string
-  project:    string
-  species:    string | null
-  quantity:   number
-  eventType:  string
-  capturedAt: string
-}
-
 interface DashboardData {
   stats: {
     projectsActive:    number
@@ -61,7 +51,6 @@ interface DashboardData {
   }
   alerts:         Alert[]
   activeProjects: ActiveProject[]
-  fieldActivity:  FieldActivityItem[]
   recentSubmissions: {
     id:        string
     title:     string
@@ -182,7 +171,9 @@ export default function PartnerDashboard() {
                   <span>{p.fundersCount} funder{p.fundersCount === 1 ? '' : 's'}</span>
                   {p.owed > 0
                     ? <span style={{ color: '#8B3A00', fontWeight: 700 }}>{p.owed.toLocaleString('en-IN')} owed</span>
-                    : <span style={{ color: '#2B5341', fontWeight: 700 }}>Up to date</span>}
+                    : p.funded > 0
+                      ? <span style={{ color: '#2B5341', fontWeight: 700 }}>Up to date</span>
+                      : <span style={{ color: '#9AA79C', fontWeight: 600 }}>No funding yet</span>}
                 </div>
                 {p.lastCapture && (
                   <div style={{ fontSize: 11, color: '#9AA79C', marginTop: 6 }}>last capture {p.lastCapture}</div>
@@ -293,40 +284,6 @@ export default function PartnerDashboard() {
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
-
-        {/* Field activity — reassures the admin that work is flowing in */}
-        <div className="pl-card" style={{ gridColumn: '1 / -1' }}>
-          <div className="pl-card__title">Field activity</div>
-          {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[1,2,3].map(i => <div key={i} className="pl-skel" style={{ height: 32 }} />)}
-            </div>
-          ) : (data?.fieldActivity?.length ?? 0) === 0 ? (
-            <div style={{ fontSize: 13, color: '#9AA79C', padding: '12px 0' }}>
-              No captures yet. Your field team's work will appear here as it arrives.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {data!.fieldActivity.map(a => (
-                <div
-                  key={a.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '9px 0', borderBottom: '0.5px solid #F0EDE8', fontSize: 13,
-                  }}
-                >
-                  <span style={{ fontSize: 15 }}>🌱</span>
-                  <span style={{ fontWeight: 600, color: '#112121' }}>{a.capturedBy}</span>
-                  <span style={{ color: '#6B7B6E' }}>
-                    {a.eventType.toLowerCase()} · {a.quantity}{a.species ? ` ${a.species}` : ''}
-                  </span>
-                  <span style={{ color: '#9AA79C', fontSize: 12 }}>{a.project}</span>
-                  <span style={{ marginLeft: 'auto', color: '#9AA79C', fontSize: 12 }}>{a.capturedAt}</span>
-                </div>
-              ))}
-            </div>
           )}
         </div>
       </div>

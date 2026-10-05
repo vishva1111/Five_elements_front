@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import PartnerLayout from './PartnerLayout'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
 
@@ -67,6 +68,8 @@ export default function LinkedSubmissions() {
 
   useEffect(() => { load() }, [load])
 
+  const pg = usePagination(submissions)
+
   return (
     <PartnerLayout title="Submissions linked to you">
       <div style={{ maxWidth: 860 }}>
@@ -89,7 +92,7 @@ export default function LinkedSubmissions() {
           </div>
         )}
 
-        {!loading && submissions.map(sub => {
+        {!loading && pg.items.map(sub => {
           const pStatus = sub.partner_review_status || 'pending'
           const colors  = PARTNER_STATUS_COLORS[pStatus] || PARTNER_STATUS_COLORS.pending
 
@@ -170,6 +173,7 @@ export default function LinkedSubmissions() {
             </div>
           )
         })}
+        {!loading && <Pagination {...pg} noun="submission" />}
       </div>
     </PartnerLayout>
   )
@@ -236,7 +240,7 @@ function PartnerReviewActions({
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="Optional note (visible to admin and submitter)…"
+            placeholder="Enter a note (optional)"
             rows={2}
             style={{ width: '100%', borderRadius: 9, border: '1px solid #D8CFC6', padding: '9px 12px', fontFamily: 'Inter, sans-serif', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
           />

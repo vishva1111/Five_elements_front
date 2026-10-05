@@ -9,7 +9,9 @@
  */
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useGoBack } from '../../hooks/useGoBack'
 import PartnerLayout from './PartnerLayout'
+import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
@@ -37,6 +39,7 @@ interface ImportSummary {
 export default function ImportFunders() {
   const { session } = useAuth()
   const navigate    = useNavigate()
+  const goBack      = useGoBack('/partner/funders')
   const fileRef     = useRef<HTMLInputElement>(null)
   const token       = session?.access_token
 
@@ -49,7 +52,7 @@ export default function ImportFunders() {
   const [importing, setImporting] = useState(false)
   const [summary,   setSummary]   = useState<ImportSummary | null>(null)
   const [error,     setError]     = useState<string | null>(null)
-  const [result,    setResult]    = useState<string | null>(null)
+  const toast = useToast()
 
   useEffect(() => {
     if (!token) return
@@ -67,7 +70,6 @@ export default function ImportFunders() {
     }
     setChecking(true)
     setError(null)
-    setResult(null)
     setSummary(null)
     try {
       const form = new FormData()
@@ -111,7 +113,8 @@ export default function ImportFunders() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Import failed')
 
-      setResult(data.message || `${data.imported} donations imported.`)
+      toast.success(data.message || `${data.imported} donations imported.`)
+      navigate('/partner/funders')
       setSummary(null)
       setFile(null)
       if (fileRef.current) fileRef.current.value = ''
@@ -147,14 +150,6 @@ export default function ImportFunders() {
     <PartnerLayout title="Import donations" subtitle="Record donations already collected offline — cash, UPI, cheque or a paper receipt">
       <div style={{ maxWidth: 760 }}>
 
-        {result && (
-          <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, color: '#27500A', marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <span>✓ {result}</span>
-            <button type="button" onClick={() => navigate('/partner/funders')} style={{ background: 'none', border: 'none', color: '#27500A', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit', fontSize: 13 }}>
-              View funders →
-            </button>
-          </div>
-        )}
 
         {error && (
           <div style={{ background: '#FEF0E3', border: '0.5px solid #F5C27A', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#8B3A00', marginBottom: 16 }}>
@@ -221,8 +216,7 @@ export default function ImportFunders() {
                 const f = e.target.files?.[0] || null
                 setFile(f)
                 setSummary(null)
-                setResult(null)
-                setError(null)
+                            setError(null)
                 if (f) checkFile(f)
               }}
             />
@@ -295,7 +289,7 @@ export default function ImportFunders() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <button type="button" className="pl-btn pl-btn--ghost" onClick={() => navigate('/partner/funders')}>← Back to funders</button>
+          <button type="button" className="pl-btn pl-btn--ghost" onClick={goBack}>← Back</button>
         </div>
       </div>
     </PartnerLayout>

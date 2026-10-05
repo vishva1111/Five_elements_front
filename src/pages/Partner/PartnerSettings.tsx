@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PartnerLayout from './PartnerLayout'
+import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
@@ -22,7 +23,7 @@ export default function PartnerSettings() {
   const [status,       setStatus]       = useState('')
 
   const [saving, setSaving] = useState(false)
-  const [saved,  setSaved]  = useState(false)
+  const toast = useToast()
 
   const token = session?.access_token
 
@@ -50,7 +51,6 @@ export default function PartnerSettings() {
 
   async function handleSave() {
     setSaving(true)
-    setSaved(false)
     setError(null)
     try {
       const res = await fetch(`${API}/api/partner/profile`, {
@@ -60,8 +60,7 @@ export default function PartnerSettings() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to save')
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      toast.success('Settings saved.')
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -97,11 +96,6 @@ export default function PartnerSettings() {
     <PartnerLayout title="Partner settings">
       <div style={{ maxWidth: 680 }}>
 
-        {saved && (
-          <div style={{ background: '#EAF3DE', border: '0.5px solid #AACBA7', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#2B5341', marginBottom: 20 }}>
-            ✓ Settings saved successfully.
-          </div>
-        )}
         {error && (
           <div style={{ background: '#FEF0E3', border: '0.5px solid #F5C27A', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: '#8B3A00', marginBottom: 20 }}>
             {error}
@@ -122,17 +116,17 @@ export default function PartnerSettings() {
 
           <div className="sp-field" style={{ marginBottom: 14 }}>
             <label className="sp-label" htmlFor="ps-type">Organisation type</label>
-            <input id="ps-type" type="text" className="sp-input" placeholder="NGO, Trust, Co-operative…" value={orgType} onChange={e => setOrgType(e.target.value)} />
+            <input id="ps-type" type="text" className="sp-input" placeholder="Enter organisation type" value={orgType} onChange={e => setOrgType(e.target.value)} />
           </div>
 
           <div className="sp-field" style={{ marginBottom: 14 }}>
             <label className="sp-label" htmlFor="ps-web">Website</label>
-            <input id="ps-web" type="url" className="sp-input" placeholder="https://terraroots.org" value={website} onChange={e => setWebsite(e.target.value)} />
+            <input id="ps-web" type="url" className="sp-input" placeholder="Enter website URL" value={website} onChange={e => setWebsite(e.target.value)} />
           </div>
 
           <div className="sp-field" style={{ marginBottom: 14 }}>
             <label className="sp-label" htmlFor="ps-bio">Description</label>
-            <textarea id="ps-bio" className="sp-textarea" rows={3} placeholder="Describe your organisation's mission and work…" value={description} onChange={e => setDescription(e.target.value)} />
+            <textarea id="ps-bio" className="sp-textarea" rows={3} placeholder="Enter organisation description" value={description} onChange={e => setDescription(e.target.value)} />
           </div>
         </div>
 

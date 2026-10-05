@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
@@ -114,6 +116,10 @@ export default function EvidenceVault() {
   }
 
   const filtered = filter === 'all' ? items : items.filter(i => i.status === filter)
+  const pg = usePagination(filtered, 12)
+
+  // Esc closes the detail drawer; the page behind stays put.
+  useModalBehavior(() => setOpenItem(null), !!openItem)
 
   return (
     <PartnerLayout title="Evidence vault">
@@ -198,7 +204,7 @@ export default function EvidenceVault() {
           </div>
         ) : view === 'grid' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14 }}>
-            {filtered.map(item => (
+            {pg.items.map(item => (
               <button
                 key={item.id}
                 type="button"
@@ -245,7 +251,7 @@ export default function EvidenceVault() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(item => (
+              {pg.items.map(item => (
                 <tr key={item.id}>
                   <td>
                     <span style={{ marginRight: 6 }}>{fileIcon(item.fileType)}</span>
@@ -278,6 +284,7 @@ export default function EvidenceVault() {
             </tbody>
           </table>
         )}
+        {!loading && <Pagination {...pg} noun="file" />}
       </div>
 
       {/* Detail drawer. Evidence is read-only after capture — corrections are
