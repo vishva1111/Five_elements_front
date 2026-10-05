@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import AdminLayout from './AdminLayout'
 import './TreeRecords.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 interface TreeRecord {
   id: string
@@ -44,6 +45,7 @@ export default function TreeRecords() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('all')
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  useModalBehavior(() => setSelectedPhoto(null), selectedPhoto !== null)
   const [stats, setStats] = useState({ total: 0, healthy: 0, sick: 0, dead: 0 })
 
   const fetchRecords = useCallback(async (showSpinner = true) => {

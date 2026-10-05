@@ -4,6 +4,7 @@ import NotificationBell from '../../components/ui/NotificationBell'
 import { useAuth } from '../../contexts/AuthContext'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Dashboard.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 const NAV_ITEMS = [
   { icon: '▦',  label: 'Dashboard',      to: '/business' },
@@ -26,6 +27,7 @@ export default function BusinessLayout({ children, title, subtitle }: BusinessLa
   const [mobileOpen, setMobileOpen]     = useState(false)
   const [isMobile, setIsMobile]         = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  useModalBehavior(() => setShowLogoutModal(false), showLogoutModal)
   const location = useLocation()
   const navigate = useNavigate()
   const { signOut, user } = useAuth()

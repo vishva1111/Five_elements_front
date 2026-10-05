@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import './ImpactHome.css'
 import './IndividualLayout.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 const NAV_ITEMS = [
   { icon: LayoutGrid,    label: 'Dashboard',     href: '/impact' },
@@ -45,6 +46,7 @@ export default function IndividualLayout({ children, title, topLabel = 'MY IMPAC
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen]         = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  useModalBehavior(() => setShowLogoutModal(false), showLogoutModal)
 
   const displayName = user?.displayName || user?.email || 'User'
   const initials    = getInitials(displayName)

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useProject } from '../../hooks/useProjects'
 import Navbar from '../../components/layout/Navbar'
 import './ProjectDetail.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 // ── Pentagon geometry helper ──────────────────────────────────────────────────
 function penta(cx: number, cy: number, r: number, rot = -Math.PI / 2): string {
@@ -69,6 +70,7 @@ export default function ProjectDetail() {
   const { project, loading, error } = useProject(id ?? '')
   const [tab, setTab] = useState<'overview' | 'evidence' | 'ledger'>('overview')
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
+  useModalBehavior(() => setLightboxIdx(null), lightboxIdx !== null)
 
   // Loading
   if (loading) {

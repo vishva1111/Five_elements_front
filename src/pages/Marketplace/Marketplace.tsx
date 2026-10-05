@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useProjects, useProjectCategories } from '../../hooks/useProjects'
 import Navbar from '../../components/layout/Navbar'
 import './Marketplace.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 // ── Pentagon geometry helper ──────────────────────────────────────────────────
 function pentaPoints(cx: number, cy: number, r: number, rot = -Math.PI / 2): string {
@@ -68,6 +69,7 @@ function ElementIcon({ el, filled }: { el: typeof ELEMENTS[0]; filled: boolean }
 
 // ── Coming-soon modal ─────────────────────────────────────────────────────────
 function ComingSoonModal({ elementKey, onClose }: { elementKey: string; onClose: () => void }) {
+  useModalBehavior(onClose)
   const [email, setEmail] = useState('')
   const [sent, setSent]   = useState(false)
   const el = ELEMENTS.find(e => e.key === elementKey)
