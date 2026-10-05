@@ -4,6 +4,7 @@ import NotificationBell from '../../components/ui/NotificationBell'
 import { useAuth } from '../../contexts/AuthContext'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import '../Business/Dashboard.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 const NAV_ITEMS = [
   { icon: '⬡',  label: 'Dashboard',     to: '/partner/dashboard' },
@@ -31,6 +32,7 @@ export default function PartnerLayout({ children, title, subtitle }: PartnerLayo
   const [mobileOpen, setMobileOpen]     = useState(false)
   const [isMobile, setIsMobile]         = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  useModalBehavior(() => setShowLogoutModal(false), showLogoutModal)
   const location = useLocation()
   const navigate = useNavigate()
   const { signOut, user } = useAuth()

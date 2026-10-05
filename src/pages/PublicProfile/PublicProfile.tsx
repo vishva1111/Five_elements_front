@@ -5,6 +5,7 @@ import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import { fetchProfile, type ProfileData } from '../../services/api'
 import './PublicProfile.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 // ── Pentagon geometry helper ──────────────────────────────────────────────────
 function penta(cx: number, cy: number, r: number, rot = -Math.PI / 2): string {
@@ -80,6 +81,7 @@ const ELEMENTS = [
 
 // ── Tile detail modal ─────────────────────────────────────────────────────────
 function TileModal({ tile, onClose }: { tile: any; onClose: () => void }) {
+  useModalBehavior(onClose)
   return (
     <div className="pp-modal-backdrop" onClick={onClose}>
       <div className="pp-modal" onClick={e => e.stopPropagation()}>

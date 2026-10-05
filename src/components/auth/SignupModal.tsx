@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import './SignupModal.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 interface SignupModalProps {
   onSuccess: () => void
@@ -13,6 +14,7 @@ interface SignupModalProps {
  * can proceed with the payment.
  */
 export default function SignupModal({ onSuccess, onClose }: SignupModalProps) {
+  useModalBehavior(onClose)
   const { signIn, signUp } = useAuth()
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')

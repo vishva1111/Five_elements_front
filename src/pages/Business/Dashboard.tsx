@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Dashboard.css'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 interface TreeRecord {
   id: string
@@ -116,6 +117,7 @@ export default function Dashboard() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  useModalBehavior(() => setShowLogoutModal(false), showLogoutModal)
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -147,10 +149,8 @@ export default function Dashboard() {
   const loadTreeRecords = useCallback(async () => {
     setTreeLoading(true)
     try {
-      // Same fixed user_id this widget has always shown — pre-existing, not
-      // scoped to whichever business user is logged in. Left unchanged here;
-      // only the transport moved from a direct Supabase query to the API.
-      const res = await fetch(`${API}/api/dashboard/tree-records?user_id=5be2e23c-22a2-4c5e-adf9-1a764bf85f5f`, {
+      // The backend scopes this to the signed-in user.
+      const res = await fetch(`${API}/api/dashboard/tree-records`, {
         headers: { Authorization: `Bearer ${session?.access_token || ''}` },
       })
       const json = await res.json()

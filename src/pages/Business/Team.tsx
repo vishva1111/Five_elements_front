@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import BusinessLayout from './BusinessLayout'
 import { fetchTeam, inviteTeamMember, removeTeamMember, type TeamMember } from '../../services/api'
+import { useToast } from '../../components/ui/Toast'
 import './Dashboard.css'
 import './Team.css'
 
@@ -30,6 +31,7 @@ export default function Team() {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('Viewer')
   const [inviting, setInviting] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     fetchTeam()
@@ -47,7 +49,7 @@ export default function Team() {
       setMembers(prev => [...prev, res.member])
       setEmail('')
     } catch (err) {
-      alert('Failed to invite member')
+      toast.error('Failed to invite member')
     } finally {
       setInviting(false)
     }
@@ -58,7 +60,7 @@ export default function Team() {
       await removeTeamMember(id)
       setMembers(prev => prev.filter(m => m.id !== id))
     } catch {
-      alert('Failed to remove member')
+      toast.error('Failed to remove member')
     }
   }
 
