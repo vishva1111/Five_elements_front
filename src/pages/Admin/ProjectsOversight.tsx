@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
 
 interface ProjectRow {
@@ -42,6 +43,8 @@ export default function ProjectsOversight() {
   }, [session])
 
   const filtered = filter === 'all' ? projects : projects.filter(p => p.status === filter)
+
+  const pg = usePagination(filtered, 10, filter)
 
   async function approveProject(id: string) {
     setActing(id)
@@ -116,6 +119,7 @@ export default function ProjectsOversight() {
             <div className="ad-empty__title">No {filter === 'all' ? '' : filter.replace('_', ' ')} projects</div>
           </div>
         ) : (
+        <>
           <table className="ad-table">
             <thead>
               <tr>
@@ -130,7 +134,7 @@ export default function ProjectsOversight() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(p => (
+              {pg.items.map(p => (
                 <tr key={p.id}>
                   <td>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{p.title}</div>
@@ -144,12 +148,12 @@ export default function ProjectsOversight() {
                   <td><span className={`ad-badge ad-badge--${p.status === 'pending_review' ? 'pending' : p.status}`}>{p.status.replace('_', ' ')}</span></td>
                   <td>
                     {p.status === 'pending_review' ? (
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                         <button type="button" className="ad-btn ad-btn--primary ad-btn--sm" disabled={acting === p.id} onClick={() => approveProject(p.id)}>
-                          {acting === p.id ? '…' : '✅'}
+                          {acting === p.id ? '…' : 'Approve'}
                         </button>
-                        <button type="button" className="ad-btn ad-btn--danger ad-btn--sm" disabled={acting === p.id} onClick={() => rejectProject(p.id)}>
-                          {acting === p.id ? '…' : '❌'}
+                        <button type="button" className="ad-btn ad-btn--ghost ad-btn--sm" style={{ color: '#C62828' }} disabled={acting === p.id} onClick={() => rejectProject(p.id)}>
+                          Reject
                         </button>
                       </div>
                     ) : (
@@ -162,6 +166,8 @@ export default function ProjectsOversight() {
               ))}
             </tbody>
           </table>
+          <Pagination {...pg} noun="project" />
+        </>
         )}
       </div>
     </AdminLayout>

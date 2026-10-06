@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
@@ -105,8 +106,6 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
   const [reviewing,       setReviewing]       = useState(false)
 
   // Pagination
-  const [page, setPage]         = useState(1)
-  const [pageSize, setPageSize] = useState(10)
 
   const [form, setForm] = useState({
     name: '', project_id: '', assignee_id: '', tree_id: '',
@@ -329,13 +328,9 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
   const selectedBulkProject = projects.find(p => p.id === bulkForm.project_id)
 
   // ── Pagination ──────────────────────────────────────────────────────────────
-  const totalPages  = Math.max(1, Math.ceil(filteredTasks.length / pageSize))
-  const currentPage = Math.min(page, totalPages)
-  const pageStart   = (currentPage - 1) * pageSize
-  const pagedTasks  = filteredTasks.slice(pageStart, pageStart + pageSize)
+  const pg = usePagination(filteredTasks, 10, `${filterStatus}|${filterProject}`)
 
   // Jump back to page 1 whenever the filters change the result set
-  useEffect(() => { setPage(1) }, [filterStatus, filterProject, pageSize])
 
   // Esc closes the open pop-up; the page behind stays put.
   useModalBehavior(() => setShowModal(false), showModal)
@@ -416,7 +411,7 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
                 </tr>
               </thead>
               <tbody>
-                {pagedTasks.map((task, i) => (
+                {pg.items.map((task, i) => (
                   <tr key={task.id} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
                     <td style={tdStyle}>
                       <span style={{ fontFamily: 'monospace', fontSize: 12, background: '#f0f7f0', color: '#1a5c2a', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
@@ -546,61 +541,8 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
             </table>
 
             {/* Pagination */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              gap: 12, flexWrap: 'wrap', padding: '12px 16px',
-              borderTop: '1px solid #f0f0f0', background: '#fafafa',
-            }}>
-              <div style={{ fontSize: 12.5, color: '#666' }}>
-                Showing <strong>{pageStart + 1}–{Math.min(pageStart + pageSize, filteredTasks.length)}</strong> of{' '}
-                <strong>{filteredTasks.length}</strong> task{filteredTasks.length !== 1 ? 's' : ''}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <select
-                  value={pageSize}
-                  onChange={e => setPageSize(Number(e.target.value))}
-                  style={{ ...selectStyle, padding: '4px 8px', fontSize: 12 }}
-                  title="Rows per page"
-                >
-                  {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} / page</option>)}
-                </select>
-
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  style={{ ...pagerBtn, opacity: currentPage === 1 ? 0.4 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
-                >
-                  ‹ Prev
-                </button>
-
-                {getPageNumbers(currentPage, totalPages).map((p, idx) =>
-                  p === '…' ? (
-                    <span key={`gap-${idx}`} style={{ fontSize: 12, color: '#aaa', padding: '0 4px' }}>…</span>
-                  ) : (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p as number)}
-                      style={{
-                        ...pagerBtn,
-                        background: p === currentPage ? '#1a5c2a' : '#fff',
-                        color:      p === currentPage ? '#fff' : '#333',
-                        fontWeight: p === currentPage ? 700 : 500,
-                      }}
-                    >
-                      {p}
-                    </button>
-                  )
-                )}
-
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  style={{ ...pagerBtn, opacity: currentPage === totalPages ? 0.4 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
-                >
-                  Next ›
-                </button>
-              </div>
+            <div style={{ padding: '0 16px 12px' }}>
+              <Pagination {...pg} noun="task" />
             </div>
           </div>
         )}
@@ -846,28 +788,8 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
   )
 }
 
-// Builds a compact page list like [1, '…', 4, 5, 6, '…', 12] around the current page.
-function getPageNumbers(current: number, total: number): (number | '…')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-
-  const pages: (number | '…')[] = [1]
-  const start = Math.max(2, current - 1)
-  const end   = Math.min(total - 1, current + 1)
-
-  if (start > 2) pages.push('…')
-  for (let p = start; p <= end; p++) pages.push(p)
-  if (end < total - 1) pages.push('…')
-  pages.push(total)
-
-  return pages
-}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const pagerBtn: React.CSSProperties = {
-  minWidth: 30, padding: '4px 9px', borderRadius: 6,
-  border: '1.5px solid #e0e0e0', background: '#fff', color: '#333',
-  fontSize: 12.5, cursor: 'pointer', lineHeight: 1.6,
-}
 
 const overlayStyle: React.CSSProperties = {
   position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',

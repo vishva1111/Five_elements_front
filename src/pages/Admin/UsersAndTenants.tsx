@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
 
 interface User {
@@ -49,6 +50,8 @@ export default function UsersAndTenants() {
     })
     // Sign-ups waiting for approval first — they can't use the app until then.
     .sort((a, b) => Number(b.status === 'pending') - Number(a.status === 'pending'))
+
+  const pg = usePagination(filtered, 10, `${roleFilter}|${search}`)
 
   const pendingCount = users.filter(u => u.status === 'pending').length
 
@@ -125,6 +128,7 @@ export default function UsersAndTenants() {
             <div className="ad-empty__sub">Try adjusting your search or filter.</div>
           </div>
         ) : (
+        <>
           <table className="ad-table">
             <thead>
               <tr>
@@ -137,7 +141,7 @@ export default function UsersAndTenants() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(u => (
+              {pg.items.map(u => (
                 <tr key={u.id}>
                   <td>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{u.name || '—'}</div>
@@ -180,6 +184,8 @@ export default function UsersAndTenants() {
               ))}
             </tbody>
           </table>
+          <Pagination {...pg} noun="user" />
+        </>
         )}
       </div>
     </AdminLayout>

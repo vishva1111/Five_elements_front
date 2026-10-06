@@ -7,7 +7,13 @@
  */
 import React, { useEffect, useState } from 'react'
 
-export function usePagination<T>(all: T[], initialSize = 10) {
+/**
+ * `resetKey` — pass the current filter/search (e.g. `${tab}|${search}`) to jump
+ * back to page 1 only when that changes. Rows dropping out after an action
+ * (approve, reject, a poll) then keep you on your page — it is only clamped if
+ * it no longer exists. Without a key, any change in row count resets.
+ */
+export function usePagination<T>(all: T[], initialSize = 10, resetKey?: unknown) {
   const [page, setPage]         = useState(1)
   const [pageSize, setPageSize] = useState(initialSize)
 
@@ -16,8 +22,9 @@ export function usePagination<T>(all: T[], initialSize = 10) {
   const currentPage = Math.min(page, totalPages)
   const start       = (currentPage - 1) * pageSize
 
-  // Back to the first page whenever the list itself shrinks/grows (filters, reloads).
-  useEffect(() => { setPage(1) }, [total, pageSize])
+  useEffect(() => { setPage(1) }, [resetKey === undefined ? total : resetKey, pageSize])
+  // Keep the stored page in range so Prev/Next step from the page actually shown.
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [page, totalPages])
 
   return {
     items: all.slice(start, start + pageSize),

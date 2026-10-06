@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
 
 interface Transaction {
@@ -51,6 +52,8 @@ export default function FinanceConsole() {
 
   const filtered = filter === 'all' ? txns : txns.filter(t => t.type === filter)
 
+  const pg = usePagination(filtered, 10, filter)
+
   const fmt = (n: number) => `£${(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   return (
@@ -97,6 +100,7 @@ export default function FinanceConsole() {
             <div className="ad-empty__sub">No {filter === 'all' ? '' : filter} transactions recorded yet.</div>
           </div>
         ) : (
+        <>
           <table className="ad-table">
             <thead>
               <tr>
@@ -110,7 +114,7 @@ export default function FinanceConsole() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(t => (
+              {pg.items.map(t => (
                 <tr key={t.id}>
                   <td style={{ color: '#9AA79C', fontSize: 12 }}>{t.date}</td>
                   <td><span className={`ad-badge ad-badge--${TYPE_BADGE[t.type]}`}>{t.type}</span></td>
@@ -129,6 +133,8 @@ export default function FinanceConsole() {
               ))}
             </tbody>
           </table>
+          <Pagination {...pg} noun="transaction" />
+        </>
         )}
       </div>
     </AdminLayout>

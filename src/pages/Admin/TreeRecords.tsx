@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import AdminLayout from './AdminLayout'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './TreeRecords.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 
@@ -80,6 +81,9 @@ export default function TreeRecords() {
     return () => clearInterval(interval)
   }, [fetchRecords])
 
+  // Keyed on the filter so the background poll doesn't throw you back to page 1.
+  const pg = usePagination(records, 12, filter)
+
   const formatDate = (iso: string) => {
     const d = new Date(iso)
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -157,7 +161,7 @@ export default function TreeRecords() {
         {/* Records Grid */}
         {!loading && records.length > 0 && (
           <div className="tr-grid">
-            {records.map(record => (
+            {pg.items.map(record => (
               <div key={record.id} className="tr-card">
                 {/* Photo */}
                 <div className="tr-photo-wrap" onClick={() => setSelectedPhoto(record.photo_url)}>
@@ -218,6 +222,7 @@ export default function TreeRecords() {
             ))}
           </div>
         )}
+        {!loading && <Pagination {...pg} noun="record" />}
 
         {/* Photo Modal */}
         {selectedPhoto && (
