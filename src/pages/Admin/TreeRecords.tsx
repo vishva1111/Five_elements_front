@@ -47,7 +47,7 @@ interface TreeRecord {
 // Refetch on this interval instead of a live push subscription — new
 // captures show up within POLL_MS instead of instantly, in exchange for the
 // admin gallery not needing its own Supabase realtime connection.
-const POLL_MS = 20_000
+const POLL_MS = 60_000
 
 const hasPoint = (r: TreeRecord) => Number(r.latitude) !== 0 && Number(r.longitude) !== 0 && r.latitude != null && r.longitude != null
 const conditionOf = (r: TreeRecord) => (r.latest_audit?.condition || r.tree_condition || r.health_status || '').trim()
@@ -86,8 +86,11 @@ export default function TreeRecords() {
 
   useEffect(() => {
     fetchRecords()
-    const interval = setInterval(() => fetchRecords(false), POLL_MS)
-    return () => clearInterval(interval)
+    // Background refresh only while this tab is open in front of someone.
+    const tick = () => { if (document.visibilityState === 'visible') fetchRecords(false) }
+    const interval = setInterval(tick, POLL_MS)
+    document.addEventListener('visibilitychange', tick)
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', tick) }
   }, [fetchRecords])
 
   const options = useMemo(() => ({
