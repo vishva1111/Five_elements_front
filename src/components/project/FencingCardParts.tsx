@@ -8,7 +8,7 @@ import TreeMap from '../map/TreeMap'
 import { useToast } from '../ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
-import { formatArea, formatLength, formatDate, type Boundary } from '../tree/treeLabels'
+import { conditionColor, formatLength, formatDate, type Boundary } from '../tree/treeLabels'
 
 export const LOCKED_GREEN = '#2E7D32'
 export const UNLOCKED_AMBER = '#F59E0B'
@@ -29,7 +29,19 @@ export interface BoundaryRequest {
 export const boundaryRequests = (list: { type: string }[] | undefined) =>
   ((list || []) as BoundaryRequest[]).filter(r => r.type === 'boundary')
 
-export function FencingMapBlock({ boundary, height = 190, onOpen }: { boundary: Boundary | null | undefined; height?: number; onOpen?: () => void }) {
+/** "54 m²", or "1.20 ha · 12,000 m²" for bigger land. */
+function areaText(sqm: number) {
+  const m2 = `${Math.round(sqm).toLocaleString('en-IN')} m²`
+  return sqm >= 10000 ? `${(sqm / 10000).toFixed(2)} ha · ${m2}` : m2
+}
+
+const toggleBtn = (on: boolean): React.CSSProperties => ({
+  border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 999,
+  background: on ? '#2B5341' : 'transparent', color: on ? '#fff' : '#6B7B6E',
+})
+
+export function FencingMapBlock({ boundary, trees = [], height = 230, oneLine = false }: { boundary: Boundary | null | undefined; trees?: { id: string; latitude: number; longitude: number; condition?: string | null }[]; height?: number; oneLine?: boolean }) {
+  const [view, setView] = useState<'map' | 'satellite'>('map')
   const has = !!boundary && boundary.coordinates.length >= 3
   if (!has) {
     return (
@@ -41,24 +53,28 @@ export function FencingMapBlock({ boundary, height = 190, onOpen }: { boundary: 
   const color = boundary!.locked ? LOCKED_GREEN : UNLOCKED_AMBER
   return (
     <div>
+      <div style={{ display: 'inline-flex', gap: 2, padding: 2, borderRadius: 999, background: '#F2EFEA', marginBottom: 8 }}>
+        <button type="button" style={toggleBtn(view === 'map')} onClick={() => setView('map')}>Map</button>
+        <button type="button" style={toggleBtn(view === 'satellite')} onClick={() => setView('satellite')}>Satellite</button>
+      </div>
       <div style={{ position: 'relative', isolation: 'isolate' }}>
-        <TreeMap height={height} boundary={boundary!.coordinates} boundaryColor={color} interactive={false} />
-        {onOpen && (
-          <button
-            type="button"
-            onClick={onOpen}
-            aria-label="Open the full map"
-            title="Open the full map"
-            style={{ position: 'absolute', inset: 0, zIndex: 600, background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: 12 }}
-          />
-        )}
+        <TreeMap
+          height={height}
+          boundary={boundary!.coordinates}
+          boundaryColor={color}
+          satellite={view === 'satellite'}
+          points={trees.map(t => ({ id: t.id, latitude: t.latitude, longitude: t.longitude, color: conditionColor(t.condition) }))}
+          treeMarkers
+          cornerLabels
+          fitBoundaryOnly
+        />
       </div>
       <div style={{ marginTop: 8, fontSize: 12, color: '#6B7B6E', lineHeight: 1.6 }}>
         <span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 5, background: color, marginRight: 6 }} />
-        <strong style={{ color: '#1C2B22' }}>{formatArea(boundary!.areaSqM)}</strong>
-        {boundary!.areaSqM ? <span> · {Math.round(boundary!.areaSqM).toLocaleString('en-IN')} m²</span> : null}
+        <strong style={{ color: '#1C2B22' }}>{areaText(boundary!.areaSqM)}</strong>
         <span> · perimeter {formatLength(boundary!.perimeterM)}</span>
-        <div>
+        {oneLine && <span> · </span>}
+        <div style={oneLine ? { display: 'inline' } : undefined}>
           {boundary!.locked
             ? <>🔒 Locked{boundary!.lockedBy ? ` by ${boundary!.lockedBy}` : ''}{boundary!.lockedAt ? ` on ${formatDate(boundary!.lockedAt)}` : ''}</>
             : <>✏️ Open for redrawing in the app — waiting to be locked again</>}

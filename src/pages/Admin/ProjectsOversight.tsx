@@ -5,9 +5,11 @@ import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import FencingSummary from '../../components/project/FencingSummary'
+import { FencingMapBlock } from '../../components/project/FencingCardParts'
+import ChangeRequestReview, { type ChangeRequest } from '../../components/project/ChangeRequestReview'
 import { EditProjectModal, ProjectTreesModal, type ProjectLite } from '../../components/project/ProjectModals'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
-import { DEFAULT_PROJECT_COLOR, FENCING_STATUS, type Boundary, type Fencing } from '../../components/tree/treeLabels'
+import { DEFAULT_PROJECT_COLOR, FENCING_STATUS, formatDate, type Boundary, type Fencing } from '../../components/tree/treeLabels'
 import './Admin.css'
 
 interface ProjectRow {
@@ -42,6 +44,10 @@ export default function ProjectsOversight() {
   const [msg,      setMsg]      = useState('')
   const [dialog,   setDialog]   = useState<{ kind: 'edit' | 'trees' | 'fencing'; project: ProjectRow } | null>(null)
 
+  // Fencing dialog: this project's fencing requests, and the one being reviewed.
+  const [fenceReqs, setFenceReqs] = useState<ChangeRequest[] | null>(null)
+  const [reviewing, setReviewing] = useState<ChangeRequest | null>(null)
+
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
 
   const load = () => {
@@ -52,6 +58,16 @@ export default function ProjectsOversight() {
       .finally(() => setLoading(false))
   }
   useEffect(load, [session])
+
+  const fenceProjectId = dialog?.kind === 'fencing' ? dialog.project.id : null
+  const loadFenceReqs = () => {
+    if (!fenceProjectId) return
+    fetch(`${API}/api/admin/change-requests`, { headers })
+      .then(r => r.json())
+      .then(d => setFenceReqs((d.requests || []).filter((r: ChangeRequest) => r.projectId === fenceProjectId && (r.type === 'fencing' || r.type === 'boundary'))))
+      .catch(() => setFenceReqs([]))
+  }
+  useEffect(() => { setFenceReqs(null); loadFenceReqs() }, [fenceProjectId])  // eslint-disable-line react-hooks/exhaustive-deps
   useModalBehavior(() => setDialog(null), dialog?.kind === 'fencing')
   const lite = (p: ProjectRow): ProjectLite => ({
     id: p.id, name: p.title, description: p.description || null, location: p.location, category: p.category || null,
@@ -207,13 +223,47 @@ export default function ProjectsOversight() {
       {dialog?.kind === 'trees' && <ProjectTreesModal role="admin" project={lite(dialog.project)} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'fencing' && (
         <div onClick={() => setDialog(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(17,33,33,0.45)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div className="ad-card" onClick={e => e.stopPropagation()} style={{ width: 'min(460px, 100%)' }}>
+          <div className="ad-card" onClick={e => e.stopPropagation()} style={{ width: 'min(560px, 100%)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontWeight: 700, marginBottom: 10 }}>{dialog.project.title} · fencing</div>
-            <FencingSummary fencing={dialog.project.fencing} boundary={dialog.project.boundary} />
-            <p style={{ fontSize: 11.5, color: '#9AA79C', margin: '10px 0' }}>Partners ask for fencing changes; you approve them in the Approval queue.</p>
-            <button type="button" className="ad-btn ad-btn--ghost" onClick={() => setDialog(null)}>Close</button>
+            <FencingMapBlock boundary={dialog.project.boundary} height={220} oneLine />
+            <div style={{ marginTop: 12 }}>
+              <FencingSummary fencing={dialog.project.fencing} boundary={dialog.project.boundary} />
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9AA79C', margin: '16px 0 8px' }}>Fencing requests</div>
+            {fenceReqs === null ? (
+              <div style={{ fontSize: 12.5, color: '#9AA79C' }}>Loading…</div>
+            ) : fenceReqs.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: '#9AA79C' }}>No fencing requests yet.</div>
+            ) : (
+              <div style={{ border: '1px solid #EEE9E1', borderRadius: 10, overflow: 'hidden' }}>
+                {fenceReqs.map(r => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: '1px solid #F4F0EA', fontSize: 12.5 }}>
+                    <span style={{ fontWeight: 700, color: r.status === 'pending' ? '#8B5A00' : r.status === 'approved' ? '#27500A' : '#A32020' }}>
+                      {r.status === 'pending' ? 'Pending' : r.status === 'approved' ? 'Approved' : 'Rejected'}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, color: '#6B7B6E' }}>
+                      {formatDate(r.createdAt)}{r.requestedByName ? ` · ${r.requestedByName}` : ''}{r.reason ? ` — “${r.reason}”` : ''}
+                    </span>
+                    <button type="button" className="ad-btn ad-btn--ghost ad-btn--sm" onClick={() => setReviewing(r)}>{r.status === 'pending' ? 'Review' : 'View'}</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 14 }}>
+              <button type="button" className="ad-btn ad-btn--ghost" onClick={() => setDialog(null)}>Close</button>
+            </div>
           </div>
         </div>
+      )}
+
+      {reviewing && (
+        <ChangeRequestReview
+          request={reviewing}
+          onClose={() => setReviewing(null)}
+          onDone={() => { setReviewing(null); loadFenceReqs(); load() }}
+        />
       )}
     </AdminLayout>
   )

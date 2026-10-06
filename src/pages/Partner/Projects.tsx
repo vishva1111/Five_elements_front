@@ -2,9 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
-import { FencingMapBlock, FencingRequestBanner, boundaryRequests } from '../../components/project/FencingCardParts'
-import ProjectTreeList from '../../components/project/ProjectTreeList'
-import { ProjectTreesModal, type ProjectLite } from '../../components/project/ProjectModals'
+import { FencingMapBlock } from '../../components/project/FencingCardParts'
 import { DEFAULT_PROJECT_COLOR, formatDate, type Boundary, type Fencing } from '../../components/tree/treeLabels'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
@@ -32,6 +30,7 @@ interface PartnerProject {
   /** Trees the partner has recorded in this project, and how many are planted. */
   treesRecorded?:   number
   treesPlanted?:    number
+  treePoints?:      { id: string; latitude: number; longitude: number; condition?: string | null }[]
   fundedTrees:      number | null
   progressPct:      number
   tco2e:            number | null
@@ -54,7 +53,6 @@ export default function Projects() {
 
   const [projects, setProjects] = useState<PartnerProject[]>([])
   const [loading,  setLoading]  = useState(true)
-  const [mapOf,    setMapOf]    = useState<PartnerProject | null>(null)
 
   const token = session?.access_token
   const load = useCallback(() => {
@@ -67,10 +65,6 @@ export default function Projects() {
   useEffect(() => { load() }, [load])
 
   const pg = usePagination(projects, 12)
-  const lite = (p: PartnerProject): ProjectLite => ({
-    id: p.id, name: p.name, description: p.description, location: p.location, category: p.category,
-    totalTrees: p.totalTrees, mapColor: p.mapColor, fencing: p.fencing, boundary: p.boundary,
-  })
   const open = (p: PartnerProject) => navigate(`/partner/projects/${p.id}`)
 
   return (
@@ -103,9 +97,7 @@ export default function Projects() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {pg.items.map(p => {
             const color = p.mapColor || DEFAULT_PROJECT_COLOR
-            const requests = boundaryRequests(p.changeRequests)
-            const pending = requests.find(r => r.status === 'pending')
-            const lastApproved = requests.find(r => r.status === 'approved')
+            const pending = p.changeRequests.find(r => r.status === 'pending' && (r.type === 'fencing' || r.type === 'boundary'))
             const count = (p.fundedTrees ?? 0) + (p.treesPlanted ?? 0)
             const pct = p.totalTrees ? Math.min(100, Math.round((count / p.totalTrees) * 100)) : 0
             return (
@@ -113,12 +105,13 @@ export default function Projects() {
                 <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
                   {/* 1. Map — the land and its fencing */}
-                  <FencingMapBlock boundary={p.boundary} onOpen={() => setMapOf(p)} />
+                  <FencingMapBlock boundary={p.boundary} trees={p.treePoints} />
 
-                  {/* 2. A field-app user asked to redraw the land */}
-                  {pending && <FencingRequestBanner projectId={p.id} request={pending} onDecided={load} />}
-                  {!pending && lastApproved?.reviewedAt && (
-                    <div style={{ fontSize: 11.5, color: '#6B7B6E' }}>✅ Update approved on {formatDate(lastApproved.reviewedAt)}</div>
+                  {/* 2. A fencing update is waiting for approval */}
+                  {pending && (
+                    <div style={{ fontSize: 12, background: '#FFF4E0', color: '#8B5A00', borderRadius: 8, padding: '6px 10px' }}>
+                      ⏳ Fencing update waiting for approval · asked {formatDate(pending.createdAt)}
+                    </div>
                   )}
 
                   {/* 3. Project details */}
@@ -163,12 +156,6 @@ export default function Projects() {
                     )}
                   </div>
 
-                  {/* 4. Trees and tree details */}
-                  <ProjectTreeList projectId={p.id} added={p.treesRecorded ?? 0} planted={p.treesPlanted ?? 0} onOpenMap={() => setMapOf(p)} />
-
-                  <button type="button" className="pl-btn pl-btn--ghost" style={{ height: 32, fontSize: 12.5 }} onClick={() => open(p)}>
-                    Manage project — edit, colour, fencing →
-                  </button>
                 </div>
               </div>
             )
@@ -178,7 +165,6 @@ export default function Projects() {
         </>
       )}
 
-      {mapOf && <ProjectTreesModal project={lite(mapOf)} onClose={() => setMapOf(null)} />}
     </PartnerLayout>
   )
 }

@@ -52,36 +52,82 @@ const cornerIcon = (color: string, n: number) => L.divIcon({
   html: `<div style="width:22px;height:22px;border-radius:11px;background:#fff;border:3px solid ${color};box-shadow:0 1px 4px rgba(0,0,0,.35);font:700 10px/16px system-ui;text-align:center;color:${color}">${n}</div>`,
 })
 
+/** A numbered corner of the land (P1, P2 …): a ring on the corner with a small label under it. */
+const pointIcon = (color: string, n: number) => L.divIcon({
+  className: '',
+  iconSize: [34, 36],
+  iconAnchor: [17, 11],
+  html: `<div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:20px;height:20px;border-radius:10px;background:rgba(255,255,255,.9);border:3px solid ${color};box-shadow:0 1px 4px rgba(0,0,0,.4);box-sizing:border-box"></div>
+    <div style="margin-top:2px;padding:1px 6px;border-radius:9px;background:#12332a;color:#fff;font:700 10px/14px system-ui;white-space:nowrap">P${n}</div>
+  </div>`,
+})
+
+/** A tree badge like the field app's: a round colour-coded badge with a 🌳 in it. */
+const treeIconCache = new Map<string, L.DivIcon>()
+const treeIcon = (color: string) => {
+  let icon = treeIconCache.get(color)
+  if (!icon) {
+    icon = L.divIcon({
+      className: '',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      html: `<div style="width:28px;height:28px;border-radius:14px;background:${color};border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1">🌳</div>`,
+    })
+    treeIconCache.set(color, icon)
+  }
+  return icon
+}
+
 export default function TreeMap({
   points = [],
   boundary,
   boundaryColor = '#2B5341',
   editBoundary,
+  compareBoundary,
+  compareColor = '#D97706',
   onPointClick,
   height = 360,
   emptyText = 'No GPS locations recorded yet.',
   interactive = true,
+  satellite,
+  treeMarkers = false,
+  cornerLabels = false,
+  fitBoundaryOnly = false,
 }: {
   points?: MapPoint[]
   boundary?: LatLng[] | null
   boundaryColor?: string
   /** When set, the boundary is drawn/edited instead of shown. */
   editBoundary?: { coordinates: LatLng[]; onChange: (c: LatLng[]) => void }
+  /** A second, dashed outline drawn next to `boundary` (e.g. a proposed fence). */
+  compareBoundary?: LatLng[] | null
+  compareColor?: string
   onPointClick?: (id: string) => void
   height?: number | string
   emptyText?: string
-  /** false = a still preview (no pan/zoom/layer switch), e.g. on a project card. */
+  /** false = a still preview (no pan / zoom). */
   interactive?: boolean
+  /** Set (true/false) to choose satellite or street yourself; leave out for the built-in layer switch. */
+  satellite?: boolean
+  /** Trees as 🌳 badges, like the field app, instead of plain dots. */
+  treeMarkers?: boolean
+  /** Number the boundary corners P1, P2 … like the field app. */
+  cornerLabels?: boolean
+  /** Frame the map on the boundary alone, even when trees stand far outside it. */
+  fitBoundaryOnly?: boolean
 }) {
   const shown = useMemo(() => points.filter(valid), [points])
   const ring = (editBoundary ? editBoundary.coordinates : boundary || []).filter(valid)
   // While drawing, frame the trees and the boundary as it was when drawing
   // started — re-framing on every corner added would make the map jump.
+  const other = (compareBoundary || []).filter(valid)
   const startRing = useRef(ring)
   const framed = editBoundary ? startRing.current : ring
   const fit: [number, number][] = [
-    ...shown.map(p => [p.latitude, p.longitude] as [number, number]),
+    ...(fitBoundaryOnly && framed.length >= 3 ? [] : shown.map(p => [p.latitude, p.longitude] as [number, number])),
     ...framed.map(c => [c.latitude, c.longitude] as [number, number]),
+    ...other.map(c => [c.latitude, c.longitude] as [number, number]),
   ]
   const nothing = shown.length === 0 && ring.length === 0 && !editBoundary
 
@@ -93,7 +139,7 @@ export default function TreeMap({
         scrollWheelZoom={interactive} dragging={interactive} doubleClickZoom={interactive}
         touchZoom={interactive} keyboard={interactive} zoomControl={interactive}
       >
-        {interactive ? (
+        {satellite === undefined ? (
           <LayersControl position="topright">
             <LayersControl.BaseLayer checked name="Street">
               <TileLayer
@@ -104,14 +150,24 @@ export default function TreeMap({
             </LayersControl.BaseLayer>
             <LayersControl.BaseLayer name="Satellite">
               <TileLayer
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                attribution="Tiles &copy; Esri"
-                maxZoom={19}
+                url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                attribution="Map data &copy; Google"
+                maxZoom={22}
+                maxNativeZoom={20}
               />
             </LayersControl.BaseLayer>
           </LayersControl>
+        ) : satellite ? (
+          <TileLayer
+            key="sat"
+            url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+            attribution="Map data &copy; Google"
+            maxZoom={22}
+            maxNativeZoom={20}
+          />
         ) : (
           <TileLayer
+            key="osm"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             maxZoom={19}
@@ -122,6 +178,10 @@ export default function TreeMap({
 
         {ring.length >= 3 && !editBoundary && (
           <Polygon positions={ring.map(toLL)} pathOptions={{ color: boundaryColor, weight: 3, fillColor: boundaryColor, fillOpacity: 0.12 }} />
+        )}
+
+        {other.length >= 3 && !editBoundary && (
+          <Polygon positions={other.map(toLL)} pathOptions={{ color: compareColor, weight: 3, dashArray: '6 6', fillColor: compareColor, fillOpacity: 0.12 }} />
         )}
 
         {editBoundary && (
@@ -150,7 +210,27 @@ export default function TreeMap({
           </>
         )}
 
-        {shown.map(p => (
+        {cornerLabels && !editBoundary && ring.map((c, i) => (
+          <Marker key={`pc-${i}`} position={[c.latitude, c.longitude]} icon={pointIcon(boundaryColor, i + 1)} interactive={false} />
+        ))}
+
+        {treeMarkers && shown.map(p => (
+          <Marker
+            key={p.id}
+            position={[p.latitude, p.longitude]}
+            icon={treeIcon(p.color || '#16a34a')}
+            eventHandlers={onPointClick ? { click: () => onPointClick(p.id) } : undefined}
+          >
+            {(p.label || p.sublabel) && (
+              <Tooltip direction="top" offset={[0, -14]}>
+                <div style={{ fontWeight: 700 }}>{p.label}</div>
+                {p.sublabel && <div style={{ fontSize: 11, color: '#555' }}>{p.sublabel}</div>}
+              </Tooltip>
+            )}
+          </Marker>
+        ))}
+
+        {!treeMarkers && shown.map(p => (
           <CircleMarker
             key={p.id}
             center={[p.latitude, p.longitude]}
