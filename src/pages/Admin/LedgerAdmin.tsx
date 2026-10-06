@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
 
 interface LedgerEntry {
@@ -47,6 +48,8 @@ export default function LedgerAdmin() {
     e.publicHash?.toLowerCase().includes(search.toLowerCase())
   )
 
+  const pg = usePagination(filtered, 10, search)
+
   async function supersede() {
     if (!selected || !notes.trim()) { setMsg('Please add a reason for superseding this entry.'); return }
     setActing(true)
@@ -88,7 +91,7 @@ export default function LedgerAdmin() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 360px' : '1fr', gap: 20, alignItems: 'start' }}>
+      <div className={`ad-split${selected ? '' : ' ad-split--single'}`}>
 
         <div>
           <div style={{ marginBottom: 14 }}>
@@ -106,6 +109,7 @@ export default function LedgerAdmin() {
                 <div className="ad-empty__title">No ledger entries found</div>
               </div>
             ) : (
+            <>
               <table className="ad-table">
                 <thead>
                   <tr>
@@ -120,7 +124,7 @@ export default function LedgerAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(e => (
+                  {pg.items.map(e => (
                     <tr key={e.id} style={{ background: selected?.id === e.id ? '#F5F0EC' : undefined }}>
                       <td style={{ color: '#9AA79C', fontSize: 12 }}>{e.date}</td>
                       <td style={{ fontWeight: 600, fontSize: 13 }}>{e.project}</td>
@@ -147,13 +151,15 @@ export default function LedgerAdmin() {
                   ))}
                 </tbody>
               </table>
+              <Pagination {...pg} noun="ledger record" />
+            </>
             )}
           </div>
         </div>
 
         {/* Supersede panel */}
         {selected && (
-          <div className="ad-card" style={{ position: 'sticky', top: 20 }}>
+          <div className="ad-card ad-side-panel">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
               <div className="ad-card__title" style={{ margin: 0 }}>Supersede entry</div>
               <button type="button" style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#9AA79C' }} onClick={() => setSelected(null)}>✕</button>

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import { X } from 'lucide-react'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
 
 interface Partner {
@@ -21,6 +23,8 @@ interface Partner {
 export default function PartnerManagement() {
   const { session } = useAuth()
   const navigate    = useNavigate()
+  const [searchParams] = useSearchParams()
+  const reviewId    = searchParams.get('review')
 
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading,  setLoading]  = useState(true)
@@ -53,7 +57,18 @@ export default function PartnerManagement() {
       .finally(() => setLoading(false))
   }, [session])
 
+  // Arriving from the approval queue (?review=<id>) opens that application.
+  useEffect(() => {
+    if (!reviewId) return
+    const match = partners.find(p => p.id === reviewId)
+    if (!match) return
+    setSelected(match)
+    setFilter(['pending', 'approved', 'rejected'].includes(match.status) ? match.status as typeof filter : 'all')
+  }, [reviewId, partners])
+
   const filtered = filter === 'all' ? partners : partners.filter(p => p.status === filter)
+
+  const pg = usePagination(filtered, 10, filter)
 
   async function reloadPartners() {
     const res = await fetch(`${API}/api/admin/partners`, { headers })
@@ -162,7 +177,7 @@ export default function PartnerManagement() {
 
           {createErr && <div className="ad-alert ad-alert--danger">{createErr}</div>}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="ad-grid-2" style={{ gap: 12 }}>
             {([
               ['orgName',      'Organisation name *', 'Terra Roots Foundation'],
               ['orgType',      'Organisation type',   'NGO / Trust / Co-operative'],
@@ -199,7 +214,7 @@ export default function PartnerManagement() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: 20, alignItems: 'start' }}>
+      <div className={`ad-split ad-split--wide${selected ? '' : ' ad-split--single'}`}>
 
         {/* Table */}
         <div>
@@ -222,6 +237,7 @@ export default function PartnerManagement() {
                 <div className="ad-empty__title">No {filter === 'all' ? '' : filter} partners</div>
               </div>
             ) : (
+            <>
               <table className="ad-table">
                 <thead>
                   <tr>
@@ -234,8 +250,8 @@ export default function PartnerManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(p => (
-                    <tr key={p.id} style={{ cursor: 'pointer', background: selected?.id === p.id ? '#F5F0EC' : undefined }}>
+                  {pg.items.map(p => (
+                    <tr key={p.id} style={{ cursor: 'pointer', background: selected?.id === p.id ? '#F5F0EC' : undefined }} onClick={() => { setSelected(p); setNotes(''); setMsg('') }}>
                       <td style={{ fontWeight: 600 }}>{p.orgName}</td>
                       <td style={{ color: '#6B7B6E', fontSize: 12.5 }}>{p.orgType || '—'}</td>
                       <td style={{ fontSize: 12.5 }}>
@@ -253,16 +269,18 @@ export default function PartnerManagement() {
                   ))}
                 </tbody>
               </table>
+              <Pagination {...pg} noun="partner" />
+            </>
             )}
           </div>
         </div>
 
         {/* Detail panel */}
         {selected && (
-          <div className="ad-card" style={{ position: 'sticky', top: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+          <div className="ad-card ad-side-panel">
+            <div className="ad-panel-head">
               <div className="ad-card__title" style={{ margin: 0 }}>{selected.orgName}</div>
-              <button type="button" style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#9AA79C' }} onClick={() => setSelected(null)}>✕</button>
+              <button type="button" className="ad-icon-btn" aria-label="Close" onClick={() => setSelected(null)}><X size={18} /></button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
@@ -275,8 +293,8 @@ export default function PartnerManagement() {
                 { label: 'Status',       value: selected.status },
               ].map(f => (
                 <div key={f.label}>
-                  <div style={{ fontSize: 11, color: '#9AA79C', fontWeight: 600, marginBottom: 1 }}>{f.label}</div>
-                  <div style={{ fontSize: 13, color: '#112121' }}>{f.value}</div>
+                  <div className="ad-kv__label">{f.label}</div>
+                  <div className="ad-kv__value">{f.value}</div>
                 </div>
               ))}
             </div>
@@ -295,10 +313,10 @@ export default function PartnerManagement() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" className="ad-btn ad-btn--primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => handleDecision('approve')} disabled={!!acting}>
-                    {acting === 'approve' ? 'Approving…' : '✅ Approve'}
+                    {acting === 'approve' ? 'Approving…' : 'Approve'}
                   </button>
                   <button type="button" className="ad-btn ad-btn--danger" style={{ flex: 1, justifyContent: 'center' }} onClick={() => handleDecision('reject')} disabled={!!acting}>
-                    {acting === 'reject' ? 'Rejecting…' : '❌ Reject'}
+                    {acting === 'reject' ? 'Rejecting…' : 'Reject'}
                   </button>
                 </div>
               </>

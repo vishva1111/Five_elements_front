@@ -3,12 +3,13 @@ import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutGrid, AlignJustify, BookOpen, BarChart2, Award, CircleUser,
-  Bell, LogOut, Menu, X, KeyRound
+  Bell, LogOut, Menu, X
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import './ImpactHome.css'
 import './IndividualLayout.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import ProfileModal from '../../components/ui/ProfileModal'
 
 const NAV_ITEMS = [
   { icon: LayoutGrid,    label: 'Dashboard',     href: '/impact' },
@@ -46,6 +47,7 @@ export default function IndividualLayout({ children, title, topLabel = 'MY IMPAC
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen]         = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
   useModalBehavior(() => setShowLogoutModal(false), showLogoutModal)
 
   const displayName = user?.displayName || user?.email || 'User'
@@ -98,17 +100,13 @@ export default function IndividualLayout({ children, title, topLabel = 'MY IMPAC
 
         {/* Bottom — user card + sign out */}
         <div className="ih-sidebar__bottom">
-          <div className="ih-sidebar__user-card">
+          <div className="ih-sidebar__user-card" role="button" tabIndex={0} title="View profile" style={{ cursor: 'pointer' }} onClick={() => setShowProfile(true)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowProfile(true) } }}>
             <div className="ih-sidebar__avatar">{initials}</div>
             <div className="ih-sidebar__user-info">
               <span className="ih-sidebar__user-name">{displayName}</span>
               <span className="ih-sidebar__user-email">{user?.email}</span>
             </div>
           </div>
-          <button className="ih-sidebar__signout" onClick={() => navigate('/account/password')}>
-            <KeyRound size={15} />
-            <span>Change password</span>
-          </button>
           <button className="ih-sidebar__signout" onClick={() => setShowLogoutModal(true)}>
             <LogOut size={15} />
             <span>Sign out</span>
@@ -121,6 +119,8 @@ export default function IndividualLayout({ children, title, topLabel = 'MY IMPAC
       {sidebarOpen && (
         <div className="ih-overlay" onClick={() => setSidebarOpen(false)} />
       )}
+
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
       {/* Logout confirmation modal — outside <aside> so it's not clipped */}
       {showLogoutModal && (

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { API_URL as BACKEND } from '../config/api'
 import { setTokens, getTokens, clearTokens, getValidAccessToken } from '../services/authTokens'
+import { loadProfile, clearProfileCache } from '../services/profileStore'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type UserRole = 'individual' | 'business' | 'partner' | 'admin' | 'field_user'
@@ -241,6 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => {})
     }
     clearTokens()
+    clearProfileCache()
     setUser(null)
     setSession(null)
   }
@@ -259,6 +261,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({ role }),
     })
   }
+
+  // Preload the "My profile" popup's data as soon as someone is signed in, so
+  // it opens with everything already there instead of waiting on the network.
+  const userId = user?.id
+  const accessToken = session?.access_token
+  useEffect(() => {
+    if (userId && accessToken) loadProfile(accessToken, userId).catch(() => {})
+  }, [userId, accessToken])
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, setActiveRole }}>

@@ -135,7 +135,7 @@ export default function EvidenceReview() {
 
       {error && <div className="ad-alert ad-alert--danger">{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20, alignItems: 'start' }}>
+      <div className="ad-split">
 
         {/* Left — submission details */}
         <div>
@@ -154,8 +154,8 @@ export default function EvidenceReview() {
                 { label: 'Status',        value: detail.status },
               ].map(f => (
                 <div key={f.label}>
-                  <div style={{ fontSize: 11, color: '#9AA79C', fontWeight: 600, marginBottom: 2 }}>{f.label}</div>
-                  <div style={{ fontSize: 13.5, color: '#112121', fontWeight: 500 }}>{f.value}</div>
+                  <div className="ad-kv__label">{f.label}</div>
+                  <div className="ad-kv__value" style={{ textTransform: f.label === 'Element' || f.label === 'Status' ? 'capitalize' : undefined }}>{f.value}</div>
                 </div>
               ))}
             </div>
@@ -205,7 +205,7 @@ export default function EvidenceReview() {
 
         {/* Right — review panel */}
         <div>
-          <div className="ad-card" style={{ position: 'sticky', top: 20 }}>
+          <div className="ad-card ad-side-panel">
             <div className="ad-card__title">Review decision</div>
 
             <div className="ad-field">
@@ -238,7 +238,7 @@ export default function EvidenceReview() {
                 onClick={handleApprove}
                 disabled={!!acting}
               >
-                {acting === 'approve' ? 'Approving…' : '✅ Approve & create ledger entry'}
+                {acting === 'approve' ? 'Approving…' : 'Approve & create ledger entry'}
               </button>
               <button
                 type="button"
@@ -247,7 +247,7 @@ export default function EvidenceReview() {
                 onClick={handleReject}
                 disabled={!!acting}
               >
-                {acting === 'reject' ? 'Rejecting…' : '❌ Reject & notify partner'}
+                {acting === 'reject' ? 'Rejecting…' : 'Reject & notify partner'}
               </button>
               <button type="button" className="ad-btn ad-btn--ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('/admin')}>
                 Skip for now

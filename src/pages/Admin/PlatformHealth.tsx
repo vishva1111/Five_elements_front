@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
 
 interface HealthMetric {
@@ -57,6 +58,8 @@ export default function PlatformHealth() {
       .catch(() => setData(null))
       .finally(() => setLoading(false))
   }, [session, refresh])
+
+  const pg = usePagination(data?.recentErrors || [], 10, refresh)
 
   const overallStatus = data?.metrics.some(m => m.status === 'error')
     ? 'error'
@@ -145,6 +148,7 @@ export default function PlatformHealth() {
                 <div className="ad-empty__title">No recent errors</div>
               </div>
             ) : (
+            <>
               <table className="ad-table">
                 <thead>
                   <tr>
@@ -156,7 +160,7 @@ export default function PlatformHealth() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.recentErrors.map(e => (
+                  {pg.items.map(e => (
                     <tr key={e.id}>
                       <td style={{ fontWeight: 600, fontSize: 12.5 }}>{e.service}</td>
                       <td style={{ fontSize: 12.5, color: '#6B7B6E', maxWidth: 320 }}>{e.message}</td>
@@ -167,6 +171,8 @@ export default function PlatformHealth() {
                   ))}
                 </tbody>
               </table>
+              <Pagination {...pg} noun="error" />
+            </>
             )}
           </div>
         </>

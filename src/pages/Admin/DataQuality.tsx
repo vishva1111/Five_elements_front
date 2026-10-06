@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
 
 interface Flag {
@@ -47,6 +48,8 @@ export default function DataQuality() {
   }, [session])
 
   const filtered = filter === 'all' ? flags : flags.filter(f => f.status === filter)
+
+  const pg = usePagination(filtered, 10, filter)
 
   async function updateFlag(id: string, status: 'resolved' | 'dismissed') {
     setActing(id)
@@ -104,6 +107,7 @@ export default function DataQuality() {
             <div className="ad-empty__sub">Data quality looks good.</div>
           </div>
         ) : (
+        <>
           <table className="ad-table">
             <thead>
               <tr>
@@ -117,7 +121,7 @@ export default function DataQuality() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(f => (
+              {pg.items.map(f => (
                 <tr key={f.id}>
                   <td><span className="ad-badge ad-badge--in_review">{TYPE_LABELS[f.type]}</span></td>
                   <td><span className={`ad-badge ad-badge--${SEV_BADGE[f.severity]}`}>{f.severity}</span></td>
@@ -144,6 +148,8 @@ export default function DataQuality() {
               ))}
             </tbody>
           </table>
+          <Pagination {...pg} noun="flag" />
+        </>
         )}
       </div>
     </AdminLayout>
