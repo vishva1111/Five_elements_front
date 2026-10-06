@@ -60,6 +60,7 @@ export default function TreeMap({
   onPointClick,
   height = 360,
   emptyText = 'No GPS locations recorded yet.',
+  interactive = true,
 }: {
   points?: MapPoint[]
   boundary?: LatLng[] | null
@@ -69,6 +70,8 @@ export default function TreeMap({
   onPointClick?: (id: string) => void
   height?: number | string
   emptyText?: string
+  /** false = a still preview (no pan/zoom/layer switch), e.g. on a project card. */
+  interactive?: boolean
 }) {
   const shown = useMemo(() => points.filter(valid), [points])
   const ring = (editBoundary ? editBoundary.coordinates : boundary || []).filter(valid)
@@ -85,23 +88,35 @@ export default function TreeMap({
   return (
     // isolation keeps Leaflet's own z-indexes (400–1000) from rising above the panel's pop-ups.
     <div style={{ position: 'relative', isolation: 'isolate', height, borderRadius: 12, overflow: 'hidden', border: '1px solid #E6E0D8', background: '#EEF2EC' }}>
-      <MapContainer center={INDIA} zoom={4} scrollWheelZoom style={{ height: '100%', width: '100%' }} attributionControl>
-        <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="Street">
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              maxZoom={19}
-            />
-          </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Satellite">
-            <TileLayer
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution="Tiles &copy; Esri"
-              maxZoom={19}
-            />
-          </LayersControl.BaseLayer>
-        </LayersControl>
+      <MapContainer
+        center={INDIA} zoom={4} style={{ height: '100%', width: '100%' }} attributionControl
+        scrollWheelZoom={interactive} dragging={interactive} doubleClickZoom={interactive}
+        touchZoom={interactive} keyboard={interactive} zoomControl={interactive}
+      >
+        {interactive ? (
+          <LayersControl position="topright">
+            <LayersControl.BaseLayer checked name="Street">
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Satellite">
+              <TileLayer
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                attribution="Tiles &copy; Esri"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+          </LayersControl>
+        ) : (
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            maxZoom={19}
+          />
+        )}
 
         <FitTo coords={fit} />
 
