@@ -8,7 +8,7 @@ import ProfileModal from '../../components/ui/ProfileModal'
 import { API_URL } from '../../config/api'
 import {
   ClipboardCheck, Inbox, FileSearch, Handshake, Users, Sprout, ListChecks,
-  ShieldCheck, BookOpen, CreditCard, Activity, Settings, TreePine,
+  ShieldCheck, BookOpen, CreditCard, Activity, Settings, TreePine, Fence,
   LogOut, Menu, type LucideIcon,
 } from 'lucide-react'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
@@ -21,6 +21,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { icon: ClipboardCheck, label: 'Approval queue',     path: '/admin' },
+  { icon: Fence,          label: 'Fencing requests',   path: '/admin/fencing-requests' },
   { icon: Inbox,          label: 'Submissions',        path: '/admin/submissions' },
   { icon: FileSearch,     label: 'Evidence review',    path: '/admin/evidence' },
   { icon: Handshake,      label: 'Partner management', path: '/admin/partners' },

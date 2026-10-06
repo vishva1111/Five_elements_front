@@ -80,6 +80,7 @@ const PartnerSettings = lazy(() => import('./pages/Partner/PartnerSettings'))
 
 // ── Super Admin zone (A1–A10) ─────────────────────────────────────────────────
 const ApprovalQueue = lazy(() => import('./pages/Admin/ApprovalQueue'))
+const FencingRequests = lazy(() => import('./pages/Admin/FencingRequests'))
 const EvidenceReview = lazy(() => import('./pages/Admin/EvidenceReview'))
 const PartnerManagement = lazy(() => import('./pages/Admin/PartnerManagement'))
 const UsersAndTenants = lazy(() => import('./pages/Admin/UsersAndTenants'))
@@ -191,6 +192,7 @@ export default function App(): React.JSX.Element {
 
           {/* ── Super Admin zone (A1–A10, protected — admin role only) ── */}
           <Route path="/admin"                  element={<ProtectedRoute allowedRoles={['admin']}><ApprovalQueue /></ProtectedRoute>} />
+          <Route path="/admin/fencing-requests" element={<ProtectedRoute allowedRoles={['admin']}><FencingRequests /></ProtectedRoute>} />
           <Route path="/admin/submissions"      element={<ProtectedRoute allowedRoles={['admin']}><SubmissionQueue /></ProtectedRoute>} />
           <Route path="/admin/evidence"         element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
           <Route path="/admin/evidence/:id"     element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />

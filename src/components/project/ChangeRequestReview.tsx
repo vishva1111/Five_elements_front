@@ -11,7 +11,7 @@ import TreeMap from '../map/TreeMap'
 import { useToast } from '../ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
-import { DEFAULT_PROJECT_COLOR, formatArea, formatDate, formatLength, type Boundary, type Fencing } from '../tree/treeLabels'
+import { DEFAULT_PROJECT_COLOR, formatDate, formatLength, type Boundary, type Fencing } from '../tree/treeLabels'
 import { FENCING_ROWS, fencingValue } from './FencingSummary'
 
 export interface ChangeRequest {
@@ -99,8 +99,10 @@ export default function ChangeRequestReview({ request, onClose, onDone }: { requ
   return (
     <Modal
       icon={request.type === 'color' ? <Palette size={18} /> : request.type === 'fencing' ? <Fence size={18} /> : <MapIcon size={18} />}
-      title={`${CHANGE_LABEL[request.type]} · ${request.projectName}`}
-      subtitle={`Asked by ${request.requestedByName || 'a partner'} on ${formatDate(request.createdAt, true)}`}
+      title={request.type === 'color' ? `${CHANGE_LABEL[request.type]} · ${request.projectName}` : 'Fencing update request'}
+      subtitle={request.type === 'color'
+        ? `Asked by ${request.requestedByName || 'a partner'} on ${formatDate(request.createdAt, true)}`
+        : `${request.projectName} · Requested by ${request.requestedByName || 'a field user'} on ${formatDate(request.createdAt)}`}
       error={error}
       onClose={onClose}
       width={760}
@@ -152,28 +154,18 @@ export default function ChangeRequestReview({ request, onClose, onDone }: { requ
             </table>
           )}
           {proposedRing.length >= 3 && (
-            <>
-              <div style={cap}>New boundary · {formatArea(p.areaSqM)} · perimeter {formatLength(p.perimeterM)}{nowBoundary ? ` (now ${formatArea(nowBoundary.areaSqM)})` : ' (none drawn yet)'}</div>
-              <TreeMap height={300} boundary={proposedRing} boundaryColor="#D97706" />
-              {nowBoundary && nowBoundary.coordinates.length >= 3 && (
-                <>
-                  <div style={{ ...cap, marginTop: 12 }}>Current boundary</div>
-                  <TreeMap height={220} boundary={nowBoundary.coordinates} boundaryColor="#2B5341" />
-                </>
-              )}
-            </>
+            <FenceCompare now={nowBoundary} proposed={proposedRing} proposedArea={p.areaSqM} proposedPerimeter={p.perimeterM} />
           )}
         </>
       )}
 
       {request.type === 'boundary' && (
         <div style={{ fontSize: 13, color: '#4A5A4E', lineHeight: 1.6 }}>
-          The field team locked this project's land boundary in the app and now asks to redraw it.
-          <br />Approving unlocks the boundary so it can be redrawn in the app. Nothing is deleted.
+          The field team locked this project's land fence in the app and now asks to redraw it.
+          <br />Approving unlocks the fence so it can be walked and locked again in the app. Nothing is deleted.
           {nowBoundary && nowBoundary.coordinates.length >= 3 && (
             <div style={{ marginTop: 12 }}>
-              <div style={cap}>Current boundary · {formatArea(nowBoundary.areaSqM)}</div>
-              <TreeMap height={260} boundary={nowBoundary.coordinates} boundaryColor="#2B5341" />
+              <FenceCompare now={nowBoundary} proposed={[]} />
             </div>
           )}
         </div>
@@ -191,6 +183,51 @@ export default function ChangeRequestReview({ request, onClose, onDone }: { requ
         </div>
       )}
     </Modal>
+  )
+}
+
+const areaM2 = (v: number | null | undefined) => (v || v === 0) ? `${Math.round(v).toLocaleString('en-IN')} m²` : '—'
+const lenM = (v: number | null | undefined) => (v || v === 0) ? formatLength(v) : '—'
+
+/** One map with the current fence and the proposed fence, a legend, and an Area / Perimeter comparison. */
+function FenceCompare({ now, proposed, proposedArea, proposedPerimeter }: {
+  now: Boundary | null; proposed: { latitude: number; longitude: number }[]; proposedArea?: number; proposedPerimeter?: number
+}) {
+  const hasNow = !!now && now.coordinates.length >= 3
+  const hasNew = proposed.length >= 3
+  return (
+    <>
+      <TreeMap
+        height={300}
+        boundary={hasNow ? now!.coordinates : proposed}
+        boundaryColor={hasNow ? '#2E7D32' : '#F59E0B'}
+        compareBoundary={hasNow && hasNew ? proposed : null}
+        compareColor="#F59E0B"
+      />
+      <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#6B7B6E', margin: '8px 0 12px' }}>
+        {hasNow && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 14, borderTop: '3px solid #2E7D32' }} />Current fence</span>}
+        {hasNew && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 14, borderTop: '3px dashed #F59E0B' }} />Proposed fence</span>}
+      </div>
+      {hasNew && (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: 'left', color: '#9AA79C', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              <th style={th}>Measure</th><th style={th}>Current → Proposed</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderTop: '1px solid #F0ECE6' }}>
+              <td style={td}>Area</td>
+              <td style={{ ...td, fontWeight: 700 }}>{hasNow ? areaM2(now!.areaSqM) : '—'} → {areaM2(proposedArea)}</td>
+            </tr>
+            <tr style={{ borderTop: '1px solid #F0ECE6' }}>
+              <td style={td}>Perimeter</td>
+              <td style={{ ...td, fontWeight: 700 }}>{hasNow ? lenM(now!.perimeterM) : '—'} → {lenM(proposedPerimeter)}</td>
+            </tr>
+          </tbody>
+        </table>
+      )}
+    </>
   )
 }
 

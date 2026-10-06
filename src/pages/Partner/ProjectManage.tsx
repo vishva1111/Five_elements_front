@@ -1,11 +1,11 @@
-/** A partner's full project page: edit details, ask for a colour / fencing change, see every tree. */
+/** A partner's project page: the land map, fencing status, fencing request history and trees. */
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Pencil, Palette, Fence, TreePine, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import PartnerLayout from './PartnerLayout'
 import FencingSummary from '../../components/project/FencingSummary'
-import { FencingMapBlock, FencingRequestBanner, boundaryRequests } from '../../components/project/FencingCardParts'
-import { EditProjectModal, ColorRequestModal, FencingRequestModal, ProjectTreesModal, type ProjectLite } from '../../components/project/ProjectModals'
+import { FencingMapBlock, FencingRequestBanner } from '../../components/project/FencingCardParts'
+import ProjectTreeList from '../../components/project/ProjectTreeList'
 import { DEFAULT_PROJECT_COLOR, formatDate, type Boundary, type Fencing } from '../../components/tree/treeLabels'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
@@ -28,17 +28,23 @@ interface FullProject {
   element: string
   category: string | null
   location: string
-  description: string | null
-  totalTrees: number | null
   mapColor: string | null
+  treesRecorded?: number
+  treesPlanted?: number
+  treePoints?: { id: string; latitude: number; longitude: number; condition?: string | null }[]
   fencing: Fencing | null
   boundary: Boundary | null
   changeRequests: ChangeRequestRow[]
 }
 
-type Dialog = 'edit' | 'color' | 'fencing' | 'trees' | null
+const STATUS_CHIP: Record<string, { label: string; bg: string; fg: string }> = {
+  pending:  { label: 'Pending',  bg: '#FFF4E0', fg: '#8B5A00' },
+  approved: { label: 'Approved', bg: '#EAF3DE', fg: '#27500A' },
+  rejected: { label: 'Rejected', bg: '#FBE9E9', fg: '#A32020' },
+}
 
-const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 34, padding: '0 14px', fontSize: 13 }
+const backBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 34, padding: '0 14px', fontSize: 13, marginBottom: 16 }
+const sectionTitle: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9AA79C', marginBottom: 8 }
 
 export default function ProjectManage() {
   const { id } = useParams<{ id: string }>()
@@ -48,8 +54,6 @@ export default function ProjectManage() {
 
   const [project, setProject] = useState<FullProject | null>(null)
   const [loading, setLoading] = useState(true)
-  const [dialog, setDialog] = useState<Dialog>(null)
-  const [trees, setTrees] = useState<{ id: string; latitude: number; longitude: number }[]>([])
 
   const load = useCallback(() => {
     fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${token || ''}` } })
@@ -59,18 +63,6 @@ export default function ProjectManage() {
       .finally(() => setLoading(false))
   }, [token, id])
   useEffect(() => { load() }, [load])
-
-  // Trees (for drawing a boundary around them) are loaded when the fencing dialog opens.
-  useEffect(() => {
-    if (dialog !== 'fencing' || !id) return
-    setTrees([])
-    fetch(`${API}/api/partner/trees?project_id=${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${token || ''}` } })
-      .then(r => r.json())
-      .then(d => setTrees((d.trees || []).filter((t: { latitude: number; longitude: number }) => Number(t.latitude) && Number(t.longitude))))
-      .catch(() => setTrees([]))
-  }, [dialog, id, token])
-
-  const closeAndReload = () => { setDialog(null); load() }
 
   if (loading) {
     return <PartnerLayout title="Project"><div className="pl-skel" style={{ height: 240, borderRadius: 14 }} /></PartnerLayout>
@@ -88,55 +80,68 @@ export default function ProjectManage() {
 
   const p = project
   const color = p.mapColor || DEFAULT_PROJECT_COLOR
-  const pendingColor = p.changeRequests.find(r => r.type === 'color' && r.status === 'pending')
-  const pendingFence = p.changeRequests.find(r => r.type === 'fencing' && r.status === 'pending')
-  const rejected = p.changeRequests.find(r => r.status === 'rejected' && (r.type === 'color' || r.type === 'fencing'))
-  const pendingBoundary =boundaryRequests(p.changeRequests).find(r => r.status === 'pending')
-  const lite: ProjectLite = {
-    id: p.id, name: p.name, description: p.description, location: p.location, category: p.category,
-    totalTrees: p.totalTrees, mapColor: p.mapColor, fencing: p.fencing, boundary: p.boundary,
-  }
+  // Every fencing request, whether it came from the app (boundary) or the panel (fencing).
+  const requests = p.changeRequests.filter(r => r.type === 'fencing' || r.type === 'boundary')
+  const pending = requests.find(r => r.status === 'pending')
+  // A field-app request (type 'boundary') is decided right here; a panel fencing request waits for an admin.
+  const decidable = pending?.type === 'boundary' ? pending : null
 
   return (
     <PartnerLayout title={p.name} subtitle={`${p.location} · ${p.element}${p.category ? ` · ${p.category}` : ''}`}>
-      <button type="button" className="pl-btn pl-btn--ghost" style={{ ...iconBtn, marginBottom: 16 }} onClick={() => navigate('/partner/projects')}>
+      <button type="button" className="pl-btn pl-btn--ghost" style={backBtn} onClick={() => navigate('/partner/projects')}>
         <ArrowLeft size={14} /> All projects
       </button>
 
-      <div className="pl-card" style={{ padding: 20, borderTop: `5px solid ${color}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <FencingMapBlock boundary={p.boundary} height={280} />
-        {pendingBoundary && <FencingRequestBanner projectId={p.id} request={pendingBoundary} onDecided={load} />}
-        <FencingSummary fencing={p.fencing} boundary={p.boundary} />
+      <div className="pl-card" style={{ padding: 20, borderTop: `5px solid ${color}`, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <FencingMapBlock boundary={p.boundary} trees={p.treePoints} height={300} oneLine />
 
-        {!pendingColor && !pendingFence && rejected && (
-          <div style={{ fontSize: 12, background: '#FBE9E9', color: '#A32020', borderRadius: 8, padding: '6px 10px' }}>
-            ✕ Your last {rejected.type === 'color' ? 'colour' : 'fencing'} request was not approved{rejected.reviewNotes ? `: ${rejected.reviewNotes}` : ''}
+        <div>
+          <div style={sectionTitle}>Fencing</div>
+          <FencingSummary fencing={p.fencing} boundary={p.boundary} />
+        </div>
+
+        {decidable ? (
+          <FencingRequestBanner projectId={p.id} request={decidable} onDecided={load} />
+        ) : pending && (
+          <div style={{ fontSize: 12, background: '#FFF4E0', color: '#8B5A00', borderRadius: 8, padding: '6px 10px' }}>
+            ⏳ Fencing update waiting for approval · asked {formatDate(pending.createdAt)}
           </div>
         )}
 
-        {(pendingColor || pendingFence) && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {pendingColor && <div style={{ fontSize: 12, background: '#FFF4E0', color: '#8B5A00', borderRadius: 8, padding: '6px 10px' }}>⏳ Colour change waiting for approval · asked {formatDate(pendingColor.createdAt)}</div>}
-            {pendingFence && <div style={{ fontSize: 12, background: '#FFF4E0', color: '#8B5A00', borderRadius: 8, padding: '6px 10px' }}>⏳ Fencing update waiting for approval · asked {formatDate(pendingFence.createdAt)}</div>}
-          </div>
-        )}
+        <div>
+          <div style={sectionTitle}>Fencing requests</div>
+          {requests.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: '#9AA79C' }}>No fencing requests yet.</div>
+          ) : (
+            <div style={{ border: '1px solid #EEE9E1', borderRadius: 10, overflow: 'hidden' }}>
+              {requests.map(r => {
+                const chip = STATUS_CHIP[r.status]
+                return (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px', borderBottom: '1px solid #F4F0EA', fontSize: 12.5 }}>
+                    <span style={{ background: chip.bg, color: chip.fg, padding: '1px 8px', borderRadius: 999, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap', marginTop: 1 }}>{chip.label}</span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ color: '#1C2B22' }}>
+                        Asked {formatDate(r.createdAt)}{r.requestedByName ? ` by ${r.requestedByName}` : ''}
+                      </div>
+                      {r.reason && <div style={{ color: '#6B7B6E' }}>“{r.reason}”</div>}
+                      {r.status !== 'pending' && (
+                        <div style={{ color: '#7A867C' }}>
+                          {r.status === 'approved' ? 'Approved' : 'Rejected'} on {formatDate(r.reviewedAt)}{r.reviewNotes ? ` — ${r.reviewNotes}` : ''}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 14, borderTop: '1px solid #F0ECE6' }}>
-          <button type="button" className="pl-btn pl-btn--ghost" style={iconBtn} onClick={() => setDialog('edit')}><Pencil size={14} /> Edit details</button>
-          <button type="button" className="pl-btn pl-btn--ghost" style={iconBtn} disabled={!!pendingColor} title={pendingColor ? 'A colour change is already waiting for approval' : 'Needs admin approval'} onClick={() => setDialog('color')}>
-            <span style={{ width: 12, height: 12, borderRadius: 3, background: color, border: '1px solid rgba(0,0,0,0.2)' }} /><Palette size={14} /> Colour
-          </button>
-          <button type="button" className="pl-btn pl-btn--ghost" style={iconBtn} disabled={!!pendingFence} title={pendingFence ? 'A fencing update is already waiting for approval' : 'Needs admin approval'} onClick={() => setDialog('fencing')}>
-            <Fence size={14} /> Fencing
-          </button>
-          <button type="button" className="pl-btn pl-btn--ghost" style={iconBtn} onClick={() => setDialog('trees')}><TreePine size={14} /> Trees</button>
+        <div>
+          <div style={sectionTitle}>Trees</div>
+          <ProjectTreeList projectId={p.id} added={p.treesRecorded ?? 0} planted={p.treesPlanted ?? 0} />
         </div>
       </div>
-
-      {dialog === 'edit'    && <EditProjectModal project={lite} onClose={() => setDialog(null)} onSaved={closeAndReload} />}
-      {dialog === 'color'   && <ColorRequestModal project={lite} onClose={() => setDialog(null)} onSent={closeAndReload} />}
-      {dialog === 'fencing' && <FencingRequestModal project={lite} trees={trees} onClose={() => setDialog(null)} onSent={closeAndReload} />}
-      {dialog === 'trees'   && <ProjectTreesModal project={lite} onClose={() => setDialog(null)} />}
     </PartnerLayout>
   )
 }
