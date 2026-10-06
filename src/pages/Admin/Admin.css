@@ -332,6 +332,7 @@
 .ad-badge--evidence     { background: #E3F2FD; color: #1565C0; }
 .ad-badge--project      { background: #E8F1EC; color: #2B5341; }
 .ad-badge--partner      { background: #F3E5F5; color: #6A1B9A; }
+.ad-badge--change       { background: #FFF4E0; color: #8B5A00; }
 .ad-badge--pending      { background: #FFF3E0; color: #E65100; }
 .ad-badge--in_review    { background: #E3F2FD; color: #1565C0; }
 .ad-badge--approved     { background: #E8F5E9; color: #2E7D32; }

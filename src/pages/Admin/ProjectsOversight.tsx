@@ -4,6 +4,10 @@ import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
+import FencingSummary from '../../components/project/FencingSummary'
+import { EditProjectModal, ProjectTreesModal, type ProjectLite } from '../../components/project/ProjectModals'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
+import { DEFAULT_PROJECT_COLOR, FENCING_STATUS, type Boundary, type Fencing } from '../../components/tree/treeLabels'
 import './Admin.css'
 
 interface ProjectRow {
@@ -16,6 +20,11 @@ interface ProjectRow {
   treeCount:   number
   status:      string
   submittedAt: string
+  description?: string | null
+  category?:    string | null
+  mapColor?:    string | null
+  fencing?:     Fencing | null
+  boundary?:    Boundary | null
 }
 
 const ELEMENT_ICONS: Record<string, string> = {
@@ -31,16 +40,23 @@ export default function ProjectsOversight() {
   const [filter,   setFilter]   = useState<'all' | 'pending_review' | 'approved' | 'rejected'>('pending_review')
   const [acting,   setActing]   = useState<string | null>(null)
   const [msg,      setMsg]      = useState('')
+  const [dialog,   setDialog]   = useState<{ kind: 'edit' | 'trees' | 'fencing'; project: ProjectRow } | null>(null)
 
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
 
-  useEffect(() => {
+  const load = () => {
     fetch(`${API}/api/admin/projects`, { headers })
       .then(r => r.json())
       .then(d => setProjects(d.projects || []))
       .catch(() => setProjects([]))
       .finally(() => setLoading(false))
-  }, [session])
+  }
+  useEffect(load, [session])
+  useModalBehavior(() => setDialog(null), dialog?.kind === 'fencing')
+  const lite = (p: ProjectRow): ProjectLite => ({
+    id: p.id, name: p.title, description: p.description || null, location: p.location, category: p.category || null,
+    totalTrees: p.treeCount, mapColor: p.mapColor || null, fencing: p.fencing || null, boundary: p.boundary || null,
+  })
 
   const filtered = filter === 'all' ? projects : projects.filter(p => p.status === filter)
 
@@ -126,6 +142,7 @@ export default function ProjectsOversight() {
                 <th>Project</th>
                 <th>Element</th>
                 <th>Location</th>
+                <th>Fencing</th>
                 <th>Partner</th>
                 <th>Trees</th>
                 <th>Submitted</th>
@@ -137,11 +154,24 @@ export default function ProjectsOversight() {
               {pg.items.map(p => (
                 <tr key={p.id}>
                   <td>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{p.title}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span title={`Map colour ${(p.mapColor || DEFAULT_PROJECT_COLOR).toUpperCase()}${p.mapColor ? '' : ' (default)'}`} style={{ width: 11, height: 11, borderRadius: 3, background: p.mapColor || DEFAULT_PROJECT_COLOR, flexShrink: 0, border: '1px solid rgba(0,0,0,0.15)' }} />
+                      {p.title}
+                    </div>
                     <div style={{ color: '#9AA79C', fontSize: 11.5 }}>by {p.submittedBy}</div>
                   </td>
                   <td style={{ fontSize: 18 }} title={p.element}>{ELEMENT_ICONS[p.element] || '🌿'}</td>
                   <td style={{ color: '#6B7B6E', fontSize: 12.5 }}>{p.location}</td>
+                  <td>
+                    {(() => {
+                      const st = p.fencing?.status ? FENCING_STATUS[p.fencing.status] : null
+                      return (
+                        <button type="button" onClick={() => setDialog({ kind: 'fencing', project: p })} title="Fencing details" style={{ border: 'none', background: st?.bg || '#F2EFEA', color: st?.fg || '#6B7B6E', padding: '3px 10px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                          {st?.label || 'Not added'}
+                        </button>
+                      )
+                    })()}
+                  </td>
                   <td style={{ color: '#6B7B6E', fontSize: 12.5 }}>{p.partnerName || 'Self'}</td>
                   <td style={{ fontWeight: 600 }}>{p.treeCount?.toLocaleString() || '—'}</td>
                   <td style={{ color: '#9AA79C', fontSize: 12 }}>{p.submittedAt}</td>
@@ -157,9 +187,11 @@ export default function ProjectsOversight() {
                         </button>
                       </div>
                     ) : (
-                      <button type="button" className="ad-btn ad-btn--ghost ad-btn--sm" onClick={() => navigate(`/projects/${p.id}`)}>
-                        View →
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button type="button" className="ad-btn ad-btn--ghost ad-btn--sm" onClick={() => setDialog({ kind: 'trees', project: p })}>Trees</button>
+                        <button type="button" className="ad-btn ad-btn--ghost ad-btn--sm" onClick={() => setDialog({ kind: 'edit', project: p })}>Edit</button>
+                        <button type="button" className="ad-btn ad-btn--ghost ad-btn--sm" onClick={() => navigate(`/projects/${p.id}`)}>View →</button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -170,6 +202,19 @@ export default function ProjectsOversight() {
         </>
         )}
       </div>
+
+      {dialog?.kind === 'edit'  && <EditProjectModal role="admin" project={lite(dialog.project)} onClose={() => setDialog(null)} onSaved={() => { setDialog(null); load() }} />}
+      {dialog?.kind === 'trees' && <ProjectTreesModal role="admin" project={lite(dialog.project)} onClose={() => setDialog(null)} />}
+      {dialog?.kind === 'fencing' && (
+        <div onClick={() => setDialog(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(17,33,33,0.45)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="ad-card" onClick={e => e.stopPropagation()} style={{ width: 'min(460px, 100%)' }}>
+            <div style={{ fontWeight: 700, marginBottom: 10 }}>{dialog.project.title} · fencing</div>
+            <FencingSummary fencing={dialog.project.fencing} boundary={dialog.project.boundary} />
+            <p style={{ fontSize: 11.5, color: '#9AA79C', margin: '10px 0' }}>Partners ask for fencing changes; you approve them in the Approval queue.</p>
+            <button type="button" className="ad-btn ad-btn--ghost" onClick={() => setDialog(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   )
 }

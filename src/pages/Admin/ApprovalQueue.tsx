@@ -5,23 +5,27 @@ import { useAuth } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
+import ChangeRequestReview, { CHANGE_LABEL, type ChangeRequest } from '../../components/project/ChangeRequestReview'
 import './Admin.css'
 
 interface QueueItem {
   id:          string
-  type:        'evidence' | 'project' | 'partner'
+  type:        'evidence' | 'project' | 'partner' | 'change'
+  /** change requests only: where it is stored, and what it asks for. */
+  source?:     'project' | 'geofence'
+  changeType?: 'color' | 'fencing' | 'boundary'
   title:       string
   detail?:     string
   submittedBy: string
   submittedAt: string
   element?:    string
-  priority:    'high' | 'normal' | 'low'
 }
 
 const TYPE_LABELS: Record<string, string> = {
   evidence: 'Evidence',
   project:  'Project',
   partner:  'Partner application',
+  change:   'Project change',
 }
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -43,18 +47,34 @@ export default function ApprovalQueue() {
 
   const [items,   setItems]   = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter,  setFilter]  = useState<'all' | 'evidence' | 'project' | 'partner'>('all')
+  const [filter,  setFilter]  = useState<'all' | 'evidence' | 'project' | 'partner' | 'change'>('all')
+  const [reviewing, setReviewing] = useState<ChangeRequest | null>(null)
+  const [opening,   setOpening]   = useState<string | null>(null)
 
-  useEffect(() => {
-    fetch(
-      `${API_URL}/api/admin/queue`,
-      { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
-    )
+  const load = React.useCallback(() => {
+    const headers = { Authorization: `Bearer ${session?.access_token || ''}` }
+    fetch(`${API_URL}/api/admin/queue`, { headers })
       .then(r => r.json())
       .then(d => setItems(d.items || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
   }, [session])
+  useEffect(() => { load() }, [load])
+
+  // Change requests are decided in a pop-up right here, not on another page.
+  async function openChange(item: QueueItem) {
+    setOpening(item.id)
+    try {
+      const res = await fetch(`${API_URL}/api/admin/change-requests?status=pending`, { headers: { Authorization: `Bearer ${session?.access_token || ''}` } })
+      const json = await res.json()
+      const found = (json.requests || []).find((r: ChangeRequest) => r.id === item.id)
+      if (found) setReviewing(found)
+      else load()   // someone else already decided it
+    } finally {
+      setOpening(null)
+    }
+  }
+  const open = (item: QueueItem) => item.type === 'change' ? openChange(item) : navigate(reviewPath(item))
 
   const filtered = filter === 'all' ? items : items.filter(i => i.type === filter)
 
@@ -64,19 +84,21 @@ export default function ApprovalQueue() {
     evidence: items.filter(i => i.type === 'evidence').length,
     project:  items.filter(i => i.type === 'project').length,
     partner:  items.filter(i => i.type === 'partner').length,
+    change:   items.filter(i => i.type === 'change').length,
   }
 
   const STATS = [
     { key: 'evidence' as const, label: 'Evidence pending',     tone: 'ad-stat--warn' },
     { key: 'project'  as const, label: 'Projects pending',     tone: 'ad-stat--ok' },
     { key: 'partner'  as const, label: 'Partner applications', tone: '' },
+    { key: 'change'   as const, label: 'Colour & fencing',     tone: 'ad-stat--warn' },
   ]
 
   return (
     <AdminLayout title="Approval queue" subtitle={loading ? undefined : `${items.length} pending`}>
 
       {/* Stats — click to filter */}
-      <div className="ad-stats ad-grid-3">
+      <div className="ad-stats ad-grid-4">
         {STATS.map(s => (
           <button
             key={s.key}
@@ -93,7 +115,7 @@ export default function ApprovalQueue() {
 
       {/* Filter tabs */}
       <div className="ad-tabs">
-        {(['all', 'evidence', 'project', 'partner'] as const).map(f => (
+        {(['all', 'evidence', 'project', 'partner', 'change'] as const).map(f => (
           <button key={f} type="button" className={`ad-tab${filter === f ? ' ad-tab--active' : ''}`} onClick={() => setFilter(f)}>
             {f === 'all' ? `All (${items.length})` : `${TYPE_LABELS[f]} (${counts[f] ?? 0})`}
           </button>
@@ -121,19 +143,19 @@ export default function ApprovalQueue() {
                 <th>Submitted by</th>
                 <th>Element</th>
                 <th>Date</th>
-                <th>Priority</th>
                 <th aria-label="Actions"></th>
               </tr>
             </thead>
             <tbody>
               {pg.items.map(item => (
-                <tr key={`${item.type}-${item.id}`} style={{ cursor: 'pointer' }} onClick={() => navigate(reviewPath(item))}>
+                <tr key={`${item.type}-${item.id}`} style={{ cursor: 'pointer' }} onClick={() => open(item)}>
                   <td>
                     <span className={`ad-badge ad-badge--${item.type}`}>{TYPE_LABELS[item.type]}</span>
                   </td>
                   <td style={{ minWidth: 220 }}>
                     <div style={{ fontWeight: 600 }}>{item.title}</div>
                     {item.detail && <div className="ad-table__sub">{item.detail}</div>}
+                    {item.type === 'change' && item.changeType && !item.detail && <div className="ad-table__sub">{CHANGE_LABEL[item.changeType]}</div>}
                   </td>
                   <td className="ad-table__muted">{item.submittedBy}</td>
                   <td className="ad-table__muted">
@@ -145,13 +167,8 @@ export default function ApprovalQueue() {
                     ) : '—'}
                   </td>
                   <td className="ad-table__muted">{item.submittedAt}</td>
-                  <td>
-                    <span className={`ad-badge ad-badge--${item.priority === 'high' ? 'rejected' : item.priority === 'low' ? 'approved' : 'neutral'}`}>
-                      {item.priority}
-                    </span>
-                  </td>
                   <td className="ad-table__actions">
-                    <button type="button" className="ad-btn ad-btn--ghost ad-btn--sm" onClick={e => { e.stopPropagation(); navigate(reviewPath(item)) }}>
+                    <button type="button" className="ad-btn ad-btn--ghost ad-btn--sm" disabled={opening === item.id} onClick={e => { e.stopPropagation(); open(item) }}>
                       Review <ArrowRight size={14} />
                     </button>
                   </td>
@@ -163,6 +180,14 @@ export default function ApprovalQueue() {
         </>
         )}
       </div>
+
+      {reviewing && (
+        <ChangeRequestReview
+          request={reviewing}
+          onClose={() => setReviewing(null)}
+          onDone={() => { setReviewing(null); load() }}
+        />
+      )}
     </AdminLayout>
   )
 }

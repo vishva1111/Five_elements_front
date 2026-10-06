@@ -10,7 +10,7 @@
  */
 import React, { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Pencil, Trash2, Lock, TreePine, X, Sprout, Loader2, ChevronDown, Check, Leaf, UserCog, Search, ArrowRight } from 'lucide-react'
+import { Pencil, Trash2, Lock, TreePine, X, Sprout, Loader2, ChevronDown, Check, Leaf, UserCog, Search, ArrowRight, Eye, LayoutGrid, List, Map as MapIcon, Camera } from 'lucide-react'
 import PartnerLayout from './PartnerLayout'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import RecordModal from '../../components/ui/Modal'
@@ -19,6 +19,9 @@ import { TREE_STAGES, DEFAULT_STAGE, STAGE_STYLE } from '../../constants/treeSta
 import { useSpecies, type TreeSpecies } from '../../constants/treeSpecies'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import TreeDetailModal from '../../components/tree/TreeHistory'
+import TreeMap from '../../components/map/TreeMap'
+import { taskStatus, conditionTone, conditionColor, capitalise, formatDate, DEFAULT_PROJECT_COLOR } from '../../components/tree/treeLabels'
 import './Partner.css'
 
 interface TreeRow {
@@ -54,16 +57,30 @@ interface TreeRow {
   /** Older record with nobody named on it — its person can still be set. */
   canSetAssignee?: boolean
   taskId: string | null
+  projectColor?: string | null
+  /** Every photo of the tree (record, planting capture, audits), newest audit last. */
+  photoUrls?: string[]
+  photoCount?: number
+  auditCount?: number
+  latestAudit?: {
+    round: number
+    status: string
+    date: string | null
+    condition: string | null
+    health: string | null
+    survival: string | null
+    photo: string | null
+  } | null
 }
 
 // Under plantation → Planted (task created) → Field Operator assigned → in
-// progress → completed → approved (ledger) / rejected (redo).
+// progress → completed → approved (ledger) / changes requested (redo).
 const TASK_STATUS_LABEL: Record<string, { label: string; badge: string }> = {
   assigned:    { label: 'Assigned to field operator', badge: 'pending' },
   in_progress: { label: 'Survey in progress', badge: 'progress' },
   completed:   { label: 'Awaiting your review', badge: 'info' },
   approved:    { label: 'Verified · on ledger', badge: 'approved' },
-  rejected:    { label: 'Rejected · redo survey', badge: 'rejected' },
+  rejected:    { label: 'Changes requested', badge: 'rejected' },
 }
 
 // Planting task while the tree is under plantation; audit task once it's planted.
@@ -72,7 +89,7 @@ const PLANTING_STATUS_LABEL: Record<string, { label: string; badge: string }> = 
   in_progress: { label: 'Planting in progress', badge: 'progress' },
   completed:   { label: 'Planted · awaiting your review', badge: 'info' },
   approved:    { label: 'Planting approved', badge: 'approved' },
-  rejected:    { label: 'Planting rejected · redo', badge: 'rejected' },
+  rejected:    { label: 'Planting · changes requested', badge: 'rejected' },
 }
 
 /**
@@ -82,7 +99,7 @@ const PLANTING_STATUS_LABEL: Record<string, { label: string; badge: string }> = 
 function overallStatus(t: { taskStatus: string | null; taskType?: string | null; taskNeedsAssignee?: boolean; stage?: string }) {
   const stage = t.stage || DEFAULT_STAGE
   if (stage === 'Dead') return { label: 'Dead', bg: '#F4E4E4', fg: '#A32020' }
-  if (t.taskStatus === 'rejected') return { label: 'Rejected', bg: '#FBE9E9', fg: '#A32020' }
+  if (t.taskStatus === 'rejected') return { label: 'Changes requested', bg: '#FDEEE3', fg: '#9A4A00' }
   if (t.taskType === 'planting' || (!t.taskType && stage === DEFAULT_STAGE)) {
     if (!t.taskStatus || t.taskNeedsAssignee) return { label: 'Pending', bg: '#F2EFEA', fg: '#6B7B6E' }
     if (t.taskStatus === 'completed')          return { label: 'Planting review', bg: '#E8F1FB', fg: '#185FA5' }
@@ -147,6 +164,15 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
   const [fieldOps,      setFieldOps]      = useState<{ auth_id: string; display_name: string }[]>([])
   const [confirmDelete, setConfirmDelete] = useState<TreeRow | null>(null)
   const [deleting,      setDeleting]      = useState(false)
+  // Tree details pop-up, extra filters, and how the list is shown.
+  const [detailId,        setDetailId]        = useState<string | null>(null)
+  const [conditionFilter, setConditionFilter] = useState('all')
+  const [statusFilter,    setStatusFilter]    = useState('all')
+  const [auditFilter,     setAuditFilter]     = useState('all')
+  const [view,            setView]            = useState<'table' | 'cards' | 'map'>(() => {
+    try { const v = localStorage.getItem('fe.trees.view'); return v === 'cards' || v === 'map' ? v : 'table' } catch { return 'table' }
+  })
+  useEffect(() => { try { localStorage.setItem('fe.trees.view', view) } catch { /* private mode */ } }, [view])
 
   // ── Add record (Action listing) ────────────────────────────────────────────
   const today = () => new Date().toISOString().slice(0, 10)
@@ -340,10 +366,10 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
 
   async function reviewPlanting(action: 'approve' | 'reject') {
     if (!reviewing?.taskId) return
-    if (action === 'reject' && !reviewNote.trim()) { toast.error('Say why the planting is rejected'); return }
+    if (action === 'reject' && !reviewNote.trim()) { toast.error('Say what needs to change'); return }
     setReviewBusy(action)
     try {
-      const res = await fetch(`${API}/api/admin/tasks/${reviewing.taskId}/${action}`, {
+      const res = await fetch(`${API}/api/admin/tasks/${reviewing.taskId}/${action === 'approve' ? 'approve' : 'request-changes'}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
         body: JSON.stringify({ review_notes: reviewNote.trim() || null }),
@@ -352,7 +378,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
       if (!res.ok) throw new Error(d.error || 'Failed to submit review')
       toast.success(action === 'approve'
         ? `${codeOf(reviewing)} is now Planted — its audit task is in Tasks.`
-        : `Planting rejected — ${reviewing.taskAssignee || 'the field operator'} has to redo it.`)
+        : `Changes requested — sent back to ${reviewing.taskAssignee || 'the field operator'}.`)
       setReviewing(null)
       await load()
     } catch (e: unknown) {
@@ -449,10 +475,21 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
   const co2Of = (t: TreeRow) => { const sp = findSpecies(t.species); return sp ? sp.co2PerYear * t.quantity : 0 }
   const q = search.trim().toLowerCase()
   // Search + project narrow the list first; the stage tabs count within that.
+  const conditionOf = (t: TreeRow) => (t.latestAudit?.condition || t.condition || '').trim()
+  const auditKey = (t: TreeRow) => t.latestAudit ? t.latestAudit.status : 'none'
   const searchedTrees = compact ? trees : trees.filter(t =>
     (projectFilter === 'all' || t.projectId === projectFilter) &&
+    (conditionFilter === 'all' || conditionOf(t).toLowerCase() === conditionFilter || (t.healthStatus || '').toLowerCase() === conditionFilter) &&
+    (statusFilter === 'all' || overallStatus(t).label === statusFilter) &&
+    (auditFilter === 'all' || auditKey(t) === auditFilter) &&
     (!q || [codeOf(t), t.species, t.scientificName || '', t.recordedFor, t.projectName].some(v => v.toLowerCase().includes(q)))
   )
+  // Filter choices come from the data, so only values that exist are offered.
+  const conditionOptions = [...new Set(trees.flatMap(t => [conditionOf(t), t.healthStatus || '']).map(v => v.toLowerCase()).filter(Boolean))].sort()
+  const statusOptions = [...new Set(trees.map(t => overallStatus(t).label))].sort()
+  const auditOptions = [...new Set(trees.map(auditKey))]
+  const filtersOn = conditionFilter !== 'all' || statusFilter !== 'all' || auditFilter !== 'all' || projectFilter !== 'all' || !!q
+  const clearFilters = () => { setSearch(''); setProjectFilter('all'); setStageFilter('all'); setConditionFilter('all'); setStatusFilter('all'); setAuditFilter('all') }
   const visibleTrees = compact || stageFilter === 'all' ? searchedTrees : searchedTrees.filter(t => stageOf(t) === stageFilter)
   const projectOptions = [...new Map(trees.map(t => [t.projectId, t.projectName])).entries()].sort((a, b) => a[1].localeCompare(b[1]))
   const summary = {
@@ -521,6 +558,41 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                 {projectOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
               </select>
             )}
+            <select className="sp-select" aria-label="Filter by condition" value={conditionFilter} onChange={e => { setConditionFilter(e.target.value); setSelected(new Set()) }} style={{ flex: '0 1 180px', minWidth: 150 }}>
+              <option value="all">Any condition</option>
+              {conditionOptions.map(c => <option key={c} value={c}>{capitalise(c)}</option>)}
+            </select>
+            <select className="sp-select" aria-label="Filter by status" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setSelected(new Set()) }} style={{ flex: '0 1 180px', minWidth: 150 }}>
+              <option value="all">Any status</option>
+              {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select className="sp-select" aria-label="Filter by latest audit" value={auditFilter} onChange={e => { setAuditFilter(e.target.value); setSelected(new Set()) }} style={{ flex: '0 1 200px', minWidth: 160 }}>
+              <option value="all">Any audit</option>
+              {auditOptions.map(a => <option key={a} value={a}>{a === 'none' ? 'No audit yet' : `Latest audit: ${taskStatus(a).label}`}</option>)}
+            </select>
+            {filtersOn && (
+              <button type="button" className="pl-btn pl-btn--ghost" onClick={() => { clearFilters(); setSelected(new Set()) }} style={{ height: 38 }}>
+                <X size={14} /> Clear
+              </button>
+            )}
+            <div role="tablist" aria-label="View" style={{ marginLeft: 'auto', display: 'inline-flex', gap: 2, padding: 3, background: '#EFEAE3', borderRadius: 10 }}>
+              {([['table', <List size={15} key="i" />, 'Table'], ['cards', <LayoutGrid size={15} key="i" />, 'Cards'], ['map', <MapIcon size={15} key="i" />, 'Map']] as const).map(([v, icon, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === v}
+                  onClick={() => setView(v)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: 'none',
+                    background: view === v ? '#fff' : 'transparent', boxShadow: view === v ? '0 1px 3px rgba(17,33,33,0.12)' : 'none',
+                    color: view === v ? '#1C2B22' : '#6B7B6E', fontFamily: 'inherit', fontSize: 12.5, fontWeight: view === v ? 700 : 600, cursor: 'pointer',
+                  }}
+                >
+                  {icon}{label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -593,8 +665,8 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
             <div className="pl-empty">
               <div className="pl-empty__icon">🔍</div>
               <div className="pl-empty__title">No trees match</div>
-              <div className="pl-empty__sub">Try another search, project or stage.</div>
-              <button type="button" className="pl-btn pl-btn--ghost" onClick={() => { setSearch(''); setProjectFilter('all'); setStageFilter('all') }}>Clear filters</button>
+              <div className="pl-empty__sub">Try another search, project, stage, condition, status or audit.</div>
+              <button type="button" className="pl-btn pl-btn--ghost" onClick={clearFilters}>Clear filters</button>
             </div>
           ) : trees.length === 0 && !compact ? (
             <div className="pl-empty">
@@ -602,6 +674,47 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
               <div className="pl-empty__title">No trees recorded yet</div>
               <div className="pl-empty__sub">Trees added for your team — one at a time or by spreadsheet — show up here.</div>
               {showAdd && <Link to="/partner/actions/new" className="pl-btn pl-btn--primary">Add tree</Link>}
+            </div>
+          ) : !compact && view === 'map' ? (
+            <div>
+              <TreeMap
+                height={520}
+                points={visibleTrees.map(t => ({
+                  id: t.id,
+                  latitude: t.latitude,
+                  longitude: t.longitude,
+                  color: conditionColor(conditionOf(t) || t.healthStatus),
+                  label: `${codeOf(t)} · ${t.species}`,
+                  sublabel: `${t.projectName} · ${overallStatus(t).label}${conditionOf(t) ? ` · ${conditionOf(t)}` : ''}`,
+                }))}
+                onPointClick={setDetailId}
+                emptyText="None of these trees has a GPS location yet."
+              />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 12, color: '#6B7B6E', marginTop: 10 }}>
+                {['Healthy', 'Average', 'Poor', 'Dead'].map(c => (
+                  <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 5, background: conditionColor(c) }} />{c}
+                  </span>
+                ))}
+                <span style={{ marginLeft: 'auto' }}>
+                  {visibleTrees.filter(t => Number(t.latitude) && Number(t.longitude)).length} of {visibleTrees.length} trees have a location · click a dot for details
+                </span>
+              </div>
+            </div>
+          ) : !compact && view === 'cards' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 14 }}>
+              {(pg.items.filter(r => r.kind === 'tree') as { kind: 'tree'; t: TreeRow }[]).map(({ t }) => (
+                <TreeCard
+                  key={t.id}
+                  t={t}
+                  code={codeOf(t)}
+                  status={overallStatus(t)}
+                  task={verificationLabel(t)}
+                  condition={conditionOf(t)}
+                  onOpen={() => setDetailId(t.id)}
+                  onEdit={locked(t) ? undefined : () => openEdit(t)}
+                />
+              ))}
             </div>
           ) : (
             <table className="pl-table">
@@ -693,9 +806,19 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                             )}
                           </td>
                           <td>
-                            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12, fontWeight: 700, color: '#2B5341', background: '#F2F6EE', border: '1px solid #DCE8D3', borderRadius: 6, padding: '3px 7px', whiteSpace: 'nowrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => setDetailId(t.id)}
+                              title="Photos, location and audit history"
+                              style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12, fontWeight: 700, color: '#2B5341', background: '#F2F6EE', border: '1px solid #DCE8D3', borderRadius: 6, padding: '3px 7px', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                            >
                               {t.treeCode || `TREE-${t.id.slice(0, 8).toUpperCase()}`}
-                            </span>
+                            </button>
+                            {(t.photoCount ?? 0) > 0 && (
+                              <div style={{ fontSize: 11, color: '#7A867C', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <Camera size={11} /> {t.photoCount} · {t.auditCount ? `${t.auditCount} audit${t.auditCount === 1 ? '' : 's'}` : 'no audit'}
+                              </div>
+                            )}
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -795,6 +918,18 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
                       <td style={{ color: '#9AA79C', fontSize: 12 }}>{new Date(t.surveyDate || t.submittedAt).toLocaleDateString('en-IN')}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>
+                          {!compact && (
+                            <button
+                              type="button"
+                              className="pl-btn pl-btn--ghost"
+                              style={{ height: 30, width: 30, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              onClick={() => setDetailId(t.id)}
+                              title="View photos, location and audit history"
+                              aria-label="View details"
+                            >
+                              <Eye size={14} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="pl-btn pl-btn--ghost"
@@ -826,9 +961,13 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
               </tbody>
             </table>
           )}
-          {!loading && <Pagination {...pg} noun="record" />}
+          {!loading && !(view === 'map' && !compact) && <Pagination {...pg} noun="record" />}
         </div>
       </div>
+
+      {detailId && (
+        <TreeDetailModal historyUrl={`${API}/api/partner/trees/${detailId}/history`} onClose={() => setDetailId(null)} />
+      )}
 
       {/* Review a completed planting */}
       {reviewing && (
@@ -840,7 +979,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
           width={520}
           footer={<>
             <button type="button" className="pl-btn pl-btn--ghost" style={{ color: '#A32020' }} onClick={() => reviewPlanting('reject')} disabled={!!reviewBusy}>
-              {reviewBusy === 'reject' ? 'Rejecting…' : 'Reject'}
+              {reviewBusy === 'reject' ? 'Sending…' : 'Request changes'}
             </button>
             <button type="button" className="pl-btn pl-btn--primary" onClick={() => reviewPlanting('approve')} disabled={!!reviewBusy}>
               {reviewBusy === 'approve' ? 'Confirming…' : '✓ Confirm planted'}
@@ -860,10 +999,10 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
           </div>
           <div className="sp-field">
             <label className="sp-label" htmlFor="rp-note">Note</label>
-            <textarea id="rp-note" className="sp-textarea" rows={2} style={FULL} placeholder="Enter a note (required to reject)" value={reviewNote} onChange={e => setReviewNote(e.target.value)} />
+            <textarea id="rp-note" className="sp-textarea" rows={2} style={FULL} placeholder="What needs to change? (required to request changes)" value={reviewNote} onChange={e => setReviewNote(e.target.value)} />
           </div>
           <div style={{ fontSize: 11.5, color: '#7A867C', marginTop: 10, lineHeight: 1.5 }}>
-            Confirming makes the tree <strong>Planted</strong> and opens its <strong>audit task</strong> in Tasks. Rejecting sends it back to the field operator.
+            Confirming makes the tree <strong>Planted</strong> and opens its <strong>audit task</strong> in Tasks. Requesting changes sends it back to the field operator with your note.
           </div>
         </RecordModal>
       )}
@@ -1240,4 +1379,92 @@ function initials(name: string) {
   const parts = (name || '').trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0 || name === '—') return '?'
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase()
+}
+
+/** One tree as a card: photo strip, identity, status, condition and its latest audit. */
+function TreeCard({ t, code, status, task, condition, onOpen, onEdit }: {
+  t: TreeRow
+  code: string
+  status: { label: string; bg: string; fg: string }
+  task: { label: string; badge: string }
+  condition: string
+  onOpen: () => void
+  onEdit?: () => void
+}) {
+  const photos = t.photoUrls && t.photoUrls.length > 0 ? t.photoUrls : (t.photoUrl ? [t.photoUrl] : [])
+  const cover = t.latestAudit?.photo || photos[photos.length - 1] || null
+  const la = t.latestAudit
+  const laStatus = la ? taskStatus(la.status) : null
+  const hasPoint = Number(t.latitude) && Number(t.longitude)
+  return (
+    <div className="pl-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <button type="button" onClick={onOpen} style={{ position: 'relative', height: 150, border: 'none', padding: 0, background: '#F2EFEA', cursor: 'pointer', display: 'block' }}>
+        {cover
+          ? <img src={cover} alt={t.species} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#B5AEA4', fontSize: 30 }}>🌳</div>}
+        <span style={{ position: 'absolute', top: 8, left: 8, display: 'inline-flex', alignItems: 'center', gap: 5, background: status.bg, color: status.fg, padding: '3px 9px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+          <span style={{ width: 6, height: 6, borderRadius: 3, background: status.fg }} />{status.label}
+        </span>
+        {(t.photoCount ?? photos.length) > 0 && (
+          <span style={{ position: 'absolute', bottom: 8, right: 8, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(17,33,33,0.72)', color: '#fff', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+            <Camera size={12} /> {t.photoCount ?? photos.length}
+          </span>
+        )}
+      </button>
+      {photos.length > 1 && (
+        <div style={{ display: 'flex', gap: 4, padding: '6px 10px 0', overflow: 'hidden' }}>
+          {photos.slice(-5).map(u => <img key={u} src={u} alt="" loading="lazy" style={{ width: 34, height: 34, borderRadius: 6, objectFit: 'cover', border: '1px solid #EEE9E1' }} />)}
+        </div>
+      )}
+      <div style={{ padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 11.5, fontWeight: 700, color: '#2B5341', background: '#F2F6EE', border: '1px solid #DCE8D3', borderRadius: 6, padding: '2px 6px' }}>{code}</span>
+          <span style={{ fontSize: 11.5, color: '#7A867C', marginLeft: 'auto' }}>{t.stage || DEFAULT_STAGE}</span>
+        </div>
+        <div>
+          <div style={{ fontWeight: 700, color: '#1C2B22', fontSize: 14.5 }}>{t.species}</div>
+          {t.scientificName && <div style={{ fontSize: 11.5, color: '#9AA79C', fontStyle: 'italic' }}>{t.scientificName}</div>}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {condition && (() => { const c = conditionTone(condition); return <span style={{ background: c.bg, color: c.fg, padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{condition}</span> })()}
+          {t.healthStatus && (() => { const c = conditionTone(t.healthStatus); return <span style={{ background: c.bg, color: c.fg, padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{capitalise(t.healthStatus)}</span> })()}
+          <span className={`pl-badge pl-badge--${task.badge || 'pending'}`} style={{ fontSize: 11 }}>{task.label}</span>
+        </div>
+        <div style={{ fontSize: 12, color: '#6B7B6E', lineHeight: 1.55 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: t.projectColor || DEFAULT_PROJECT_COLOR }} />{t.projectName}
+          </div>
+          <div>👤 {t.recordedFor}{t.taskAssignee ? ` · field: ${t.taskAssignee}` : ''}</div>
+          <div>📍 {hasPoint ? `${Number(t.latitude).toFixed(5)}, ${Number(t.longitude).toFixed(5)}` : 'No GPS yet'}</div>
+        </div>
+        {/* Latest audit, highlighted */}
+        <div style={{ borderRadius: 10, padding: '8px 10px', background: la ? '#F5FAF2' : '#FAF8F4', border: `1px solid ${la ? '#CFE5C9' : '#EEE9E1'}` }}>
+          {la && laStatus ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#1C2B22' }}>
+                ★ Latest: Audit {la.round}
+                <span style={{ marginLeft: 'auto', background: laStatus.bg, color: laStatus.fg, padding: '1px 7px', borderRadius: 999, fontSize: 10.5 }}>{laStatus.label}</span>
+              </div>
+              <div style={{ fontSize: 11.5, color: '#6B7B6E', marginTop: 3 }}>
+                {formatDate(la.date)}{la.condition ? ` · ${la.condition}` : ''}{la.survival ? ` · ${capitalise(la.survival)}` : ''}
+                {t.auditCount && t.auditCount > 1 ? ` · ${t.auditCount} audits` : ''}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 11.5, color: '#9AA79C' }}>No audit submitted yet</div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+          <button type="button" className="pl-btn pl-btn--primary" style={{ flex: 1, height: 34, fontSize: 12.5 }} onClick={onOpen}>
+            <Eye size={14} /> Details & history
+          </button>
+          {onEdit && (
+            <button type="button" className="pl-btn pl-btn--ghost" style={{ height: 34, width: 34, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={onEdit} title="Edit" aria-label="Edit">
+              <Pencil size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }

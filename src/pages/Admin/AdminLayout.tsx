@@ -26,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Handshake,      label: 'Partner management', path: '/admin/partners' },
   { icon: Users,          label: 'Users & tenants',    path: '/admin/users' },
   { icon: Sprout,         label: 'Projects oversight', path: '/admin/projects' },
-  { icon: ListChecks,     label: 'Task management',    path: '/admin/tasks' },
+  { icon: ListChecks,     label: 'Submission review',  path: '/admin/tasks' },
   { icon: ShieldCheck,    label: 'Data quality',       path: '/admin/data-quality' },
   { icon: BookOpen,       label: 'Ledger admin',       path: '/admin/ledger' },
   { icon: CreditCard,     label: 'Finance console',    path: '/admin/finance' },
