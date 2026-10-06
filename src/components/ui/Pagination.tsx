@@ -75,7 +75,7 @@ export default function Pagination({
           title="Rows per page"
           aria-label="Rows per page"
         >
-          {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} / page</option>)}
+          {[...new Set([10, 25, 50, 100, pageSize])].sort((a, b) => a - b).map(n => <option key={n} value={n}>{n} / page</option>)}
         </select>
 
         <button

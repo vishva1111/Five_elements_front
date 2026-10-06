@@ -68,6 +68,7 @@ const EvidenceVault = lazy(() => import('./pages/Partner/EvidenceVault'))
 const SubmissionTracker = lazy(() => import('./pages/Partner/SubmissionTracker'))
 const PartnerProjects = lazy(() => import('./pages/Partner/Projects'))
 const PartnerProjectManage = lazy(() => import('./pages/Partner/ProjectManage'))
+const PartnerActivity = lazy(() => import('./pages/Partner/ActivityReport'))
 const AddTree = lazy(() => import('./pages/Partner/AddTree'))
 const MyTrees = lazy(() => import('./pages/Partner/MyTrees'))
 const ImportFunders = lazy(() => import('./pages/Partner/ImportFunders'))
@@ -170,6 +171,7 @@ export default function App(): React.JSX.Element {
           <Route path="/partner/projects"     element={<ProtectedRoute allowedRoles={['partner']}><PartnerProjects /></ProtectedRoute>} />
           <Route path="/partner/projects/new" element={<ProtectedRoute allowedRoles={['partner']}><ProjectRegistration /></ProtectedRoute>} />
           <Route path="/partner/projects/:id" element={<ProtectedRoute allowedRoles={['partner']}><PartnerProjectManage /></ProtectedRoute>} />
+          <Route path="/partner/activity" element={<ProtectedRoute allowedRoles={['partner']}><PartnerActivity /></ProtectedRoute>} />
           <Route path="/partner/trees"        element={<ProtectedRoute allowedRoles={['partner']}><MyTrees compact /></ProtectedRoute>} />
           <Route path="/partner/actions"      element={<ProtectedRoute allowedRoles={['partner']}><MyTrees title="Assign action" showAdd /></ProtectedRoute>} />
           <Route path="/partner/actions/new"  element={<ProtectedRoute allowedRoles={['partner']}><AddTree /></ProtectedRoute>} />

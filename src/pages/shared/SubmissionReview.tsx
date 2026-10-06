@@ -252,9 +252,10 @@ export default function SubmissionReview({ Layout }: SubmissionReviewProps) {
                 {reviewPg.items.map(task => <SubmissionCard key={task.id} task={task} onOpen={() => setReviewingId(task.id)} />)}
               </div>
             ) : (
-              <SubmissionTable tasks={reviewPg.items} reviewFilter={reviewFilter} onOpen={id => setReviewingId(id)} />
+              <SubmissionTable tasks={reviewPg.items} reviewFilter={reviewFilter} onOpen={id => setReviewingId(id)}
+                footer={<Pagination {...reviewPg} noun="submission" />} />
             )}
-            <div style={{ marginTop: 16 }}><Pagination {...reviewPg} noun="submission" /></div>
+            {view === 'cards' && <div className="sr-pager"><Pagination {...reviewPg} noun="submission" /></div>}
           </>
         )}
       </div>
@@ -303,10 +304,11 @@ function ago(iso: string | null | undefined) {
 }
 
 /** The same submissions as a listing: one row each, click a row to review it. */
-function SubmissionTable({ tasks, reviewFilter, onOpen }: { tasks: Task[]; reviewFilter: string; onOpen: (id: string) => void }) {
+function SubmissionTable({ tasks, reviewFilter, onOpen, footer }: { tasks: Task[]; reviewFilter: string; onOpen: (id: string) => void; footer?: React.ReactNode }) {
   const dateHead = reviewFilter === 'completed' ? 'Submitted' : 'Reviewed'
   return (
     <div className="sr-tablewrap">
+      <div className="sr-tablescroll">
       <table className="sr-table">
         <thead>
           <tr>
@@ -330,13 +332,13 @@ function SubmissionTable({ tasks, reviewFilter, onOpen }: { tasks: Task[]; revie
             const cond = task.tree_health ? conditionTone(task.tree_health) : null
             return (
               <tr key={task.id} onClick={() => onOpen(task.id)}>
-                <td>
+                <td className="sr-c-photo">
                   {task.photo_url
                     ? <img className="sr-thumb" src={task.photo_url} alt="" loading="lazy" />
                     : <div className="sr-thumb sr-thumb--empty"><Camera size={18} /></div>}
                 </td>
-                <td>{task.tree_code ? <span className="sr-code">{task.tree_code}</span> : <span style={{ color: '#B5BDB6' }}>—</span>}</td>
-                <td>
+                <td data-label="Tree ID">{task.tree_code ? <span className="sr-code">{task.tree_code}</span> : <span style={{ color: '#B5BDB6' }}>—</span>}</td>
+                <td className="sr-c-task">
                   <div className="sr-cell-title" title={task.name}>{task.name}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                     <TypeBadge task={task} />
@@ -346,26 +348,26 @@ function SubmissionTable({ tasks, reviewFilter, onOpen }: { tasks: Task[]; revie
                     <div style={{ fontSize: 11.5, color: '#7A1F1F', marginTop: 4, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.review_notes}>✕ {task.review_notes}</div>
                   )}
                 </td>
-                <td>
+                <td data-label="Species">
                   <div style={{ fontWeight: 600 }}>{task.tree_species || '—'}</div>
                   {cond && task.tree_health && <span className="sr-chip" style={{ background: cond.bg, color: cond.fg, padding: '1px 8px', fontSize: 11, marginTop: 4 }}>{capitalise(task.tree_health)}</span>}
                 </td>
-                <td>
+                <td data-label="Submitted by">
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
                     <span className="sr-avatar">{initials(task.assignee_name)}</span>{task.assignee_name}
                   </span>
                 </td>
-                <td style={{ color: '#4A5A4E', maxWidth: 200 }}>
+                <td data-label="Project" style={{ color: '#4A5A4E', maxWidth: 200 }}>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.project_name}>{task.project_name || '—'}</div>
                 </td>
-                <td style={{ whiteSpace: 'nowrap' }}>
+                <td data-label={dateHead} style={{ whiteSpace: 'nowrap' }}>
                   <div>{formatDate(at, true)}</div>
                   <div style={{ fontSize: 11.5, color: waiting && days >= 2 ? '#8B5A00' : '#9AA79C', fontWeight: waiting && days >= 2 ? 700 : 400, marginTop: 2 }}>
                     {waiting && days >= 2 ? `Waiting ${days} days` : ago(at)}
                   </div>
                 </td>
-                <td><span className="sr-chip" style={{ background: st.bg, color: st.fg }}>{st.label}</span></td>
-                <td style={{ textAlign: 'right' }}>
+                <td className="sr-c-status"><span className="sr-chip" style={{ background: st.bg, color: st.fg }}>{st.label}</span></td>
+                <td className="sr-c-action" style={{ textAlign: 'right' }}>
                   <button type="button" className={`sr-rowbtn ${waiting ? 'sr-rowbtn--primary' : 'sr-rowbtn--quiet'}`} onClick={e => { e.stopPropagation(); onOpen(task.id) }}>
                     {waiting ? 'Review' : 'View'} <ArrowRight size={14} />
                   </button>
@@ -375,6 +377,8 @@ function SubmissionTable({ tasks, reviewFilter, onOpen }: { tasks: Task[]; revie
           })}
         </tbody>
       </table>
+      </div>
+      {footer && <div className="sr-tablefoot">{footer}</div>}
     </div>
   )
 }
