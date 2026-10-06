@@ -202,8 +202,8 @@ function ReviewNote({ s }: { s: HistoryStep }) {
   if (!s.reviewNotes) return null
   const changes = s.status === 'rejected'
   return (
-    <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, fontSize: 12.5, lineHeight: 1.45, background: changes ? '#FDEEE3' : '#F2F6EE', color: changes ? '#7A3B00' : '#2B5341' }}>
-      <strong>{changes ? 'Changes requested: ' : 'Reviewer note: '}</strong>{s.reviewNotes}
+    <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, fontSize: 12.5, lineHeight: 1.45, background: changes ? '#FBE9E9' : '#F2F6EE', color: changes ? '#7A1F1F' : '#2B5341' }}>
+      <strong>{changes ? 'Rejected: ' : 'Reviewer note: '}</strong>{s.reviewNotes}
     </div>
   )
 }
@@ -220,8 +220,12 @@ export function TreeHistoryView({ data, focusTaskId }: { data: TreeHistoryData; 
   }
   const hasPoint = tree.latitude !== null && tree.longitude !== null
   // The step under review (task review) is shown first and open.
-  const focused = focusTaskId ? audits.find(a => a.taskId === focusTaskId) || null : null
-  const headline = focused || latestAudit
+  const focusedAudit = focusTaskId ? audits.find(a => a.taskId === focusTaskId) || null : null
+  const focusedPlanting = !focusedAudit && focusTaskId && planting?.taskId === focusTaskId ? planting : null
+  const focused: HistoryStep | AuditStep | null = focusedAudit || focusedPlanting
+  const headline: HistoryStep | AuditStep | null = focused || latestAudit
+  const headBefore = headline && 'before' in headline ? (headline as AuditStep).before : null
+  const headAfter = headline && 'after' in headline ? (headline as AuditStep).after : null
 
   return (
     <div>
@@ -310,7 +314,7 @@ export function TreeHistoryView({ data, focusTaskId }: { data: TreeHistoryData; 
           <div style={{ ...grid, marginTop: 12 }}>{measurementFacts(headline.measurements)}<Fact label="Health" value={capitalise(headline.health)} /></div>
           {headline.notes && <div style={{ marginTop: 10, fontSize: 12.5, color: '#4A5A4E' }}>Field notes: “{headline.notes}”</div>}
           <ReviewNote s={headline} />
-          <div style={{ marginTop: 14 }}><BeforeAfter before={headline.before} after={headline.after} open={openAll} /></div>
+          <div style={{ marginTop: 14 }}><BeforeAfter before={headBefore} after={headAfter} open={openAll} /></div>
           {headline.photos.length > 1 && (
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               {headline.photos.map(u => <Thumb key={u} url={u} onOpen={() => openAll(u)} size={58} />)}

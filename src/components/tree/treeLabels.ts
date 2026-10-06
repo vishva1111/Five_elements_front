@@ -5,14 +5,14 @@ export interface Tone { bg: string; fg: string }
 /**
  * tasks.status → what the panel calls it. 'rejected' stays the stored value
  * because the mobile app reads it to show its Edit button, but to people it
- * means the submission was sent back with changes to make.
+ * means the submission was rejected and sent back to be fixed.
  */
 export const TASK_STATUS: Record<string, { label: string } & Tone> = {
   assigned:    { label: 'Assigned',          bg: '#EEF3EA', fg: '#2B5341' },
   in_progress: { label: 'In progress',       bg: '#FFF4E0', fg: '#8B5A00' },
   completed:   { label: 'Awaiting review',   bg: '#E8F1FB', fg: '#185FA5' },
   approved:    { label: 'Approved',          bg: '#D9EBD2', fg: '#1C3A2B' },
-  rejected:    { label: 'Changes requested', bg: '#FDEEE3', fg: '#9A4A00' },
+  rejected:    { label: 'Rejected',          bg: '#FBE9E9', fg: '#A32020' },
   submitted:   { label: 'Submitted',         bg: '#E8F1FB', fg: '#185FA5' },
   pending:     { label: 'Not started',       bg: '#F2EFEA', fg: '#6B7B6E' },
 }

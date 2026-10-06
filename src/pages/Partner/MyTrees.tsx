@@ -74,13 +74,13 @@ interface TreeRow {
 }
 
 // Under plantation → Planted (task created) → Field Operator assigned → in
-// progress → completed → approved (ledger) / changes requested (redo).
+// progress → completed → approved (ledger) / rejected (redo).
 const TASK_STATUS_LABEL: Record<string, { label: string; badge: string }> = {
   assigned:    { label: 'Assigned to field operator', badge: 'pending' },
   in_progress: { label: 'Survey in progress', badge: 'progress' },
   completed:   { label: 'Awaiting your review', badge: 'info' },
   approved:    { label: 'Verified · on ledger', badge: 'approved' },
-  rejected:    { label: 'Changes requested', badge: 'rejected' },
+  rejected:    { label: 'Rejected', badge: 'rejected' },
 }
 
 // Planting task while the tree is under plantation; audit task once it's planted.
@@ -89,7 +89,7 @@ const PLANTING_STATUS_LABEL: Record<string, { label: string; badge: string }> = 
   in_progress: { label: 'Planting in progress', badge: 'progress' },
   completed:   { label: 'Planted · awaiting your review', badge: 'info' },
   approved:    { label: 'Planting approved', badge: 'approved' },
-  rejected:    { label: 'Planting · changes requested', badge: 'rejected' },
+  rejected:    { label: 'Planting rejected', badge: 'rejected' },
 }
 
 /**
@@ -99,7 +99,7 @@ const PLANTING_STATUS_LABEL: Record<string, { label: string; badge: string }> = 
 function overallStatus(t: { taskStatus: string | null; taskType?: string | null; taskNeedsAssignee?: boolean; stage?: string }) {
   const stage = t.stage || DEFAULT_STAGE
   if (stage === 'Dead') return { label: 'Dead', bg: '#F4E4E4', fg: '#A32020' }
-  if (t.taskStatus === 'rejected') return { label: 'Changes requested', bg: '#FDEEE3', fg: '#9A4A00' }
+  if (t.taskStatus === 'rejected') return { label: 'Rejected', bg: '#FBE9E9', fg: '#A32020' }
   if (t.taskType === 'planting' || (!t.taskType && stage === DEFAULT_STAGE)) {
     if (!t.taskStatus || t.taskNeedsAssignee) return { label: 'Pending', bg: '#F2EFEA', fg: '#6B7B6E' }
     if (t.taskStatus === 'completed')          return { label: 'Planting review', bg: '#E8F1FB', fg: '#185FA5' }
@@ -366,7 +366,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
 
   async function reviewPlanting(action: 'approve' | 'reject') {
     if (!reviewing?.taskId) return
-    if (action === 'reject' && !reviewNote.trim()) { toast.error('Say what needs to change'); return }
+    if (action === 'reject' && !reviewNote.trim()) { toast.error('Say why the planting is rejected'); return }
     setReviewBusy(action)
     try {
       const res = await fetch(`${API}/api/admin/tasks/${reviewing.taskId}/${action === 'approve' ? 'approve' : 'request-changes'}`, {
@@ -378,7 +378,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
       if (!res.ok) throw new Error(d.error || 'Failed to submit review')
       toast.success(action === 'approve'
         ? `${codeOf(reviewing)} is now Planted — its audit task is in Tasks.`
-        : `Changes requested — sent back to ${reviewing.taskAssignee || 'the field operator'}.`)
+        : `Rejected — sent back to ${reviewing.taskAssignee || 'the field operator'}.`)
       setReviewing(null)
       await load()
     } catch (e: unknown) {
@@ -979,7 +979,7 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
           width={520}
           footer={<>
             <button type="button" className="pl-btn pl-btn--ghost" style={{ color: '#A32020' }} onClick={() => reviewPlanting('reject')} disabled={!!reviewBusy}>
-              {reviewBusy === 'reject' ? 'Sending…' : 'Request changes'}
+              {reviewBusy === 'reject' ? 'Rejecting…' : 'Reject'}
             </button>
             <button type="button" className="pl-btn pl-btn--primary" onClick={() => reviewPlanting('approve')} disabled={!!reviewBusy}>
               {reviewBusy === 'approve' ? 'Confirming…' : '✓ Confirm planted'}
@@ -999,10 +999,10 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
           </div>
           <div className="sp-field">
             <label className="sp-label" htmlFor="rp-note">Note</label>
-            <textarea id="rp-note" className="sp-textarea" rows={2} style={FULL} placeholder="What needs to change? (required to request changes)" value={reviewNote} onChange={e => setReviewNote(e.target.value)} />
+            <textarea id="rp-note" className="sp-textarea" rows={2} style={FULL} placeholder="Why is it rejected? (required to reject)" value={reviewNote} onChange={e => setReviewNote(e.target.value)} />
           </div>
           <div style={{ fontSize: 11.5, color: '#7A867C', marginTop: 10, lineHeight: 1.5 }}>
-            Confirming makes the tree <strong>Planted</strong> and opens its <strong>audit task</strong> in Tasks. Requesting changes sends it back to the field operator with your note.
+            Confirming makes the tree <strong>Planted</strong> and opens its <strong>audit task</strong> in Tasks. Rejecting sends it back to the field operator with your note.
           </div>
         </RecordModal>
       )}
