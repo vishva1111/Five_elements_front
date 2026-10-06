@@ -99,6 +99,10 @@ export default function SubmissionTracker() {
   const [activeTab,      setActiveTab]      = useState<'submissions' | 'tasks'>('submissions')
   const [pendingTasks,   setPendingTasks]   = useState<PendingTask[]>([])
   const [tasksLoading,   setTasksLoading]   = useState(false)
+  const [reviewingId,    setReviewingId]    = useState<string | null>(null)
+  const [reviewNotes,    setReviewNotes]    = useState('')
+  const [reviewAction,   setReviewAction]   = useState<'approve' | 'reject' | null>(null)
+  const [submittingReview, setSubmittingReview] = useState(false)
 
   const token = session?.access_token
 
@@ -157,7 +161,30 @@ export default function SubmissionTracker() {
     }
   }, [token])
 
-  useEffect(() => { loadPendingTasks() }, [loadPendingTasks])
+  useEffect(() => {
+    if (activeTab === 'tasks') loadPendingTasks()
+  }, [activeTab, loadPendingTasks])
+
+  const handleReview = async (taskId: string, action: 'approve' | 'reject') => {
+    setSubmittingReview(true)
+    try {
+      const res = await fetch(`${API}/api/admin/tasks/${taskId}/${action}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ review_notes: reviewNotes }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      toast.success(action === 'approve' ? 'Task approved.' : 'Task rejected.')
+      setReviewingId(null)
+      setReviewNotes('')
+      setReviewAction(null)
+      loadPendingTasks()
+    } catch {
+      toast.error('Failed to submit review. Please try again.')
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
 
   const filtered = filter === 'all' ? submissions : submissions.filter(s => s.status === filter)
 
@@ -193,11 +220,11 @@ export default function SubmissionTracker() {
   return (
     <PartnerLayout title="Submission tracker">
 
-      {/* Top-level tabs: Submissions | Submission review */}
+      {/* Top-level tabs: Submissions | Task Review */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '2px solid #e8f0e8' }}>
         {[
           { key: 'submissions', label: '📋 Project Submissions' },
-          { key: 'tasks',       label: `✅ Submission review${pendingTasks.length > 0 ? ` (${pendingTasks.length})` : ''}` },
+          { key: 'tasks',       label: `✅ Task Review${pendingTasks.length > 0 && activeTab !== 'tasks' ? ` (${pendingTasks.length})` : ''}` },
         ].map(tab => (
           <button
             key={tab.key}
@@ -362,24 +389,143 @@ export default function SubmissionTracker() {
       )}
 
       {/* ── Task Review Tab ── */}
-      {/* Task review moved to Submission review, where each submission opens with its full audit details. */}
       {activeTab === 'tasks' && (
-        <div className="pl-card">
-          <div className="pl-empty">
-            <div className="pl-empty__icon">✅</div>
-            <div className="pl-empty__title">
-              {tasksLoading ? 'Checking…' : pendingTasks.length > 0
-                ? `${pendingTasks.length} submission${pendingTasks.length === 1 ? '' : 's'} waiting for your review`
-                : 'No submissions waiting for review'}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 14, color: '#6B7B6E' }}>
+              Tasks completed by field users — approve or reject each one.
             </div>
-            <div className="pl-empty__sub">
-              Field submissions are now reviewed in <strong>Submission review</strong> — each one opens with all its photos,
-              before/after comparison and audit history, and you can approve it or request changes.
-            </div>
-            <button type="button" className="pl-btn pl-btn--primary" onClick={() => navigate('/partner/tasks')}>
-              Open Submission review →
+            <button type="button" className="pl-btn" style={{ fontSize: 12 }} onClick={loadPendingTasks}>
+              ↻ Refresh
             </button>
           </div>
+
+          {tasksLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[1,2,3].map(i => <div key={i} className="pl-skel" style={{ height: 72 }} />)}
+            </div>
+          ) : pendingTasks.length === 0 ? (
+            <div className="pl-card">
+              <div className="pl-empty">
+                <div className="pl-empty__icon">✅</div>
+                <div className="pl-empty__title">No tasks pending review</div>
+                <div className="pl-empty__sub">All completed tasks have been reviewed. Check back later.</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {pendingTasks.map(task => (
+                <div key={task.id} className="pl-card" style={{ padding: '16px 20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    {/* Photo captured in the app */}
+                    {task.photo_url && (
+                      <a href={task.photo_url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
+                        <img
+                          src={task.photo_url}
+                          alt="Field capture"
+                          style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', border: '1px solid #e8f0e8', display: 'block' }}
+                        />
+                      </a>
+                    )}
+                    <div style={{ flex: 1 }}>
+                      {/* Task code + name */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <span style={{
+                          fontFamily: 'monospace', fontSize: 11, background: '#f0f7f0',
+                          color: '#1a5c2a', padding: '2px 8px', borderRadius: 4, fontWeight: 700,
+                        }}>
+                          {task.task_code || task.id.slice(0, 8).toUpperCase()}
+                        </span>
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: '#112121', marginBottom: 4 }}>{task.name}</div>
+                      <div style={{ fontSize: 12, color: '#6B7B6E', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        <span>👤 {task.assignee_name}</span>
+                        {task.tree_species && <span>🌳 {task.tree_species}{task.tree_health ? ` · ${task.tree_health}` : ''}</span>}
+                        {task.project_name && <span>🌿 {task.project_name}</span>}
+                        {task.location && <span>📍 {task.location}</span>}
+                        {task.completed_at && (
+                          <span>✅ Completed {new Date(task.completed_at).toLocaleDateString('en-GB')}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    {reviewingId !== task.id ? (
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => { setReviewingId(task.id); setReviewAction('approve'); setReviewNotes('') }}
+                          style={{
+                            background: '#22c55e', color: '#fff', border: 'none',
+                            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                          }}
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setReviewingId(task.id); setReviewAction('reject'); setReviewNotes('') }}
+                          style={{
+                            background: '#ef4444', color: '#fff', border: 'none',
+                            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                          }}
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => { setReviewingId(null); setReviewAction(null) }}
+                          style={{
+                            background: '#f5f5f5', color: '#555', border: '1px solid #ddd',
+                            borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Inline review form */}
+                  {reviewingId === task.id && (
+                    <div style={{ marginTop: 14, padding: '14px 16px', background: reviewAction === 'approve' ? '#f0fdf4' : '#fef2f2', borderRadius: 10, border: `1px solid ${reviewAction === 'approve' ? '#bbf7d0' : '#fecaca'}` }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: reviewAction === 'approve' ? '#15803d' : '#dc2626', marginBottom: 8 }}>
+                        {reviewAction === 'approve' ? '✓ Approving task' : '✕ Rejecting task'} — add notes (optional)
+                      </div>
+                      <textarea
+                        value={reviewNotes}
+                        onChange={e => setReviewNotes(e.target.value)}
+                        placeholder={reviewAction === 'approve' ? 'Enter a note (optional)' : 'Enter reason for rejection'}
+                        rows={2}
+                        style={{
+                          width: '100%', padding: '8px 10px', borderRadius: 8,
+                          border: '1.5px solid #e0e0e0', fontSize: 13, resize: 'vertical',
+                          boxSizing: 'border-box', fontFamily: 'inherit',
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                        <button
+                          type="button"
+                          disabled={submittingReview}
+                          onClick={() => handleReview(task.id, reviewAction!)}
+                          style={{
+                            background: reviewAction === 'approve' ? '#22c55e' : '#ef4444',
+                            color: '#fff', border: 'none', borderRadius: 8,
+                            padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                          }}
+                        >
+                          {submittingReview ? 'Submitting…' : `Confirm ${reviewAction === 'approve' ? 'Approval' : 'Rejection'}`}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

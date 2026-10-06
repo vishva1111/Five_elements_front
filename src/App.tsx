@@ -71,6 +71,7 @@ const AddTree = lazy(() => import('./pages/Partner/AddTree'))
 const MyTrees = lazy(() => import('./pages/Partner/MyTrees'))
 const ImportFunders = lazy(() => import('./pages/Partner/ImportFunders'))
 const PartnerTasks = lazy(() => import('./pages/Partner/PartnerTasks'))
+const PartnerSubmissionReview = lazy(() => import('./pages/Partner/PartnerSubmissionReview'))
 const FundersView = lazy(() => import('./pages/Partner/FundersView'))
 const PartnerTeam = lazy(() => import('./pages/Partner/PartnerTeam'))
 const PartnerUsers = lazy(() => import('./pages/Partner/PartnerUsers'))
@@ -90,6 +91,7 @@ const PlatformHealth = lazy(() => import('./pages/Admin/PlatformHealth'))
 const Configuration = lazy(() => import('./pages/Admin/Configuration'))
 const TreeRecords = lazy(() => import('./pages/Admin/TreeRecords'))
 const TaskManagement = lazy(() => import('./pages/Admin/TaskManagement'))
+const AdminSubmissionReview = lazy(() => import('./pages/Admin/AdminSubmissionReview'))
 
 export default function App(): React.JSX.Element {
   // AuthProvider wraps the entire app so useAuth() works everywhere
@@ -181,6 +183,7 @@ export default function App(): React.JSX.Element {
           <Route path="/partner/settings"          element={<ProtectedRoute allowedRoles={['partner']}><PartnerSettings /></ProtectedRoute>} />
           <Route path="/partner/linked-submissions" element={<ProtectedRoute allowedRoles={['partner']}><LinkedSubmissions /></ProtectedRoute>} />
           <Route path="/partner/tasks"       element={<ProtectedRoute allowedRoles={['partner']}><PartnerTasks /></ProtectedRoute>} />
+          <Route path="/partner/submission-review" element={<ProtectedRoute allowedRoles={['partner']}><PartnerSubmissionReview /></ProtectedRoute>} />
           {/* Redirect bare /partner to dashboard */}
           <Route path="/partner" element={<ProtectedRoute allowedRoles={['partner']}><PartnerDashboard /></ProtectedRoute>} />
 
@@ -193,6 +196,7 @@ export default function App(): React.JSX.Element {
           <Route path="/admin/users"        element={<ProtectedRoute allowedRoles={['admin']}><UsersAndTenants /></ProtectedRoute>} />
           <Route path="/admin/projects"     element={<ProtectedRoute allowedRoles={['admin']}><ProjectsOversight /></ProtectedRoute>} />
           <Route path="/admin/tasks"        element={<ProtectedRoute allowedRoles={['admin']}><TaskManagement /></ProtectedRoute>} />
+          <Route path="/admin/submission-review" element={<ProtectedRoute allowedRoles={['admin']}><AdminSubmissionReview /></ProtectedRoute>} />
           <Route path="/admin/data-quality" element={<ProtectedRoute allowedRoles={['admin']}><DataQuality /></ProtectedRoute>} />
           <Route path="/admin/ledger"       element={<ProtectedRoute allowedRoles={['admin']}><LedgerAdmin /></ProtectedRoute>} />
           <Route path="/admin/finance"      element={<ProtectedRoute allowedRoles={['admin']}><FinanceConsole /></ProtectedRoute>} />
