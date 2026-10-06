@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useNavigate } from 'react-router-dom'
-import { Pencil, Palette, Fence, TreePine } from 'lucide-react'
 import PartnerLayout from './PartnerLayout'
-import FencingSummary from '../../components/project/FencingSummary'
-import { EditProjectModal, ColorRequestModal, FencingRequestModal, ProjectTreesModal, type ProjectLite } from '../../components/project/ProjectModals'
+import { FencingMapBlock, FencingRequestBanner, boundaryRequests } from '../../components/project/FencingCardParts'
+import ProjectTreeList from '../../components/project/ProjectTreeList'
+import { ProjectTreesModal, type ProjectLite } from '../../components/project/ProjectModals'
 import { DEFAULT_PROJECT_COLOR, formatDate, type Boundary, type Fencing } from '../../components/tree/treeLabels'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
@@ -12,11 +12,13 @@ import './Partner.css'
 
 interface ChangeRequestRow {
   id: string
-  type: 'color' | 'fencing' | 'boundary'
+  type: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: string
   reviewedAt: string | null
   reviewNotes: string | null
+  reason?: string | null
+  requestedByName?: string | null
 }
 
 interface PartnerProject {
@@ -46,19 +48,13 @@ interface PartnerProject {
   changeRequests:   ChangeRequestRow[]
 }
 
-type Dialog = { kind: 'edit' | 'color' | 'fencing' | 'trees'; project: PartnerProject } | null
-
-const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 32, padding: '0 11px', fontSize: 12.5 }
-
 export default function Projects() {
   const { session } = useAuth()
   const navigate     = useNavigate()
 
   const [projects, setProjects] = useState<PartnerProject[]>([])
   const [loading,  setLoading]  = useState(true)
-  const [dialog,   setDialog]   = useState<Dialog>(null)
-  // Trees (for drawing a boundary around them) are loaded when the fencing dialog opens.
-  const [trees, setTrees] = useState<{ id: string; latitude: number; longitude: number }[]>([])
+  const [mapOf,    setMapOf]    = useState<PartnerProject | null>(null)
 
   const token = session?.access_token
   const load = useCallback(() => {
@@ -70,23 +66,12 @@ export default function Projects() {
   }, [token])
   useEffect(() => { load() }, [load])
 
-  useEffect(() => {
-    if (dialog?.kind !== 'fencing') return
-    setTrees([])
-    fetch(`${API}/api/partner/trees?project_id=${encodeURIComponent(dialog.project.id)}`, { headers: { Authorization: `Bearer ${token || ''}` } })
-      .then(r => r.json())
-      .then(d => setTrees((d.trees || []).filter((t: { latitude: number; longitude: number }) => Number(t.latitude) && Number(t.longitude))))
-      .catch(() => setTrees([]))
-  }, [dialog, token])
-
   const pg = usePagination(projects, 12)
   const lite = (p: PartnerProject): ProjectLite => ({
     id: p.id, name: p.name, description: p.description, location: p.location, category: p.category,
     totalTrees: p.totalTrees, mapColor: p.mapColor, fencing: p.fencing, boundary: p.boundary,
   })
-  const pendingOf = (p: PartnerProject, type: 'color' | 'fencing') => p.changeRequests.find(r => r.type === type && r.status === 'pending')
-  const lastRejected = (p: PartnerProject) => p.changeRequests.find(r => r.status === 'rejected' && r.type !== 'boundary')
-  const closeAndReload = () => { setDialog(null); load() }
+  const open = (p: PartnerProject) => navigate(`/partner/projects/${p.id}`)
 
   return (
     <PartnerLayout title="Projects" subtitle="Your approved, active projects and their live progress">
@@ -118,100 +103,72 @@ export default function Projects() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {pg.items.map(p => {
             const color = p.mapColor || DEFAULT_PROJECT_COLOR
-            const pendingColor = pendingOf(p, 'color')
-            const pendingFence = pendingOf(p, 'fencing')
-            const rejected = lastRejected(p)
+            const requests = boundaryRequests(p.changeRequests)
+            const pending = requests.find(r => r.status === 'pending')
+            const lastApproved = requests.find(r => r.status === 'approved')
+            const count = (p.fundedTrees ?? 0) + (p.treesPlanted ?? 0)
+            const pct = p.totalTrees ? Math.min(100, Math.round((count / p.totalTrees) * 100)) : 0
             return (
               <div key={p.id} className="pl-card" style={{ padding: 0, overflow: 'hidden', borderTop: `5px solid ${color}` }}>
-                <div style={{ padding: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 8 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15.5, color: '#112121', lineHeight: 1.3 }}>{p.name}</div>
-                    <span className={`pl-badge pl-badge--${p.active ? 'approved' : 'pending'}`}>{p.active ? 'Active' : 'Inactive'}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: '#9AA79C', marginBottom: 14 }}>
-                    📍 {p.location} · <span style={{ textTransform: 'capitalize' }}>{p.element}</span>{p.category ? ` · ${p.category}` : ''}
+                <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                  {/* 1. Map — the land and its fencing */}
+                  <FencingMapBlock boundary={p.boundary} onOpen={() => setMapOf(p)} />
+
+                  {/* 2. A field-app user asked to redraw the land */}
+                  {pending && <FencingRequestBanner projectId={p.id} request={pending} onDecided={load} />}
+                  {!pending && lastApproved?.reviewedAt && (
+                    <div style={{ fontSize: 11.5, color: '#6B7B6E' }}>✅ Update approved on {formatDate(lastApproved.reviewedAt)}</div>
+                  )}
+
+                  {/* 3. Project details */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 8 }}>
+                      <button type="button" onClick={() => open(p)} title="Open the project page" style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', fontWeight: 700, fontSize: 15.5, color: '#112121', lineHeight: 1.3 }}>
+                        {p.name}
+                      </button>
+                      <span className={`pl-badge pl-badge--${p.active ? 'approved' : 'pending'}`}>{p.active ? 'Active' : 'Inactive'}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#9AA79C', marginBottom: 12 }}>
+                      📍 {p.location} · <span style={{ textTransform: 'capitalize' }}>{p.element}</span>{p.category ? ` · ${p.category}` : ''}
+                    </div>
+
+                    <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6B7B6E' }}>
+                      <span>{count.toLocaleString()} / {(p.totalTrees ?? 0).toLocaleString()} trees</span>
+                      <span style={{ fontWeight: 700, color: '#2B5341' }}>{pct}%</span>
+                    </div>
+                    <div style={{ height: 8, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden', marginBottom: 14 }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 12 }}>
+                      <div>
+                        <div style={{ color: '#9AA79C', marginBottom: 2 }}>tCO2e</div>
+                        <div style={{ fontWeight: 700, color: '#112121' }}>{p.tco2e?.toLocaleString() ?? '—'}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#9AA79C', marginBottom: 2 }}>Evidence</div>
+                        <div style={{ fontWeight: 700, color: '#112121' }}>{p.evidenceCount ?? 0}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#9AA79C', marginBottom: 2 }}>Funders</div>
+                        <div style={{ fontWeight: 700, color: '#112121' }}>{p.fundersCount ?? 0}</div>
+                      </div>
+                    </div>
+
+                    {p.approvedAt && (
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#9AA79C' }}>
+                        Approved {formatDate(p.approvedAt)}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Progress bar — trees funded by funders plus trees actually planted
-                      (still "Under plantation" doesn't count yet) */}
-                  {(() => {
-                    const count = (p.fundedTrees ?? 0) + (p.treesPlanted ?? 0)
-                    const pct = p.totalTrees ? Math.min(100, Math.round((count / p.totalTrees) * 100)) : 0
-                    return (
-                      <>
-                        <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6B7B6E' }}>
-                          <span>{count.toLocaleString()} / {(p.totalTrees ?? 0).toLocaleString()} trees</span>
-                          <span style={{ fontWeight: 700, color: '#2B5341' }}>{pct}%</span>
-                        </div>
-                        <div style={{ height: 8, background: '#EFEAE4', borderRadius: 999, overflow: 'hidden', marginBottom: 14 }}>
-                          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
-                        </div>
-                      </>
-                    )
-                  })()}
+                  {/* 4. Trees and tree details */}
+                  <ProjectTreeList projectId={p.id} added={p.treesRecorded ?? 0} planted={p.treesPlanted ?? 0} onOpenMap={() => setMapOf(p)} />
 
-                  {/* All the project's trees, together on a map */}
-                  <button
-                    type="button"
-                    onClick={() => setDialog({ kind: 'trees', project: p })}
-                    title="See every tree in this project on a map"
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 10, background: '#F5F8F1', border: '1px solid #E1EBD8', marginBottom: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-                  >
-                    <span style={{ fontSize: 16 }}>🌳</span>
-                    <span style={{ fontSize: 12.5, color: '#2B5341' }}>
-                      <strong style={{ fontSize: 14 }}>{(p.treesRecorded ?? 0).toLocaleString('en-IN')}</strong> trees added
-                      <span style={{ color: '#7A867C' }}> · </span>
-                      <strong>{(p.treesPlanted ?? 0).toLocaleString('en-IN')}</strong> planted
-                    </span>
-                    <span style={{ marginLeft: 'auto', fontSize: 12, color: '#2B5341', fontWeight: 700 }}>View on map →</span>
+                  <button type="button" className="pl-btn pl-btn--ghost" style={{ height: 32, fontSize: 12.5 }} onClick={() => open(p)}>
+                    Manage project — edit, colour, fencing →
                   </button>
-
-                  {/* Fencing */}
-                  <FencingSummary fencing={p.fencing} boundary={p.boundary} compact />
-
-                  {(pendingColor || pendingFence || rejected) && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10 }}>
-                      {pendingColor && <div style={{ fontSize: 11.5, background: '#FFF4E0', color: '#8B5A00', borderRadius: 8, padding: '5px 9px' }}>⏳ Colour change waiting for approval · asked {formatDate(pendingColor.createdAt)}</div>}
-                      {pendingFence && <div style={{ fontSize: 11.5, background: '#FFF4E0', color: '#8B5A00', borderRadius: 8, padding: '5px 9px' }}>⏳ Fencing update waiting for approval · asked {formatDate(pendingFence.createdAt)}</div>}
-                      {rejected && !pendingColor && !pendingFence && (
-                        <div style={{ fontSize: 11.5, background: '#FBE9E9', color: '#A32020', borderRadius: 8, padding: '5px 9px' }}>
-                          ✕ Your last {rejected.type === 'color' ? 'colour' : 'fencing'} request was not approved{rejected.reviewNotes ? `: ${rejected.reviewNotes}` : ''}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 12, marginTop: 14 }}>
-                    <div>
-                      <div style={{ color: '#9AA79C', marginBottom: 2 }}>tCO2e</div>
-                      <div style={{ fontWeight: 700, color: '#112121' }}>{p.tco2e?.toLocaleString() ?? '—'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: '#9AA79C', marginBottom: 2 }}>Evidence</div>
-                      <div style={{ fontWeight: 700, color: '#112121' }}>{p.evidenceCount ?? 0}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: '#9AA79C', marginBottom: 2 }}>Funders</div>
-                      <div style={{ fontWeight: 700, color: '#112121' }}>{p.fundersCount ?? 0}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid #F0ECE6' }}>
-                    <button type="button" className="pl-btn pl-btn--ghost" style={iconBtn} onClick={() => setDialog({ kind: 'edit', project: p })}><Pencil size={13} /> Edit</button>
-                    <button type="button" className="pl-btn pl-btn--ghost" style={iconBtn} disabled={!!pendingColor} title={pendingColor ? 'A colour change is already waiting for approval' : 'Needs admin approval'} onClick={() => setDialog({ kind: 'color', project: p })}>
-                      <span style={{ width: 12, height: 12, borderRadius: 3, background: color, border: '1px solid rgba(0,0,0,0.2)' }} /><Palette size={13} /> Colour
-                    </button>
-                    <button type="button" className="pl-btn pl-btn--ghost" style={iconBtn} disabled={!!pendingFence} title={pendingFence ? 'A fencing update is already waiting for approval' : 'Needs admin approval'} onClick={() => setDialog({ kind: 'fencing', project: p })}>
-                      <Fence size={13} /> Fencing
-                    </button>
-                    <button type="button" className="pl-btn pl-btn--ghost" style={iconBtn} onClick={() => setDialog({ kind: 'trees', project: p })}><TreePine size={13} /> Trees</button>
-                  </div>
-
-                  {p.approvedAt && (
-                    <div style={{ marginTop: 12, fontSize: 11, color: '#9AA79C' }}>
-                      Approved {new Date(p.approvedAt).toLocaleDateString('en-GB')}
-                    </div>
-                  )}
                 </div>
               </div>
             )
@@ -221,10 +178,7 @@ export default function Projects() {
         </>
       )}
 
-      {dialog?.kind === 'edit'    && <EditProjectModal project={lite(dialog.project)} onClose={() => setDialog(null)} onSaved={closeAndReload} />}
-      {dialog?.kind === 'color'   && <ColorRequestModal project={lite(dialog.project)} onClose={() => setDialog(null)} onSent={closeAndReload} />}
-      {dialog?.kind === 'fencing' && <FencingRequestModal project={lite(dialog.project)} trees={trees} onClose={() => setDialog(null)} onSent={closeAndReload} />}
-      {dialog?.kind === 'trees'   && <ProjectTreesModal project={lite(dialog.project)} onClose={() => setDialog(null)} />}
+      {mapOf && <ProjectTreesModal project={lite(mapOf)} onClose={() => setMapOf(null)} />}
     </PartnerLayout>
   )
 }
