@@ -125,7 +125,7 @@ function verificationLabel(t: { taskStatus: string | null; taskNeedsAssignee?: b
   return map[t.taskStatus] || { label: t.taskStatus, badge: '' }
 }
 
-export default function MyTrees({ title = 'Action listing', showAdd = false, compact = false }: { title?: string; showAdd?: boolean; compact?: boolean }) {
+export default function MyTrees({ title = 'Tree listing', showAdd = false, compact = false }: { title?: string; showAdd?: boolean; compact?: boolean }) {
   const { session } = useAuth()
   const token = session?.access_token
   const { species: speciesList, find: findSpecies, add: addSpecies } = useSpecies()
@@ -181,24 +181,29 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
   const [addForm,   setAddForm]   = useState(emptyAdd)
   const [addError,  setAddError]  = useState<string | null>(null)
   const [savingAdd, setSavingAdd] = useState(false)
-  const [teamUsers, setTeamUsers] = useState<{ effectiveId: string; teamMemberId: string; name: string; email: string }[]>([])
+  const [teamUsers, setTeamUsers] = useState<{ effectiveId: string; teamMemberId: string; name: string; email: string; projectId?: string | null }[]>([])
   const [projects,  setProjects]  = useState<{ id: string; name: string }[]>([])
 
   async function openAdd() {
-    setAddForm(emptyAdd())
     setAddError(null)
     setAdding(true)
-    if (teamUsers.length && projects.length) return
     try {
       const headers = { Authorization: `Bearer ${token || ''}` }
       const [u, p] = await Promise.all([
         fetch(`${API}/api/partner/team-users`, { headers }).then(r => r.json()),
         fetch(`${API}/api/partner/projects`,   { headers }).then(r => r.json()),
       ])
-      setTeamUsers((u.users || []).filter((x: { canRecord: boolean }) => x.canRecord))
-      setProjects((p.projects || []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name })))
+      const users = (u.users || []).filter((x: { canRecord: boolean }) => x.canRecord)
+      const projs = (p.projects || []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name }))
+      setTeamUsers(users)
+      setProjects(projs)
+      const defaultProjectId = projs[0]?.id || ''
+      // Auto-pick the user assigned to this project; fall back to first user
+      const defaultUser = users.find((x: { projectId?: string | null }) => x.projectId === defaultProjectId) || users[0]
+      setAddForm({ ...emptyAdd(), userId: defaultUser?.effectiveId || '', projectId: defaultProjectId })
     } catch {
       setAddError('Could not load your team or projects.')
+      setAddForm(emptyAdd())
     }
   }
 
@@ -214,8 +219,6 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
 
   async function saveAdd() {
     const species = addForm.species.trim()
-    if (!addForm.userId)    return setAddError('Choose a user')
-    if (!addForm.projectId) return setAddError('Choose a project')
     if (!species)           return setAddError('Species is required')
     const co2 = Number(addForm.co2)
     if (addForm.co2 !== '' && (!Number.isFinite(co2) || co2 < 0)) return setAddError('CO₂ must be a number')
@@ -1059,24 +1062,6 @@ export default function MyTrees({ title = 'Action listing', showAdd = false, com
             </button>
           </>}
         >
-          <SectionLabel>Who and where</SectionLabel>
-          <FieldGrid>
-            <div className="sp-field" style={{ minWidth: 0 }}>
-              <label className="sp-label sp-label--required" htmlFor="ar-user">User</label>
-              <select id="ar-user" className="sp-select" style={FULL} value={addForm.userId} onChange={e => setAddForm(f => ({ ...f, userId: e.target.value }))}>
-                <option value="">Select a user…</option>
-                {teamUsers.map(u => <option key={u.effectiveId} value={u.effectiveId}>{u.name || u.email}</option>)}
-              </select>
-            </div>
-            <div className="sp-field" style={{ minWidth: 0 }}>
-              <label className="sp-label sp-label--required" htmlFor="ar-project">Project</label>
-              <select id="ar-project" className="sp-select" style={FULL} value={addForm.projectId} onChange={e => setAddForm(f => ({ ...f, projectId: e.target.value }))}>
-                <option value="">Select a project…</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-          </FieldGrid>
-
           <SectionLabel>Tree</SectionLabel>
           <SpeciesFields
             list={speciesList}

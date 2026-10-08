@@ -177,7 +177,7 @@ export default function App(): React.JSX.Element {
           <Route path="/partner/activity" element={<ProtectedRoute allowedRoles={['partner']}><PartnerActivity /></ProtectedRoute>} />
           <Route path="/partner/audit-schedule" element={<ProtectedRoute allowedRoles={['partner']}><PartnerAuditSchedule /></ProtectedRoute>} />
           <Route path="/partner/trees"        element={<ProtectedRoute allowedRoles={['partner']}><MyTrees compact /></ProtectedRoute>} />
-          <Route path="/partner/actions"      element={<ProtectedRoute allowedRoles={['partner']}><MyTrees title="Assign action" showAdd /></ProtectedRoute>} />
+          <Route path="/partner/actions"      element={<ProtectedRoute allowedRoles={['partner']}><MyTrees title="Assign Tree" showAdd /></ProtectedRoute>} />
           <Route path="/partner/actions/new"  element={<ProtectedRoute allowedRoles={['partner']}><AddTree /></ProtectedRoute>} />
           <Route path="/partner/trees/new"   element={<ProtectedRoute allowedRoles={['partner']}><AddTree /></ProtectedRoute>} />
           <Route path="/partner/funders/import" element={<ProtectedRoute allowedRoles={['partner']}><ImportFunders /></ProtectedRoute>} />

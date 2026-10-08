@@ -257,7 +257,7 @@ export default function AddTree() {
   const canSubmit  = !saving && !loading && recordable.length > 0 && projects.length > 0
 
   return (
-    <PartnerLayout title="Assign action" subtitle="Record a tree on behalf of one of your users">
+    <PartnerLayout title="Assign Tree" subtitle="Record a tree on behalf of one of your users">
       <div style={{ maxWidth: 1120 }}>
 
         {error && (

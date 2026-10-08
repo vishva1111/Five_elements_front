@@ -182,7 +182,8 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
     setInviteRole(scope === 'users' ? 'business' : 'field_officer')
     setInviteName('')
     setInviteEmail('')
-    setInviteProjectIds([])
+    // Auto-select the first project so the partner doesn't have to pick one manually.
+    setInviteProjectIds(scope === 'users' && projects.length > 0 ? [projects[0].id] : [])
     setInvitePassword('')
     setShowPassword(false)
     setInviteGst('')
