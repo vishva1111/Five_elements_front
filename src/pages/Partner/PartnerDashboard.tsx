@@ -182,7 +182,7 @@ export default function PartnerDashboard() {
 
                 <Link
                   to="/partner/actions"
-                  title="See these trees in Assign action"
+                  title="See these trees in Assign Tree"
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, background: '#F5F8F1', border: '1px solid #E1EBD8', marginTop: 10, textDecoration: 'none' }}
                 >
                   <span style={{ fontSize: 14 }}>🌳</span>
