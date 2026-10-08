@@ -116,7 +116,7 @@ export default function EvidenceVault() {
   }
 
   const filtered = filter === 'all' ? items : items.filter(i => i.status === filter)
-  const pg = usePagination(filtered, 12)
+  const pg = usePagination(filtered)
 
   // Esc closes the detail drawer; the page behind stays put.
   useModalBehavior(() => setOpenItem(null), !!openItem)

@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { icon: '⚡', label: 'Assign action',  to: '/partner/actions' },
   { icon: '✅', label: 'Tasks',         to: '/partner/tasks' },
   { icon: '📊', label: 'Activity',      to: '/partner/activity' },
+  { icon: '🗓️', label: 'Audit schedule', to: '/partner/audit-schedule' },
   { icon: '🔍', label: 'Submission review', to: '/partner/submission-review' },
   { icon: '📁', label: 'Evidence vault',to: '/partner/evidence' },
   { icon: '📋', label: 'Submissions',   to: '/partner/submissions' },

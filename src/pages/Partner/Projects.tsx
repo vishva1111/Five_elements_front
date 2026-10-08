@@ -64,7 +64,7 @@ export default function Projects() {
   }, [token])
   useEffect(() => { load() }, [load])
 
-  const pg = usePagination(projects, 12)
+  const pg = usePagination(projects, 10)
   const open = (p: PartnerProject) => navigate(`/partner/projects/${p.id}`)
 
   return (

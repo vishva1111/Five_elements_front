@@ -29,6 +29,10 @@ interface Task {
   tree_species: string | null
   /** planting — put the tree in the ground; audit — verify it for the ledger. */
   task_type?: 'planting' | 'audit'
+  /** 1-4: which of the tree's four audits this is. */
+  audit_round?: number | null
+  /** Approved audit only: the next round as planned in the audit schedule (not a task until its date). */
+  next_audit?: { round: number; due_at: string; status: 'pending' | 'created' | 'cancelled'; cancel_reason: string | null } | null
   /** Stage of the linked tree — the board lists tasks for planted trees only. */
   tree_stage?: string | null
   tree_health: string | null
@@ -74,6 +78,7 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
   const [error, setError]           = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterProject, setFilterProject] = useState('all')
+  const [filterRound, setFilterRound] = useState('all')
 
   const [showModal, setShowModal]   = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -302,7 +307,26 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
   const plantedTasks = tasks.filter(t => (t.task_type || 'audit') === 'planting'
     ? showPlanting
     : (!t.tree_id || (t.tree_stage || 'Under plantation') !== 'Under plantation'))
-  const projectTasks = filterProject === 'all' ? plantedTasks : plantedTasks.filter(t => t.project_id === filterProject)
+  const inProject = filterProject === 'all' ? plantedTasks : plantedTasks.filter(t => t.project_id === filterProject)
+  const projectTasks = filterRound === 'all' ? inProject : inProject.filter(t => (t.task_type || 'audit') === 'audit' && Number(t.audit_round) === Number(filterRound))
+
+  // Audit 1 → 2 → 3 → 4: each tree's audits side by side, so a finished audit can point at the next one.
+  const auditOf = new Map<string, Task>()
+  for (const t of tasks) if ((t.task_type || 'audit') === 'audit' && t.tree_id && Number(t.audit_round) > 0) auditOf.set(`${t.tree_id}:${t.audit_round}`, t)
+  const auditName = (t: Task) => (t.task_type || 'audit') === 'audit' && Number(t.audit_round) > 0
+    ? t.name.replace(/^Tree Survey\s+—\s+/, `Audit ${t.audit_round} — `)
+    : t.name
+  const nextAuditNote = (t: Task) => {
+    const round = Number(t.audit_round)
+    if ((t.task_type || 'audit') !== 'audit' || !(round > 0) || t.status !== 'approved') return null
+    if (round >= 4) return '✓ All 4 audits done'
+    const next = t.tree_id ? auditOf.get(`${t.tree_id}:${round + 1}`) : undefined
+    if (next) return `→ Audit ${round + 1}${next.due_date ? ` · ${new Date(next.due_date).toLocaleDateString('en-GB')}` : ''}`
+    const planned = t.next_audit
+    if (planned?.status === 'cancelled') return `Audits stopped — tree ${planned.cancel_reason || 'dead'}`
+    if (planned) return `→ Audit ${round + 1} opens ${new Date(planned.due_at).toLocaleDateString('en-GB')}`
+    return `Audit ${round + 1} is not planned yet`
+  }
 
   const filteredTasks = projectTasks.filter(t => {
     if (filterStatus !== 'all' && t.status !== filterStatus) return false
@@ -320,7 +344,7 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
   const selectedBulkProject = projects.find(p => p.id === bulkForm.project_id)
 
   // ── Pagination ──────────────────────────────────────────────────────────────
-  const pg = usePagination(filteredTasks, 10, `${filterStatus}|${filterProject}`)
+  const pg = usePagination(filteredTasks, 10, `${filterStatus}|${filterProject}|${filterRound}`)
 
   // Jump back to page 1 whenever the filters change the result set
 
@@ -341,6 +365,11 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
           <select value={filterProject} onChange={e => setFilterProject(e.target.value)} style={selectStyle}>
             <option value="all">All projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+          </select>
+
+          <select value={filterRound} onChange={e => setFilterRound(e.target.value)} style={selectStyle} aria-label="Audit round">
+            <option value="all">All audit rounds</option>
+            {[1, 2, 3, 4].map(n => <option key={n} value={String(n)}>Audit {n} of 4</option>)}
           </select>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
@@ -419,10 +448,11 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
                     </td>
                     <td style={{ ...tdStyle, fontWeight: 600, maxWidth: 240 }}>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.name}</div>
+                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.name}>{auditName(task)}</div>
                         {(task.task_type || 'audit') === 'planting'
                           ? <span style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: '#FFF4E0', color: '#8B5A00' }}>🌱 Planting</span>
-                          : <span style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: '#E8F1FB', color: '#185FA5' }}>🔍 Audit</span>}
+                          : <span style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: '#E8F1FB', color: '#185FA5' }}>🔍 {Number(task.audit_round) > 0 ? `Audit ${task.audit_round} of 4` : 'Audit'}</span>}
+                        {nextAuditNote(task) && <div style={{ fontSize: 11, color: '#1a5c2a', fontWeight: 700, marginTop: 3 }}>{nextAuditNote(task)}</div>}
                         {task.location && LOCATION_VISIBLE.includes(task.status) && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>📍 {task.location}</div>}
                       </div>
                     </td>

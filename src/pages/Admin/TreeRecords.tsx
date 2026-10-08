@@ -110,7 +110,7 @@ export default function TreeRecords() {
   const filtersOn = condition !== 'all' || project !== 'all' || auditFilter !== 'all' || stage !== 'all' || !!q
 
   // Keyed on the filters so the background poll doesn't throw you back to page 1.
-  const pg = usePagination(filtered, 12, `${condition}|${project}|${auditFilter}|${stage}|${q}`)
+  const pg = usePagination(filtered, 10, `${condition}|${project}|${auditFilter}|${stage}|${q}`)
 
   const stats = {
     total: filtered.length,

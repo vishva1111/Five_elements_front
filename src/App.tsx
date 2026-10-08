@@ -69,6 +69,7 @@ const SubmissionTracker = lazy(() => import('./pages/Partner/SubmissionTracker')
 const PartnerProjects = lazy(() => import('./pages/Partner/Projects'))
 const PartnerProjectManage = lazy(() => import('./pages/Partner/ProjectManage'))
 const PartnerActivity = lazy(() => import('./pages/Partner/ActivityReport'))
+const PartnerAuditSchedule = lazy(() => import('./pages/Partner/AuditSchedule'))
 const AddTree = lazy(() => import('./pages/Partner/AddTree'))
 const MyTrees = lazy(() => import('./pages/Partner/MyTrees'))
 const ImportFunders = lazy(() => import('./pages/Partner/ImportFunders'))
@@ -82,6 +83,8 @@ const PartnerSettings = lazy(() => import('./pages/Partner/PartnerSettings'))
 // ── Super Admin zone (A1–A10) ─────────────────────────────────────────────────
 const ApprovalQueue = lazy(() => import('./pages/Admin/ApprovalQueue'))
 const FencingRequests = lazy(() => import('./pages/Admin/FencingRequests'))
+const AdminActivity = lazy(() => import('./pages/Admin/ActivityReport'))
+const AdminAuditSchedule = lazy(() => import('./pages/Admin/AuditSchedule'))
 const EvidenceReview = lazy(() => import('./pages/Admin/EvidenceReview'))
 const PartnerManagement = lazy(() => import('./pages/Admin/PartnerManagement'))
 const UsersAndTenants = lazy(() => import('./pages/Admin/UsersAndTenants'))
@@ -172,6 +175,7 @@ export default function App(): React.JSX.Element {
           <Route path="/partner/projects/new" element={<ProtectedRoute allowedRoles={['partner']}><ProjectRegistration /></ProtectedRoute>} />
           <Route path="/partner/projects/:id" element={<ProtectedRoute allowedRoles={['partner']}><PartnerProjectManage /></ProtectedRoute>} />
           <Route path="/partner/activity" element={<ProtectedRoute allowedRoles={['partner']}><PartnerActivity /></ProtectedRoute>} />
+          <Route path="/partner/audit-schedule" element={<ProtectedRoute allowedRoles={['partner']}><PartnerAuditSchedule /></ProtectedRoute>} />
           <Route path="/partner/trees"        element={<ProtectedRoute allowedRoles={['partner']}><MyTrees compact /></ProtectedRoute>} />
           <Route path="/partner/actions"      element={<ProtectedRoute allowedRoles={['partner']}><MyTrees title="Assign action" showAdd /></ProtectedRoute>} />
           <Route path="/partner/actions/new"  element={<ProtectedRoute allowedRoles={['partner']}><AddTree /></ProtectedRoute>} />
@@ -195,6 +199,8 @@ export default function App(): React.JSX.Element {
           {/* ── Super Admin zone (A1–A10, protected — admin role only) ── */}
           <Route path="/admin"                  element={<ProtectedRoute allowedRoles={['admin']}><ApprovalQueue /></ProtectedRoute>} />
           <Route path="/admin/fencing-requests" element={<ProtectedRoute allowedRoles={['admin']}><FencingRequests /></ProtectedRoute>} />
+          <Route path="/admin/activity" element={<ProtectedRoute allowedRoles={['admin']}><AdminActivity /></ProtectedRoute>} />
+          <Route path="/admin/audit-schedule" element={<ProtectedRoute allowedRoles={['admin']}><AdminAuditSchedule /></ProtectedRoute>} />
           <Route path="/admin/submissions"      element={<ProtectedRoute allowedRoles={['admin']}><SubmissionQueue /></ProtectedRoute>} />
           <Route path="/admin/evidence"         element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
           <Route path="/admin/evidence/:id"     element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
