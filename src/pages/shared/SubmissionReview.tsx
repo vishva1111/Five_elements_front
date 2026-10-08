@@ -151,7 +151,7 @@ export default function SubmissionReview({ Layout }: SubmissionReviewProps) {
     approved:  kindTasks.filter(t => t.status === 'approved').length,
   }
 
-  const reviewPg = usePagination(reviewList, 12, `${reviewKind}|${reviewFilter}|${filterProject}|${q}|${oldestFirst}`)
+  const reviewPg = usePagination(reviewList, 10, `${reviewKind}|${reviewFilter}|${filterProject}|${q}|${oldestFirst}`)
 
   const reviewing = reviewingId ? tasks.find(t => t.id === reviewingId) || null : null
 
@@ -284,7 +284,7 @@ function TypeBadge({ task }: { task: Task }) {
   const planting = (task.task_type || 'audit') === 'planting'
   return planting
     ? <span className="sr-chip" style={{ background: '#FFF4E0', color: '#8B5A00' }}><Sprout size={12} /> Planting</span>
-    : <span className="sr-chip" style={{ background: '#E8F1FB', color: '#185FA5' }}><ClipboardCheck size={12} /> Audit{task.audit_round ? ` ${task.audit_round}` : ''}</span>
+    : <span className="sr-chip" style={{ background: '#E8F1FB', color: '#185FA5' }}><ClipboardCheck size={12} /> Audit{task.audit_round ? ` ${task.audit_round} of 4` : ''}</span>
 }
 
 const initials = (name: string) => {
