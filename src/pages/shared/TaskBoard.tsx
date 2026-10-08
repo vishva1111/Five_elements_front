@@ -528,7 +528,7 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
                           </span>
                           <button
                             onClick={() => { setReassigningId(task.id); setReassignUserId(task.assignee_id) }}
-                            title="Change assigned user"
+                            title="Change assigned field operator"
                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', padding: '4px 2px' }}
                           >
                             ✎
@@ -544,7 +544,7 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
                             title="Hand this ticket off to a real TreeApp field user"
                             style={{ background: '#eef6ee', color: '#1a5c2a', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
                           >
-                            👤 Assign to user
+                            👤 Assign field operator
                           </button>
                           <button onClick={() => handleDelete(task.id, task.name)} style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                             Delete
