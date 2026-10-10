@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react'
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '../../hooks/useProjects'
 import { submitFunding } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 import './FundFlow.css'
+import IndividualLayout from '../ImpactHome/IndividualLayout'
 
 // ── Pentagon preset icon ──────────────────────────────────────────────────────
 function PresetPenta({ selected }: { selected: boolean }) {
@@ -38,7 +39,7 @@ function FootPenta() {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function FundFlow() {
+function FundFlowContent() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -50,7 +51,7 @@ export default function FundFlow() {
   const [showName, setShowName] = useState(true)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isDeclined, setIsDeclined] = useState(false)
+  const [fundError, setFundError]   = useState<string | null>(null)
   const [isDone, setIsDone] = useState(false)
 
   // Demo card fields (pre-filled for testing)
@@ -83,7 +84,7 @@ export default function FundFlow() {
       return
     }
     setIsProcessing(true)
-    setIsDeclined(false)
+    setFundError(null)
     try {
       await submitFunding({
         projectId: project?.id || projectId,
@@ -99,10 +100,15 @@ export default function FundFlow() {
       const tco2e = (trees * 0.017).toFixed(2)
       const total = trees * (project?.pricePerTree || 120) * 1.1
       navigate(
-        `/confirmation?trees=${trees}&tco2e=${tco2e}&amount=₹${Math.round(total).toLocaleString('en-IN')}&project=${encodeURIComponent(project?.name || 'your project')}`
+        `/confirmation?trees=${trees}&tco2e=${tco2e}&price=${pricePerTree}&amount=${encodeURIComponent(`₹${Math.round(total).toLocaleString('en-IN')}`)}&project=${encodeURIComponent(project?.name || 'your project')}`
       )
-    } catch {
-      setIsDeclined(true)
+    } catch (err) {
+      const msg = (err as Error).message || ''
+      setFundError(
+        /not accepting funding/i.test(msg) ? 'This project is not accepting funding right now. Please choose another project.'
+        : /not found/i.test(msg)           ? 'This project could not be found. Please choose another project.'
+        : 'Something went wrong and your funding was not recorded. Please try again in a moment.'
+      )
     } finally {
       setIsProcessing(false)
     }
@@ -136,7 +142,7 @@ export default function FundFlow() {
               <span className="ff-success__stat-label">total paid</span>
             </div>
           </div>
-          <a href="/projects" className="ff-btn ff-btn--orange">Back to projects</a>
+          <Link to="/impact/projects" className="ff-btn ff-btn--orange">Back to projects</Link>
         </div>
       </div>
     )
@@ -160,6 +166,18 @@ export default function FundFlow() {
         <div className="ff-fund">
           <div className="ff-skel" style={{ height: 200, borderRadius: 16 }} />
           <div className="ff-skel" style={{ height: 400, borderRadius: 16 }} />
+        </div>
+      </div>
+    )
+  }
+
+  // ── Project not found ─────────────────────────────────────────────────────
+  if (!project) {
+    return (
+      <div className="ff">
+        <div className="ff-fund" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: 16 }}>
+          <p style={{ color: '#6B7280', fontSize: 16, margin: 0 }}>We couldn't find this project. It may have been removed.</p>
+          <Link to="/impact/projects" className="ff-btn ff-btn--orange">Browse projects</Link>
         </div>
       </div>
     )
@@ -231,8 +249,8 @@ export default function FundFlow() {
                     </div>
                     <div className="ff-ctx-project__info">
                       <span className="ff-ctx-project__badge">🌍 Earth</span>
-                      <span className="ff-ctx-project__name">{project?.name || 'Ahmedabad Urban Canopy — Phase 1'}</span>
-                      <span className="ff-ctx-project__meta">{project?.partner || 'SEWA Green Collective'} · ✓ {project?.certification || 'Gold Standard'}</span>
+                      <span className="ff-ctx-project__name">{project.name}</span>
+                      <span className="ff-ctx-project__meta">{project.partner || '—'}{project.certification ? ` · ✓ ${project.certification}` : ''}</span>
                     </div>
                   </div>
                 </div>
@@ -289,11 +307,11 @@ export default function FundFlow() {
               </div>
             </div>
 
-            {/* Declined banner */}
-            {isDeclined && (
+            {/* Error banner */}
+            {fundError && (
               <div className="ff-declined">
                 <span>⚠️</span>
-                <p>Your bank declined this card. Try another card or method — your {trees} trees are still here.</p>
+                <p>{fundError}</p>
               </div>
             )}
 
@@ -389,5 +407,14 @@ export default function FundFlow() {
         </main>
       </div>
     </div>
+  )
+}
+
+// Signed-in only — always shown inside the Individual panel shell.
+export default function FundFlow() {
+  return (
+    <IndividualLayout title="Fund trees" subtitle="Choose how many trees · pay securely">
+      <FundFlowContent />
+    </IndividualLayout>
   )
 }

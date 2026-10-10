@@ -99,3 +99,48 @@
 .ih-modal__confirm:hover {
   background: #b91c1c;
 }
+/* ═══════════════════════════════════════════════
+   Individual sidebar — extras on top of the shared
+   Business (db-*) shell
+   ═══════════════════════════════════════════════ */
+
+.db-nav__icon > svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.ind-nav--soon,
+.ind-nav--soon:hover {
+  cursor: default;
+  background: none;
+  color: #B5BFB7;
+}
+
+.ind-nav__soon {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c97a10;
+  background: rgba(240, 145, 37, 0.12);
+  border-radius: 9999px;
+  padding: 2px 7px;
+}
+
+/* Full-page screens rendered inside the panel shell (fund, confirmation,
+   certificate) — drop their own full-viewport height/background. */
+.db-content > .ff,
+.db-content > .conf-page,
+.db-content > .cert-page {
+  min-height: 0;
+  background: transparent;
+}
+
+/* Printing a certificate/invoice from the panel prints the page, not the shell */
+@media print {
+  .db-sidebar,
+  .db-sidebar-overlay,
+  .db-topbar { display: none !important; }
+  .db-content { padding: 0; overflow: visible; }
+}

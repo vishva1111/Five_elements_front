@@ -185,6 +185,25 @@
   color: #2B5341;
 }
 
+.ih-sidebar__nav-item--soon,
+.ih-sidebar__nav-item--soon:hover {
+  cursor: default;
+  background: none;
+  color: rgba(0,0,0,0.3);
+}
+
+.ih-sidebar__soon {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c97a10;
+  background: rgba(240,145,37,0.12);
+  border-radius: 9999px;
+  padding: 2px 7px;
+}
+
 /* Bottom */
 .ih-sidebar__bottom {
   padding: 14px 16px;
@@ -352,9 +371,10 @@
   padding: 32px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  max-width: 1200px;
+  gap: 24px;
+  max-width: 1440px;
   width: 100%;
+  margin: 0 auto;
 }
 
 /* ═══════════════════════════════════════════════
@@ -508,6 +528,91 @@
   grid-template-columns: 1fr 280px;
   gap: 20px;
   align-items: start;
+}
+
+/* KPI card that links somewhere */
+.ih-kpi-card--link { text-decoration: none; cursor: pointer; }
+
+/* Trees by project */
+.ih-shares {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ih-share {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.ih-share:hover { background: #f5f9f6; }
+
+.ih-share__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ih-share__info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ih-share__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2B5341;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ih-share__loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #8a9e8d;
+}
+
+.ih-share__nums {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.ih-share__trees {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #2B5341;
+}
+
+.ih-share__co2 {
+  font-size: 11px;
+  color: #8a9e8d;
+}
+
+.ih-share__track {
+  height: 6px;
+  border-radius: 9999px;
+  background: #EAF3DE;
+  overflow: hidden;
+}
+
+.ih-share__fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #40916C, #2B5341);
+  transition: width 0.4s;
 }
 
 /* Map */
@@ -762,6 +867,24 @@
 
 .ih-entry:last-child { border-bottom: none; }
 
+.ih-entry__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #F0F7F3;
+  color: #2D6A4F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ih-entry__amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2B5341;
+}
+
 .ih-entry__left {
   display: flex;
   flex-direction: column;
@@ -777,7 +900,7 @@
 }
 
 .ih-entry__project {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #2B5341;
   white-space: nowrap;
@@ -908,5 +1031,104 @@
   .ih-side-col { flex-direction: column; }
   .ih-topbar { padding: 14px 20px; }
   .ih-cta { padding: 28px 24px; flex-direction: column; align-items: flex-start; }
+  .ih-entry { flex-wrap: wrap; }
+  .ih-entry__icon { display: none; }
+  .ih-entry__right { flex-direction: row; align-items: center; gap: 10px; }
   .ih-topbar__name { font-size: 16px; }
+}
+/* ═══════════════════════════════════════════════
+   Individual dashboard (db-* shell) — extras
+   ═══════════════════════════════════════════════ */
+
+.ind-stat-divider {
+  width: 1px;
+  height: 18px;
+  background: #E2D9D0;
+  align-self: center;
+}
+
+/* "Your share of CARM" card */
+.ind-share {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+.ind-share__big {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ind-share__pct {
+  font-size: 40px;
+  font-weight: 800;
+  color: #2B5341;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.ind-share__of {
+  font-size: 13px;
+  color: #6B7B6E;
+  max-width: 220px;
+  line-height: 1.4;
+}
+
+.ind-share__track { height: 8px; }
+.ind-share__fill  { background: linear-gradient(90deg, #40916C, #2B5341); }
+
+.ind-share__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #EEE7DE;
+}
+
+.ind-share__stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ind-share__num {
+  font-size: 18px;
+  font-weight: 800;
+  color: #112121;
+  letter-spacing: -0.02em;
+}
+
+.ind-share__lbl {
+  font-size: 11px;
+  color: #9AA79C;
+}
+
+/* Project card progress */
+.ind-card-track { height: 4px; }
+
+.ind-card-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #9AA79C;
+  margin-top: 3px;
+}
+
+/* Recent fundings card */
+.ind-recent { padding-top: 6px; padding-bottom: 6px; }
+
+.ind-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #6B7B6E;
+}
+
+@media (max-width: 640px) {
+  .ind-share__stats { grid-template-columns: 1fr 1fr; }
 }

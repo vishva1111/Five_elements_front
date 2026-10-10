@@ -1,28 +1,32 @@
-import React, { useState } from 'react'
-import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
+import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutGrid, AlignJustify, BookOpen, BarChart2, Award, CircleUser,
-  Bell, LogOut, Menu, X
+  LayoutGrid, AlignJustify, BookOpen, BarChart2, Award, LogOut,
 } from 'lucide-react'
+import NotificationBell from '../../components/ui/NotificationBell'
+import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import { useAuth } from '../../contexts/AuthContext'
-import './ImpactHome.css'
-import './IndividualLayout.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import ProfileModal from '../../components/ui/ProfileModal'
+import '../Business/Dashboard.css'
+import './IndividualLayout.css'
 
-const NAV_ITEMS = [
-  { icon: LayoutGrid,    label: 'Dashboard',     href: '/impact' },
-  { icon: AlignJustify,  label: 'My Projects',   href: '/my-projects' },
-  { icon: BookOpen,      label: 'Ledger',        href: '/ledger' },
-  { icon: BarChart2,     label: 'Reports',       href: '/reports' },
-  { icon: Award,         label: 'Certificates',  href: '/certificates' },
-  { icon: CircleUser,    label: 'Public profile',href: '/profile' },
+// `soon` items have no page yet — shown disabled instead of linking to a
+// route that doesn't exist (which fell through to the marketing Landing page).
+// Everything an Individual needs lives inside this panel — no item links out
+// to the public website. `also` lists extra paths that light up the item.
+const NAV_ITEMS: { icon: typeof LayoutGrid; label: string; to: string; soon?: boolean; also?: string[] }[] = [
+  { icon: LayoutGrid,   label: 'Dashboard',       to: '/impact', also: ['/impact/projects', '/fund', '/confirmation'] },
+  { icon: AlignJustify, label: 'My Projects',     to: '/my-projects',     also: ['/certificate'] },
+  { icon: BookOpen,     label: 'My Ledger',       to: '/my-ledger' },
+  { icon: BarChart2,    label: 'Reports',         to: '/my-reports' },
+  { icon: Award,        label: 'Certificates',    to: '/certificates', soon: true },
 ]
 
 function getInitials(name: string): string {
-  return name 
+  return name
     .split(' ')
+    .filter(Boolean)
     .map(w => w[0])
     .join('')
     .toUpperCase()
@@ -32,149 +36,172 @@ function getInitials(name: string): string {
 interface IndividualLayoutProps {
   children: React.ReactNode
   title: string
-  topLabel?: string
+  subtitle?: string
+  /** Extra buttons on the right of the top bar (before the bell) */
+  actions?: React.ReactNode
 }
 
 /**
- * Shared shell (sidebar + topbar) for all individual-role pages
- * (Dashboard, My Projects, Ledger, Reports, Certificates, Public profile).
- * Keeps the sidebar persistent so navigating between these pages never
- * drops back to the public marketing layout / opens a new tab.
+ * Shared shell (sidebar + topbar) for all individual-role pages.
+ * Same look as the Business console (BusinessLayout) so both dashboards
+ * feel like one product.
  */
-export default function IndividualLayout({ children, title, topLabel = 'MY IMPACT' }: IndividualLayoutProps) {
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [sidebarOpen, setSidebarOpen]         = useState(false)
+export default function IndividualLayout({ children, title, subtitle, actions }: IndividualLayoutProps) {
+  const [collapsed, setCollapsed]   = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile]     = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   useModalBehavior(() => setShowLogoutModal(false), showLogoutModal)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { signOut, user } = useAuth()
+
+  // Detect mobile breakpoint
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    setIsMobile(mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  // Close mobile sidebar on route change
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
+
+  const sidebarW  = collapsed ? '64px' : '240px'
+  const labelDisp = isMobile || !collapsed ? 'block' : 'none'
 
   const displayName = user?.displayName || user?.email || 'User'
-  const initials    = getInitials(displayName)
+  const initials    = getInitials(displayName) || 'U'
 
-  async function handleSignOut() {
+  async function handleLogout() {
     await signOut()
     navigate('/login')
   }
 
+  function handleToggle() {
+    if (isMobile) setMobileOpen(o => !o)
+    else setCollapsed(c => !c)
+  }
+
   return (
-    <div className="ih-shell">
+    <div className="db-shell">
 
-      {/* ── Sidebar ── */}
-      <aside className={`ih-sidebar ${sidebarOpen ? 'ih-sidebar--open' : ''}`}>
-        {/* Brand */}
-        <div className="ih-sidebar__brand">
-          <FiveElementsIcon size={28} />
-          <span className="ih-sidebar__brand-text">five elements <strong>CARM</strong></span>
+      {/* Mobile overlay backdrop */}
+      {isMobile && (
+        <div
+          className={`db-sidebar-overlay${mobileOpen ? ' db-sidebar-overlay--visible' : ''}`}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR */}
+      <aside
+        className={`db-sidebar${isMobile && mobileOpen ? ' db-sidebar--open' : ''}`}
+        style={isMobile ? undefined : { width: sidebarW }}
+      >
+        <div className="db-sidebar__logo">
+          <FiveElementsIcon size={26} />
+          <span className="db-sidebar__brand" style={{ display: labelDisp }}>
+            five elements <strong>CARM</strong>
+          </span>
         </div>
 
-        {/* User pill */}
-        <div className="ih-sidebar__user">
-          <div className="ih-sidebar__avatar">{initials}</div>
-          <div className="ih-sidebar__user-info">
-            <span className="ih-sidebar__user-name">{displayName}</span>
-            <span className="ih-sidebar__user-role">Individual</span>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="ih-sidebar__nav">
-          {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
-            const active = href === '/impact'
-              ? location.pathname === '/impact'
-              : location.pathname.startsWith(href)
+        <nav className="db-sidebar__nav">
+          {NAV_ITEMS.map(({ icon: Icon, label, to, soon, also }) => {
+            if (soon) {
+              return (
+                <span key={to} className="db-nav ind-nav--soon" aria-disabled="true" title={`${label} — coming soon`}>
+                  <span className="db-nav__icon"><Icon size={16} /></span>
+                  <span className="db-nav__label" style={{ display: labelDisp }}>{label}</span>
+                  {labelDisp === 'block' && <span className="ind-nav__soon">Soon</span>}
+                </span>
+              )
+            }
+            // '/impact' must match exactly — every panel path starts with it
+            const isActive = (to === '/impact' ? location.pathname === to : location.pathname.startsWith(to))
+              || (also ?? []).some(p => location.pathname.startsWith(p))
             return (
               <Link
-                key={label}
-                to={href}
-                className={`ih-sidebar__nav-item ${active ? 'ih-sidebar__nav-item--active' : ''}`}
-                onClick={() => setSidebarOpen(false)}
+                key={to}
+                to={to}
+                className={`db-nav${isActive ? ' db-nav--active' : ''}`}
+                title={label}
               >
-                <Icon size={18} />
-                <span>{label}</span>
+                <span className="db-nav__icon"><Icon size={16} /></span>
+                <span className="db-nav__label" style={{ display: labelDisp }}>{label}</span>
               </Link>
             )
           })}
         </nav>
 
-        {/* Bottom — user card + sign out */}
-        <div className="ih-sidebar__bottom">
-          <div className="ih-sidebar__user-card" role="button" tabIndex={0} title="View profile" style={{ cursor: 'pointer' }} onClick={() => setShowProfile(true)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowProfile(true) } }}>
-            <div className="ih-sidebar__avatar">{initials}</div>
-            <div className="ih-sidebar__user-info">
-              <span className="ih-sidebar__user-name">{displayName}</span>
-              <span className="ih-sidebar__user-email">{user?.email}</span>
+        <div
+          className="db-sidebar__user"
+          role="button"
+          tabIndex={0}
+          title="View profile"
+          style={{ cursor: 'pointer' }}
+          onClick={() => setShowProfile(true)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowProfile(true) } }}
+        >
+          <div className="db-sidebar__avatar">{initials}</div>
+          <div className="db-sidebar__user-info" style={{ display: labelDisp }}>
+            <div className="db-sidebar__user-name">{displayName}</div>
+            <div className="db-sidebar__user-org">{user?.email || ''}</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowLogoutModal(true)}
+          className="db-nav db-nav--logout"
+          title="Sign out"
+        >
+          <span className="db-nav__icon"><LogOut size={15} /></span>
+          <span className="db-nav__label" style={{ display: labelDisp }}>Sign out</span>
+        </button>
+
+        {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+
+        {/* Logout confirmation modal */}
+        {showLogoutModal && (
+          <div className="db-modal-overlay" onClick={() => setShowLogoutModal(false)}>
+            <div className="db-modal" onClick={e => e.stopPropagation()}>
+              <div className="db-modal__icon">⏻</div>
+              <h3 className="db-modal__title">Sign out?</h3>
+              <p className="db-modal__sub">You will be redirected to the login page.</p>
+              <div className="db-modal__actions">
+                <button type="button" className="db-modal__cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+                <button type="button" className="db-modal__confirm" onClick={handleLogout}>Sign out</button>
+              </div>
             </div>
           </div>
-          <button className="ih-sidebar__signout" onClick={() => setShowLogoutModal(true)}>
-            <LogOut size={15} />
-            <span>Sign out</span>
-          </button>
-        </div>
-
+        )}
       </aside>
 
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div className="ih-overlay" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
-
-      {/* Logout confirmation modal — outside <aside> so it's not clipped */}
-      {showLogoutModal && (
-        <div className="ih-modal-overlay" onClick={() => setShowLogoutModal(false)}>
-          <div className="ih-modal" onClick={e => e.stopPropagation()}>
-            <div className="ih-modal__icon">
-              <LogOut size={28} />
-            </div>
-            <h3 className="ih-modal__title">Sign out?</h3>
-            <p className="ih-modal__sub">You will be redirected to the login page.</p>
-            <div className="ih-modal__actions">
-              <button
-                type="button"
-                className="ih-modal__cancel"
-                onClick={() => setShowLogoutModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="ih-modal__confirm"
-                onClick={handleSignOut}
-              >
-                Sign out
-              </button>
-            </div>
+      {/* MAIN */}
+      <div className="db-main">
+        <header className="db-topbar">
+          <button
+            type="button"
+            className="db-topbar__toggle"
+            onClick={handleToggle}
+            aria-label="Toggle sidebar"
+          >☰</button>
+          <div className="db-topbar__title-wrap">
+            <h1 className="db-topbar__title">{title}</h1>
+            {subtitle && <div className="db-topbar__sub">{subtitle}</div>}
           </div>
-        </div>
-      )}
-
-      {/* ── Main ── */}
-      <main className="ih-main">
-
-        {/* Top bar */}
-        <header className="ih-topbar">
-          <button className="ih-topbar__menu" onClick={() => setSidebarOpen(v => !v)}>
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-          <div className="ih-topbar__title">
-            <span className="ih-topbar__label">{topLabel}</span>
-            <h1 className="ih-topbar__name">{title}</h1>
-          </div>
-          <div className="ih-topbar__actions">
-            <button className="ih-topbar__bell">
-              <Bell size={20} />
-            </button>
-            <div className="ih-topbar__avatar">{initials}</div>
+          <div className="db-topbar__actions">
+            {actions}
+            <NotificationBell />
           </div>
         </header>
 
-        <div className="ih-content">
+        <main className="db-content">
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

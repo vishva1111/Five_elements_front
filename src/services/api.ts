@@ -107,7 +107,11 @@ export async function submitFunding(payload: FundingPayload): Promise<{ orderId:
     headers: await getAuthHeaders(),
     body:    JSON.stringify(payload),
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) {
+    // Surface the server's reason (e.g. "Project is not accepting funding")
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error || `HTTP ${res.status}`)
+  }
   return res.json()
 }
 
@@ -346,9 +350,13 @@ export async function fetchProfile(slug: string): Promise<ProfileData> {
 export interface UserImpactEntry {
   id: string
   date: string
+  projectId: string
   project: string
+  location: string
+  element: string
   trees: number
   tCO2e: number
+  amount: number
   verified: boolean
   txHash: string
 }

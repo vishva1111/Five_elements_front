@@ -6,6 +6,7 @@ import PageLoading from './components/ui/PageLoading'
 import { AuthProvider } from './contexts/AuthContext'
 import { ToastProvider } from './components/ui/Toast'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import PublicRoute from './components/auth/PublicRoute'
 const Login = lazy(() => import('./pages/Auth/Login'))
 const Signup = lazy(() => import('./pages/Auth/Signup'))
 const Welcome = lazy(() => import('./pages/Auth/Welcome'))
@@ -28,6 +29,8 @@ const Profiles = lazy(() => import('./pages/Profiles/Profiles'))
 const IndividualLanding = lazy(() => import('./pages/IndividualLanding/IndividualLanding'))
 const FundFlow = lazy(() => import('./pages/FundFlow/FundFlow'))
 const ImpactHome = lazy(() => import('./pages/ImpactHome/ImpactHome'))
+const MyLedger = lazy(() => import('./pages/MyLedger/MyLedger'))
+const MyReports = lazy(() => import('./pages/MyReports/MyReports'))
 
 // ── Business pages ───────────────────────────────────────────────────────────
 const Dashboard = lazy(() => import('./pages/Business/Dashboard'))
@@ -108,7 +111,7 @@ export default function App(): React.JSX.Element {
         <Suspense fallback={<PageLoading />}>
         <Routes>
           {/* ── Landing ── */}
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
 
           {/* ── Auth ── */}
           <Route path="/login" element={<Login />} />
@@ -121,14 +124,18 @@ export default function App(): React.JSX.Element {
           <Route path="/role-select" element={<ProtectedRoute><RoleSelect /></ProtectedRoute>} />
 
           {/* ── Business info (public — for unauthenticated business users) ── */}
-          <Route path="/business-info" element={<IndividualLanding />} />
+          <Route path="/business-info" element={<PublicRoute><IndividualLanding /></PublicRoute>} />
 
           {/* ── Individual flow (public pages) ── */}
-          <Route path="/individual" element={<IndividualLanding />} />
+          <Route path="/individual" element={<PublicRoute><IndividualLanding /></PublicRoute>} />
 
           {/* ── Individual flow (protected) ── */}
           <Route path="/fund" element={<ProtectedRoute allowedRoles={['individual']}><FundFlow /></ProtectedRoute>} />
           <Route path="/impact" element={<ProtectedRoute allowedRoles={['individual']}><ImpactHome /></ProtectedRoute>} />
+          <Route path="/impact/projects" element={<ProtectedRoute allowedRoles={['individual']}><Marketplace /></ProtectedRoute>} />
+          <Route path="/impact/projects/:id" element={<ProtectedRoute allowedRoles={['individual']}><ProjectDetail /></ProtectedRoute>} />
+          <Route path="/my-ledger" element={<ProtectedRoute allowedRoles={['individual']}><MyLedger /></ProtectedRoute>} />
+          <Route path="/my-reports" element={<ProtectedRoute allowedRoles={['individual']}><MyReports /></ProtectedRoute>} />
           <Route path="/confirmation" element={<ProtectedRoute allowedRoles={['individual']}><Confirmation /></ProtectedRoute>} />
           <Route path="/my-projects" element={<ProtectedRoute allowedRoles={['individual']}><MyProjects /></ProtectedRoute>} />
           <Route path="/certificate/:id" element={<ProtectedRoute allowedRoles={['individual']}><Certificate /></ProtectedRoute>} />
@@ -143,15 +150,15 @@ export default function App(): React.JSX.Element {
           <Route path="/submit-project" element={<ProtectedRoute><SubmitProjectDetails /></ProtectedRoute>} />
 
           {/* ── Project marketplace (public) ── */}
-          <Route path="/projects" element={<Marketplace />} />
-          <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/projects" element={<PublicRoute><Marketplace /></PublicRoute>} />
+          <Route path="/projects/:id" element={<PublicRoute><ProjectDetail /></PublicRoute>} />
 
           {/* ── Public ledger (public) ── */}
-          <Route path="/ledger" element={<Ledger />} />
+          <Route path="/ledger" element={<PublicRoute><Ledger /></PublicRoute>} />
 
           {/* ── Profiles (public) ── */}
-          <Route path="/profiles" element={<Profiles />} />
-          <Route path="/profile/:id" element={<PublicProfile />} />
+          <Route path="/profiles" element={<PublicRoute><Profiles /></PublicRoute>} />
+          <Route path="/profile/:id" element={<PublicRoute><PublicProfile /></PublicRoute>} />
 
           {/* ── Business (protected) ── */}
           <Route path="/business" element={<ProtectedRoute allowedRoles={['business']}><Dashboard /></ProtectedRoute>} />
@@ -216,7 +223,7 @@ export default function App(): React.JSX.Element {
           <Route path="/admin/config"       element={<ProtectedRoute allowedRoles={['admin']}><Configuration /></ProtectedRoute>} />
           <Route path="/admin/tree-records" element={<ProtectedRoute allowedRoles={['admin']}><TreeRecords /></ProtectedRoute>} />
 {/* ── Fallback ── */}
-          <Route path="*" element={<Landing />} />
+          <Route path="*" element={<PublicRoute><Landing /></PublicRoute>} />
         </Routes>
         </Suspense>
       </Router>

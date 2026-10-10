@@ -2,6 +2,7 @@ import React, { useRef, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import './Confirmation.css'
+import IndividualLayout from '../ImpactHome/IndividualLayout'
 
 // ── Pentagon checkmark ────────────────────────────────────────────────────────
 function PentaCheck() {
@@ -17,8 +18,14 @@ function PentaCheck() {
   )
 }
 
+// Everything below comes from the URL — escape it before it goes into the
+// invoice window's HTML, or a crafted link could inject script.
+function esc(v: string): string {
+  return v.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string))
+}
+
 // ── Main Confirmation page ────────────────────────────────────────────────────
-export default function Confirmation() {
+function ConfirmationContent() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const { user } = useAuth()
@@ -33,8 +40,14 @@ export default function Confirmation() {
   const date        = useMemo(() => new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }), [])
   const funderName  = user?.displayName || user?.email || 'Funder'
 
-  const pricePerTree = 120
   const treesNum     = parseInt(trees) || 0
+  // The project's real price per tree (passed by the fund page). Older links
+  // without it: derive it from the total paid, which includes the 10% fee.
+  const priceParam   = Number(params.get('price'))
+  const amountNum    = Number(amount.replace(/[^\d.]/g, ''))
+  const pricePerTree = priceParam > 0
+    ? priceParam
+    : (treesNum > 0 && amountNum > 0 ? Math.round(amountNum / 1.1 / treesNum) : 120)
   const sub          = treesNum * pricePerTree
   const fee          = Math.round(sub * 0.1)
   const total        = sub + fee
@@ -404,9 +417,9 @@ export default function Confirmation() {
         </div>
         <div>
           <div class="inv-party__label">Billed To</div>
-          <div class="inv-party__name">${funderName}</div>
+          <div class="inv-party__name">${esc(funderName)}</div>
           <div class="inv-party__detail">
-            ${user?.email || ''}<br/>
+            ${esc(user?.email || '')}<br/>
             Individual Funder
           </div>
         </div>
@@ -417,7 +430,7 @@ export default function Confirmation() {
         <div class="inv-project__icon">🌳</div>
         <div>
           <div class="inv-project__label">Funded Project</div>
-          <div class="inv-project__name">${project}</div>
+          <div class="inv-project__name">${esc(project)}</div>
           <div class="inv-project__meta">🌍 Earth Element · Verified Reforestation · Gold Standard</div>
         </div>
       </div>
@@ -436,7 +449,7 @@ export default function Confirmation() {
           <tr>
             <td>
               <strong>Tree Funding</strong><br/>
-              <span style="font-size:12px;color:#9CA3AF;">${project} — geo-tagged, ledger-verified</span>
+              <span style="font-size:12px;color:#9CA3AF;">${esc(project)} — geo-tagged, ledger-verified</span>
             </td>
             <td>${treesNum} trees</td>
             <td>${fmt(pricePerTree)}</td>
@@ -466,22 +479,22 @@ export default function Confirmation() {
         </div>
         <div class="inv-totals__row inv-totals__row--total">
           <span>Total Paid</span>
-          <span class="inv-totals__amount">${amount || fmt(total)}</span>
+          <span class="inv-totals__amount">${esc(amount || fmt(total))}</span>
         </div>
       </div>
 
       <!-- Impact strip -->
       <div class="inv-impact">
         <div class="inv-impact__cell">
-          <span class="inv-impact__num">${trees}</span>
+          <span class="inv-impact__num">${esc(trees)}</span>
           <span class="inv-impact__label">Trees Funded</span>
         </div>
         <div class="inv-impact__cell">
-          <span class="inv-impact__num">${tco2e}</span>
+          <span class="inv-impact__num">${esc(tco2e)}</span>
           <span class="inv-impact__label">tCO₂e Offset</span>
         </div>
         <div class="inv-impact__cell">
-          <span class="inv-impact__num">${amount || fmt(total)}</span>
+          <span class="inv-impact__num">${esc(amount || fmt(total))}</span>
           <span class="inv-impact__label">Total Paid</span>
         </div>
       </div>
@@ -609,12 +622,21 @@ export default function Confirmation() {
           <button
             type="button"
             className="conf-btn conf-btn--ghost"
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate('/impact/projects')}
           >
             Fund another project
           </button>
         </div>
       </div>
     </div>
+  )
+}
+
+// Signed-in only — always shown inside the Individual panel shell.
+export default function Confirmation() {
+  return (
+    <IndividualLayout title="Funding confirmed" subtitle="Thank you — your trees are on their way">
+      <ConfirmationContent />
+    </IndividualLayout>
   )
 }

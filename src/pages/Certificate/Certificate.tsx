@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
 import './Certificate.css'
+import IndividualLayout from '../ImpactHome/IndividualLayout'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CertificateData {
@@ -44,7 +45,7 @@ function PentaSeal({ size = 120 }: { size?: number }) {
   )
 }
 
-export default function Certificate() {
+function CertificateContent() {
   const { id } = useParams<{ id: string }>()
   const { session } = useAuth()
   const [cert, setCert]     = useState<CertificateData | null>(null)
@@ -136,7 +137,7 @@ export default function Certificate() {
         <div className="cert-actions">
           {cert.ledgerEntryId && (
             <Link
-              to={`/ledger?entry=${cert.ledgerEntryId}`}
+              to="/my-ledger"
               className="cert-btn cert-btn--ledger"
             >
               ⛓ Verify on ledger
@@ -167,5 +168,14 @@ export default function Certificate() {
         <Link to="/my-projects" className="cert-back-link">← Back to my projects</Link>
       </div>
     </div>
+  )
+}
+
+// Signed-in only — always shown inside the Individual panel shell.
+export default function Certificate() {
+  return (
+    <IndividualLayout title="Certificate" subtitle="Certificate of impact">
+      <CertificateContent />
+    </IndividualLayout>
   )
 }
