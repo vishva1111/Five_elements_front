@@ -140,7 +140,7 @@ export default function FundersView() {
   useModalBehavior(() => setConfirmDelete(null), !!confirmDelete)
 
   return (
-    <PartnerLayout title="Funders view">
+    <PartnerLayout title="Web User">
 
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
@@ -155,7 +155,7 @@ export default function FundersView() {
       <div className="pl-stats" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 16 }}>
         <div className="pl-stat">
           <div className="pl-stat__num">{totalFunders}</div>
-          <div className="pl-stat__label">Funders</div>
+          <div className="pl-stat__label">Web Users</div>
         </div>
         <div className="pl-stat">
           <div className="pl-stat__num">{(summary?.funded ?? totalTrees).toLocaleString('en-IN')}</div>
@@ -173,8 +173,8 @@ export default function FundersView() {
 
       <div style={{ background: '#F5F0EC', borderRadius: 10, padding: '12px 16px', fontSize: 12.5, color: '#6B7B6E', lineHeight: 1.6, marginBottom: 20 }}>
         <strong style={{ color: '#112121' }}>How attribution works:</strong> when evidence is approved, its units are
-        allocated to funders in funding order (oldest first). Each funder is notified automatically with the evidence
-        attached — you never write a funder report by hand.
+        allocated to web users in funding order (oldest first). Each web user is notified automatically with the evidence
+        attached — you never write a web user report by hand.
       </div>
 
       {/* Search */}
@@ -197,14 +197,14 @@ export default function FundersView() {
         ) : filtered.length === 0 ? (
           <div className="pl-empty">
             <div className="pl-empty__icon">💰</div>
-            <div className="pl-empty__title">No funders yet</div>
-            <div className="pl-empty__sub">Once your projects are approved and listed, funders will appear here.</div>
+            <div className="pl-empty__title">No web users yet</div>
+            <div className="pl-empty__sub">Once your projects are approved and listed, web users will appear here.</div>
           </div>
         ) : (
           <table className="pl-table">
             <thead>
               <tr>
-                <th>Funder</th>
+                <th>Web User</th>
                 <th>Type</th>
                 <th>Project</th>
                 <th>Trees</th>
@@ -217,9 +217,7 @@ export default function FundersView() {
               {pg.items.map(f => (
                 <tr key={f.id}>
                   <td style={{ fontWeight: 600 }}>
-                    {f.anonymous ? (
-                      <span style={{ color: '#9AA79C', fontStyle: 'italic' }}>Anonymous</span>
-                    ) : f.name}
+                    {f.name}
                   </td>
                   <td>
                     <span className={`pl-badge pl-badge--${f.type === 'business' ? 'info' : 'approved'}`}>
@@ -241,7 +239,7 @@ export default function FundersView() {
             </tbody>
           </table>
         )}
-        {!loading && <Pagination {...pg} noun="funder" />}
+        {!loading && <Pagination {...pg} noun="web user" />}
       </div>
 
       {editing && (

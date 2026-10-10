@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   { icon: '📁', label: 'Evidence vault',to: '/partner/evidence' },
   { icon: '📋', label: 'Submissions',   to: '/partner/submissions' },
   { icon: '🔗', label: 'Linked to me',  to: '/partner/linked-submissions' },
-  { icon: '💰', label: 'Funders',       to: '/partner/funders' },
+  { icon: '💰', label: 'Web User',      to: '/partner/funders' },
   { icon: '👥', label: 'Team',          to: '/partner/team' },
   { icon: '⚙',  label: 'Settings',      to: '/partner/settings' },
 ]

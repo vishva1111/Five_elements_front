@@ -47,7 +47,7 @@ export default function FundFlow() {
 
   // State
   const [trees, setTrees] = useState(42)
-  const [anon, setAnon] = useState(true)
+  const [showName, setShowName] = useState(true)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isDeclined, setIsDeclined] = useState(false)
@@ -88,9 +88,11 @@ export default function FundFlow() {
       await submitFunding({
         projectId: project?.id || projectId,
         trees,
-        funderName: anon ? 'Anonymous' : (user.displayName || 'Funder'),
+        // Always the real name — the partner and admin need to know who funded.
+        // publicAttribution alone decides whether the public ledger shows it.
+        funderName: user.displayName || user.email || 'Funder',
         paymentMethod: 'card',
-        publicAttribution: !anon,
+        publicAttribution: showName,
         userId: user.id,
       })
       // S6: redirect to confirmation page with stats in query params
@@ -333,15 +335,17 @@ export default function FundFlow() {
             <button
               type="button"
               className="ff-anon-toggle"
-              onClick={() => setAnon(a => !a)}
+              role="switch"
+              aria-checked={showName}
+              onClick={() => setShowName(s => !s)}
             >
               <span className="ff-anon-toggle__text">
                 <span className="ff-anon-toggle__title">Show my name on the public ledger</span>
                 <span className="ff-anon-toggle__note">
-                  {anon ? 'Your name will appear on the public ledger.' : "You\u2019ll appear as Anonymous."}
+                  {showName ? 'Your name will appear on the public ledger.' : "You\u2019ll appear as Anonymous."}
                 </span>
               </span>
-              <span className={`ff-switch${anon ? ' ff-switch--on' : ''}`}>
+              <span className={`ff-switch${showName ? ' ff-switch--on' : ''}`}>
                 <span className="ff-switch__thumb" />
               </span>
             </button>
