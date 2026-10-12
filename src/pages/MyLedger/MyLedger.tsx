@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Clock, Search } from 'lucide-react'
 import IndividualLayout from '../ImpactHome/IndividualLayout'
+import BusinessLayout from '../Business/BusinessLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { fetchUserImpact } from '../../services/api'
 import type { UserImpactEntry } from '../../services/api'
@@ -15,12 +16,25 @@ const fmtINR  = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 const fmtDate = (iso: string) =>
   iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 
+type Variant = 'individual' | 'business'
+
 /**
- * The signed-in Individual's own ledger — every funding they've made, with its
- * verification status. Lives inside the panel; the public website ledger is
- * only reachable after signing out.
+ * The signed-in user's own ledger — every funding they've made, with its
+ * verification status. The same page serves both panels: Individual
+ * (/my-ledger) and Business (/business/ledger), each in its own shell.
  */
 export default function MyLedger() {
+  return <LedgerPage variant="individual" />
+}
+
+export function BusinessLedger() {
+  return <LedgerPage variant="business" />
+}
+
+function LedgerPage({ variant }: { variant: Variant }) {
+  const isBusiness   = variant === 'business'
+  // Individuals stay inside their panel; Business users browse the public marketplace.
+  const projectsBase = isBusiness ? '/projects' : '/impact/projects'
   const navigate = useNavigate()
   const { user } = useAuth()
   const [entries, setEntries] = useState<UserImpactEntry[]>([])
@@ -60,8 +74,13 @@ export default function MyLedger() {
     { key: 'pending',  label: 'Awaiting evidence', count: entries.length - verifiedCount },
   ]
 
-  return (
-    <IndividualLayout title="My Ledger" subtitle="Every tree you've funded · verified as evidence arrives">
+  const title    = isBusiness ? 'Ledger' : 'My Ledger'
+  const subtitle = isBusiness
+    ? "Every tree your organisation has funded · verified as evidence arrives"
+    : "Every tree you've funded · verified as evidence arrives"
+
+  const content = (
+    <>
 
       {error && <div className="db-error-banner">⚠ {error}</div>}
 
@@ -121,7 +140,7 @@ export default function MyLedger() {
             <div className="ml-empty__icon">🌱</div>
             <div className="ml-empty__title">Your ledger is empty</div>
             <div className="ml-empty__sub">Fund your first trees — each funding becomes an entry here.</div>
-            <button type="button" className="db-cta-btn" onClick={() => navigate('/impact/projects')}>Browse projects</button>
+            <button type="button" className="db-cta-btn" onClick={() => navigate(projectsBase)}>Browse projects</button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="ml-empty">
@@ -147,7 +166,7 @@ export default function MyLedger() {
                   <tr
                     key={e.id}
                     className="ml-row"
-                    onClick={() => e.projectId && navigate(`/impact/projects/${e.projectId}`)}
+                    onClick={() => e.projectId && navigate(`${projectsBase}/${e.projectId}`)}
                     title="Open project"
                   >
                     <td><span className="ml-id">#{e.id.slice(0, 8).toUpperCase()}</span></td>
@@ -174,6 +193,10 @@ export default function MyLedger() {
         )}
         {!loading && filtered.length > 0 && <div className="ml-pager"><Pagination {...pg} noun="record" /></div>}
       </div>
-    </IndividualLayout>
+    </>
   )
+
+  return isBusiness
+    ? <BusinessLayout title={title} subtitle={subtitle}>{content}</BusinessLayout>
+    : <IndividualLayout title={title} subtitle={subtitle}>{content}</IndividualLayout>
 }

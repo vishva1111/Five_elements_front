@@ -30,6 +30,7 @@ const IndividualLanding = lazy(() => import('./pages/IndividualLanding/Individua
 const FundFlow = lazy(() => import('./pages/FundFlow/FundFlow'))
 const ImpactHome = lazy(() => import('./pages/ImpactHome/ImpactHome'))
 const MyLedger = lazy(() => import('./pages/MyLedger/MyLedger'))
+const BusinessLedger = lazy(() => import('./pages/MyLedger/MyLedger').then(m => ({ default: m.BusinessLedger })))
 const MyReports = lazy(() => import('./pages/MyReports/MyReports'))
 
 // ── Business pages ───────────────────────────────────────────────────────────
@@ -161,19 +162,20 @@ export default function App(): React.JSX.Element {
           <Route path="/profile/:id" element={<PublicRoute><PublicProfile /></PublicRoute>} />
 
           {/* ── Business (protected) ── */}
-          <Route path="/business" element={<ProtectedRoute allowedRoles={['business']}><Dashboard /></ProtectedRoute>} />
-          <Route path="/business/emissions" element={<ProtectedRoute allowedRoles={['business']}><EmissionsHub /></ProtectedRoute>} />
-          <Route path="/business/source-data" element={<ProtectedRoute allowedRoles={['business']}><SourceDataEntry /></ProtectedRoute>} />
-          <Route path="/business/bulk-upload" element={<ProtectedRoute allowedRoles={['business']}><BulkUpload /></ProtectedRoute>} />
-          <Route path="/business/targets" element={<ProtectedRoute allowedRoles={['business']}><Targets /></ProtectedRoute>} />
-          <Route path="/business/portfolio" element={<ProtectedRoute allowedRoles={['business']}><Portfolio /></ProtectedRoute>} />
-          <Route path="/business/fund" element={<ProtectedRoute allowedRoles={['business']}><BusinessFundFlow /></ProtectedRoute>} />
-          <Route path="/business/reports" element={<ProtectedRoute allowedRoles={['business']}><ReportsCentre /></ProtectedRoute>} />
-          <Route path="/business/reports/:id" element={<ProtectedRoute allowedRoles={['business']}><ReportDetail /></ProtectedRoute>} />
-          <Route path="/business/public-profile" element={<ProtectedRoute allowedRoles={['business']}><PublicProfileSettings /></ProtectedRoute>} />
-          <Route path="/business/team" element={<ProtectedRoute allowedRoles={['business']}><Team /></ProtectedRoute>} />
-          <Route path="/business/settings" element={<ProtectedRoute allowedRoles={['business']}><OrgSettings /></ProtectedRoute>} />
-          <Route path="/business/toolkit" element={<ProtectedRoute allowedRoles={['business']}><BusinessToolkit /></ProtectedRoute>} />
+          <Route path="/business" element={<ProtectedRoute allowedRoles={['business']} strictRoles><Dashboard /></ProtectedRoute>} />
+          <Route path="/business/emissions" element={<ProtectedRoute allowedRoles={['business']} strictRoles><EmissionsHub /></ProtectedRoute>} />
+          <Route path="/business/source-data" element={<ProtectedRoute allowedRoles={['business']} strictRoles><SourceDataEntry /></ProtectedRoute>} />
+          <Route path="/business/bulk-upload" element={<ProtectedRoute allowedRoles={['business']} strictRoles><BulkUpload /></ProtectedRoute>} />
+          <Route path="/business/targets" element={<ProtectedRoute allowedRoles={['business']} strictRoles><Targets /></ProtectedRoute>} />
+          <Route path="/business/portfolio" element={<ProtectedRoute allowedRoles={['business']} strictRoles><Portfolio /></ProtectedRoute>} />
+          <Route path="/business/ledger" element={<ProtectedRoute allowedRoles={['business']} strictRoles><BusinessLedger /></ProtectedRoute>} />
+          <Route path="/business/fund" element={<ProtectedRoute allowedRoles={['business']} strictRoles><BusinessFundFlow /></ProtectedRoute>} />
+          <Route path="/business/reports" element={<ProtectedRoute allowedRoles={['business']} strictRoles><ReportsCentre /></ProtectedRoute>} />
+          <Route path="/business/reports/:id" element={<ProtectedRoute allowedRoles={['business']} strictRoles><ReportDetail /></ProtectedRoute>} />
+          <Route path="/business/public-profile" element={<ProtectedRoute allowedRoles={['business']} strictRoles><PublicProfileSettings /></ProtectedRoute>} />
+          <Route path="/business/team" element={<ProtectedRoute allowedRoles={['business']} strictRoles><Team /></ProtectedRoute>} />
+          <Route path="/business/settings" element={<ProtectedRoute allowedRoles={['business']} strictRoles><OrgSettings /></ProtectedRoute>} />
+          <Route path="/business/toolkit" element={<ProtectedRoute allowedRoles={['business']} strictRoles><BusinessToolkit /></ProtectedRoute>} />
 
           {/* ── Partner zone (P1–P10, protected) ── */}
           <Route path="/partner/onboarding" element={<ProtectedRoute allowedRoles={['partner']}><PartnerOnboarding /></ProtectedRoute>} />

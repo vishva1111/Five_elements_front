@@ -8,6 +8,13 @@ interface ProtectedRouteProps {
   children: React.ReactNode
   /** If provided, only these roles can access this route */
   allowedRoles?: UserRole[]
+  /**
+   * Only users who actually hold one of allowedRoles get in — no "higher role
+   * may enter" hierarchy. For pages built on the account's own data (the
+   * Business console), where a Partner or Admin without the role would just
+   * hit empty or forbidden screens.
+   */
+  strictRoles?: boolean
 }
 
 // ── Role Hierarchy ─────────────────────────────────────────────────────────────
@@ -29,7 +36,7 @@ const ROLE_LEVEL: Record<UserRole, number> = {
  * - Hierarchy: admin > partner > business = individual
  *   (higher-level roles can access lower-level routes)
  */
-export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, allowedRoles, strictRoles = false }: ProtectedRouteProps) {
   const { user, loading } = useAuth()
   const location = useLocation()
 
@@ -55,13 +62,25 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   //    (e.g. admin can access partner/business/individual routes,
   //           partner can access business/individual routes)
   if (allowedRoles) {
-    const userMaxLevel = Math.max(...user.roles.map(r => ROLE_LEVEL[r] ?? 0))
+    // The active role always counts — some older profiles have a role that's
+    // missing from their roles list (same rule as the backend's requireRole).
+    const held = Array.from(new Set([...user.roles, user.role]))
+    const userMaxLevel = Math.max(...held.map(r => ROLE_LEVEL[r] ?? 0))
     const requiredMinLevel = Math.min(...allowedRoles.map(r => ROLE_LEVEL[r] ?? 99))
-    const hasExactRole = allowedRoles.some(r => user.roles.includes(r))
-    const hasHigherRole = userMaxLevel > requiredMinLevel
+    const hasExactRole = allowedRoles.some(r => held.includes(r))
+    const hasHigherRole = !strictRoles && userMaxLevel > requiredMinLevel
 
     if (!hasExactRole && !hasHigherRole) {
-      return <Navigate to={ROLE_HOME[user.role]} replace />
+      const home = ROLE_HOME[user.role] ?? '/'
+      // Never redirect to the page we're already on — that loops forever.
+      if (location.pathname === home) {
+        return (
+          <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', color: '#6B7B6E', fontSize: 15 }}>
+            Your account doesn't have access to this page. Please contact the Five Elements team.
+          </div>
+        )
+      }
+      return <Navigate to={home} replace />
     }
   }
 

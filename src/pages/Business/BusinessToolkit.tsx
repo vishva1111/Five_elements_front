@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { fetchBusinessOrg } from '../../services/api'
 import BusinessLayout from './BusinessLayout'
 import './BusinessToolkit.css'
 
@@ -170,8 +171,15 @@ export default function BusinessToolkit() {
   const [logoVariant, setLogoVariant]   = useState<LogoVariant>('dark')
   const [copiedId, setCopiedId]         = useState<string | null>(null)
   const [copiedBadge, setCopiedBadge]   = useState<string | null>(null)
+  const [profileSlug, setProfileSlug]   = useState<string | null>(null)
 
-  const logos = logoVariant === 'dark' ? DARK_LOGOS : LIGHT_LOGOS
+  useEffect(() => {
+    fetchBusinessOrg().then(d => setProfileSlug(d.org.profileSlug)).catch(() => {})
+  }, [])
+
+  // Snippets that link to the org's public profile get the real profile id.
+  const withOrg = (snippet: string) => profileSlug ? snippet.split('YOUR_ORG_ID').join(profileSlug) : snippet
+  const logos = (logoVariant === 'dark' ? DARK_LOGOS : LIGHT_LOGOS).map(l => ({ ...l, snippet: withOrg(l.snippet) }))
 
   function copySnippet(id: string, text: string) {
     navigator.clipboard.writeText(text).then(() => {
@@ -250,8 +258,8 @@ export default function BusinessToolkit() {
             <div className="btk-section__header">
               <h3 className="btk-section__title">Social media assets</h3>
               <p className="btk-section__desc">
-                Download these ready-made templates and add your logo to share your
-                climate action story across social media platforms.
+                Ready-made templates to share your climate action story across social
+                media. Downloadable files are coming soon.
               </p>
             </div>
             <div className="btk-grid">
@@ -276,11 +284,8 @@ export default function BusinessToolkit() {
                     </div>
                   </div>
                   <div className="btk-card__actions">
-                    <button type="button" className="btk-btn btk-btn--primary">
-                      ⬇ Download
-                    </button>
-                    <button type="button" className="btk-btn btk-btn--ghost">
-                      👁 Preview
+                    <button type="button" className="btk-btn btk-btn--ghost" disabled title="Downloadable files are coming soon" style={{ cursor: 'not-allowed', opacity: 0.7 }}>
+                      Files coming soon
                     </button>
                   </div>
                 </div>
@@ -424,8 +429,9 @@ export default function BusinessToolkit() {
                   <div className="btk-img-card__body">
                     <div className="btk-img-card__label">{img.label}</div>
                     <div className="btk-img-card__actions">
-                      <button type="button" className="btk-btn btk-btn--primary">⬇ Download</button>
-                      <button type="button" className="btk-btn btk-btn--ghost">👁 Preview</button>
+                      <button type="button" className="btk-btn btk-btn--ghost" disabled title="Downloadable photos are coming soon" style={{ cursor: 'not-allowed', opacity: 0.7 }}>
+                        Photos coming soon
+                      </button>
                     </div>
                   </div>
                 </div>

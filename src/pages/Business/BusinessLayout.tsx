@@ -10,6 +10,7 @@ import ProfileModal from '../../components/ui/ProfileModal'
 const NAV_ITEMS = [
   { icon: '▦',  label: 'Dashboard',      to: '/business' },
   { icon: '▤',  label: 'Projects',       to: '/business/portfolio' },
+  { icon: '📒', label: 'Ledger',         to: '/business/ledger' },
   { icon: '📊', label: 'Reports',        to: '/business/reports' },
   { icon: '◎',  label: 'Public profile', to: '/business/public-profile' },
   { icon: '🧰', label: 'Toolkit',        to: '/business/toolkit' },
@@ -21,9 +22,11 @@ interface BusinessLayoutProps {
   children: React.ReactNode
   title: string
   subtitle?: string
+  /** Extra controls on the right of the top bar (before the bell) */
+  actions?: React.ReactNode
 }
 
-export default function BusinessLayout({ children, title, subtitle }: BusinessLayoutProps) {
+export default function BusinessLayout({ children, title, subtitle, actions }: BusinessLayoutProps) {
   const [collapsed, setCollapsed]       = useState(false)
   const [mobileOpen, setMobileOpen]     = useState(false)
   const [isMobile, setIsMobile]         = useState(false)
@@ -56,7 +59,7 @@ export default function BusinessLayout({ children, title, subtitle }: BusinessLa
 
   const initials = user?.displayName
     ? user.displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-    : 'SC'
+    : 'U'
 
   function handleToggle() {
     if (isMobile) {
@@ -157,6 +160,7 @@ export default function BusinessLayout({ children, title, subtitle }: BusinessLa
             {subtitle && <div className="db-topbar__sub">{subtitle}</div>}
           </div>
           <div className="db-topbar__actions">
+            {actions}
             <NotificationBell />
           </div>
         </header>
