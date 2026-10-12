@@ -379,6 +379,13 @@
   gap: 20px;
 }
 
+/* This area scrolls — its sections must keep their natural height instead of
+   being squeezed to fit (which clipped cards with overflow:hidden, e.g. a
+   table's pagination row). */
+.db-content > * {
+  flex-shrink: 0;
+}
+
 /* ── Grid layouts ────────────────────────────────────────────────────────── */
 .db-grid-4 {
   display: grid;
@@ -1329,3 +1336,49 @@
     display: none;
   }
 }
+/* ── Dashboard: period select, evidence card ─────────────────────────────── */
+.db-period-select {
+  appearance: auto;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.db-stat-divider {
+  width: 1px;
+  height: 18px;
+  background: #E2D9D0;
+  align-self: center;
+}
+
+.db-evidence { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+
+.db-evidence__big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+
+.db-evidence__pct {
+  font-size: 40px;
+  font-weight: 800;
+  color: #2B5341;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.db-evidence__of { font-size: 13px; color: #6B7B6E; max-width: 240px; line-height: 1.4; }
+
+.db-evidence__meter {
+  height: 10px;
+  border-radius: 9999px;
+  background: #FCEBD5;
+  overflow: hidden;
+}
+.db-evidence__fill { height: 100%; background: #2D6A4F; border-radius: 9999px; }
+
+.db-evidence__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #6B7B6E;
+}
+.db-evidence__row span:first-child { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #112121; }
+.db-evidence__ok   { color: #2D6A4F; }
+.db-evidence__wait { color: #c97a10; }

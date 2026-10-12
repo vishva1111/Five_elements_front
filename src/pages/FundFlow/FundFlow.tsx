@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react'
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
+import React, { useState, useRef, useEffect } from 'react'
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '../../hooks/useProjects'
 import { submitFunding } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 import './FundFlow.css'
+import IndividualLayout from '../ImpactHome/IndividualLayout'
 
 // ── Pentagon preset icon ──────────────────────────────────────────────────────
 function PresetPenta({ selected }: { selected: boolean }) {
@@ -38,7 +39,7 @@ function FootPenta() {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function FundFlow() {
+function FundFlowContent() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -47,11 +48,28 @@ export default function FundFlow() {
 
   // State
   const [trees, setTrees] = useState(42)
-  const [anon, setAnon] = useState(true)
+  const [showName, setShowName] = useState(true)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isDeclined, setIsDeclined] = useState(false)
+  const [fundError, setFundError]   = useState<string | null>(null)
   const [isDone, setIsDone] = useState(false)
+  // Trees still available in the project (null = the project has no target, so no limit).
+  // Starts from the project's figures; the server's answer replaces it if it's fresher.
+  const [remaining, setRemaining] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!project) return
+    const left = project.totalTrees > 0 ? Math.max(0, project.totalTrees - (project.fundedTrees || 0)) : null
+    setRemaining(left)
+  }, [project])
+
+  // Never let the chosen amount exceed what's left.
+  useEffect(() => {
+    if (remaining !== null && remaining > 0 && trees > remaining) setTrees(remaining)
+  }, [remaining, trees])
+
+  const maxTrees    = remaining ?? Infinity
+  const fullyFunded = remaining === 0
 
   // Demo card fields (pre-filled for testing)
   const [cardNumber, setCardNumber] = useState('1234 1234 1234 1234')
@@ -83,24 +101,34 @@ export default function FundFlow() {
       return
     }
     setIsProcessing(true)
-    setIsDeclined(false)
+    setFundError(null)
     try {
       await submitFunding({
         projectId: project?.id || projectId,
         trees,
-        funderName: anon ? 'Anonymous' : (user.displayName || 'Funder'),
+        // Always the real name — the partner and admin need to know who funded.
+        // publicAttribution alone decides whether the public ledger shows it.
+        funderName: user.displayName || user.email || 'Funder',
         paymentMethod: 'card',
-        publicAttribution: !anon,
+        publicAttribution: showName,
         userId: user.id,
       })
       // S6: redirect to confirmation page with stats in query params
       const tco2e = (trees * 0.017).toFixed(2)
       const total = trees * (project?.pricePerTree || 120) * 1.1
       navigate(
-        `/confirmation?trees=${trees}&tco2e=${tco2e}&amount=₹${Math.round(total).toLocaleString('en-IN')}&project=${encodeURIComponent(project?.name || 'your project')}`
+        `/confirmation?trees=${trees}&tco2e=${tco2e}&price=${pricePerTree}&amount=${encodeURIComponent(`₹${Math.round(total).toLocaleString('en-IN')}`)}&project=${encodeURIComponent(project?.name || 'your project')}`
       )
-    } catch {
-      setIsDeclined(true)
+    } catch (err) {
+      const e = err as Error & { remaining?: number }
+      const msg = e.message || ''
+      if (typeof e.remaining === 'number') setRemaining(e.remaining)
+      setFundError(
+        /trees? left|fully funded/i.test(msg) ? `${msg}. Please choose a smaller amount${e.remaining === 0 ? ' or another project' : ''}.`
+        : /not accepting funding/i.test(msg) ? 'This project is not accepting funding right now. Please choose another project.'
+        : /not found/i.test(msg)           ? 'This project could not be found. Please choose another project.'
+        : 'Something went wrong and your funding was not recorded. Please try again in a moment.'
+      )
     } finally {
       setIsProcessing(false)
     }
@@ -134,7 +162,7 @@ export default function FundFlow() {
               <span className="ff-success__stat-label">total paid</span>
             </div>
           </div>
-          <a href="/projects" className="ff-btn ff-btn--orange">Back to projects</a>
+          <Link to="/impact/projects" className="ff-btn ff-btn--orange">Back to projects</Link>
         </div>
       </div>
     )
@@ -158,6 +186,18 @@ export default function FundFlow() {
         <div className="ff-fund">
           <div className="ff-skel" style={{ height: 200, borderRadius: 16 }} />
           <div className="ff-skel" style={{ height: 400, borderRadius: 16 }} />
+        </div>
+      </div>
+    )
+  }
+
+  // ── Project not found ─────────────────────────────────────────────────────
+  if (!project) {
+    return (
+      <div className="ff">
+        <div className="ff-fund" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: 16 }}>
+          <p style={{ color: '#6B7280', fontSize: 16, margin: 0 }}>We couldn't find this project. It may have been removed.</p>
+          <Link to="/impact/projects" className="ff-btn ff-btn--orange">Browse projects</Link>
         </div>
       </div>
     )
@@ -229,8 +269,8 @@ export default function FundFlow() {
                     </div>
                     <div className="ff-ctx-project__info">
                       <span className="ff-ctx-project__badge">🌍 Earth</span>
-                      <span className="ff-ctx-project__name">{project?.name || 'Ahmedabad Urban Canopy — Phase 1'}</span>
-                      <span className="ff-ctx-project__meta">{project?.partner || 'SEWA Green Collective'} · ✓ {project?.certification || 'Gold Standard'}</span>
+                      <span className="ff-ctx-project__name">{project.name}</span>
+                      <span className="ff-ctx-project__meta">{project.partner || '—'}{project.certification ? ` · ✓ ${project.certification}` : ''}</span>
                     </div>
                   </div>
                 </div>
@@ -253,7 +293,11 @@ export default function FundFlow() {
             <div className="ff-presets">
               <div className="ff-presets__header">
                 <h2 className="ff-presets__title">How many trees?</h2>
-                {hasFootprint && (
+                {remaining !== null ? (
+                  <span className="ff-presets__hint">
+                    {fullyFunded ? 'This project is fully funded' : `${remaining.toLocaleString('en-IN')} tree${remaining === 1 ? '' : 's'} left in this project`}
+                  </span>
+                ) : hasFootprint && (
                   <span className="ff-presets__hint">Preset to fully offset your flight</span>
                 )}
               </div>
@@ -264,6 +308,9 @@ export default function FundFlow() {
                     type="button"
                     className={`ff-preset-btn${trees === p.count ? ' ff-preset-btn--active' : ''}`}
                     onClick={() => setTrees(p.count)}
+                    disabled={p.count > maxTrees}
+                    title={p.count > maxTrees ? `Only ${remaining} trees left in this project` : undefined}
+                    style={p.count > maxTrees ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
                   >
                     <PresetPenta selected={trees === p.count} />
                     <span className="ff-preset-btn__count">{p.count}</span>
@@ -277,21 +324,23 @@ export default function FundFlow() {
                   <input
                     type="number"
                     min={1}
+                    max={remaining ?? undefined}
                     value={trees}
                     aria-label="Number of trees"
                     className="ff-custom-input"
-                    onChange={e => setTrees(Math.max(1, parseInt(e.target.value) || 1))}
+                    disabled={fullyFunded}
+                    onChange={e => setTrees(Math.min(maxTrees, Math.max(1, parseInt(e.target.value) || 1)))}
                   />
                   <span className="ff-custom-suffix">trees</span>
                 </div>
               </div>
             </div>
 
-            {/* Declined banner */}
-            {isDeclined && (
+            {/* Error banner */}
+            {fundError && (
               <div className="ff-declined">
                 <span>⚠️</span>
-                <p>Your bank declined this card. Try another card or method — your {trees} trees are still here.</p>
+                <p>{fundError}</p>
               </div>
             )}
 
@@ -333,15 +382,17 @@ export default function FundFlow() {
             <button
               type="button"
               className="ff-anon-toggle"
-              onClick={() => setAnon(a => !a)}
+              role="switch"
+              aria-checked={showName}
+              onClick={() => setShowName(s => !s)}
             >
               <span className="ff-anon-toggle__text">
                 <span className="ff-anon-toggle__title">Show my name on the public ledger</span>
                 <span className="ff-anon-toggle__note">
-                  {anon ? 'Your name will appear on the public ledger.' : "You\u2019ll appear as Anonymous."}
+                  {showName ? 'Your name will appear on the public ledger.' : "You\u2019ll appear as Anonymous."}
                 </span>
               </span>
-              <span className={`ff-switch${anon ? ' ff-switch--on' : ''}`}>
+              <span className={`ff-switch${showName ? ' ff-switch--on' : ''}`}>
                 <span className="ff-switch__thumb" />
               </span>
             </button>
@@ -371,13 +422,13 @@ export default function FundFlow() {
             <button
               type="button"
               className={`ff-cta-btn${isProcessing ? ' ff-cta-btn--processing' : ''}`}
-              disabled={isProcessing}
+              disabled={isProcessing || fullyFunded}
               onClick={handleFund}
             >
               {isProcessing && (
                 <span className="ff-spinner" />
               )}
-              {isProcessing ? 'Processing…' : `Fund ${trees} trees`}
+              {isProcessing ? 'Processing…' : fullyFunded ? 'Fully funded' : `Fund ${trees} trees`}
             </button>
 
             <p className="ff-cta-note">You can review everything before it's final. No surprises.</p>
@@ -385,5 +436,14 @@ export default function FundFlow() {
         </main>
       </div>
     </div>
+  )
+}
+
+// Signed-in only — always shown inside the Individual panel shell.
+export default function FundFlow() {
+  return (
+    <IndividualLayout title="Fund trees" subtitle="Choose how many trees · pay securely">
+      <FundFlowContent />
+    </IndividualLayout>
   )
 }

@@ -870,3 +870,14 @@
   background: #F09125;
 }
 .pd-btn--orange:hover { opacity: 0.88; }
+/* Inside the Individual panel shell — no full-page chrome; the bottom
+   "Fund" bar sticks to the content area instead of the whole window. */
+.pd--in-panel {
+  min-height: 0;
+  margin: -24px;
+  padding-bottom: 0;
+}
+
+.pd--in-panel .pd-sticky-bar {
+  position: sticky;
+}

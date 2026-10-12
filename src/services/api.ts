@@ -107,17 +107,33 @@ export async function submitFunding(payload: FundingPayload): Promise<{ orderId:
     headers: await getAuthHeaders(),
     body:    JSON.stringify(payload),
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) {
+    // Surface the server's reason (e.g. "Only 12 trees left in this project")
+    const body = await res.json().catch(() => ({}))
+    const err = new Error(body.error || `HTTP ${res.status}`) as Error & { remaining?: number }
+    if (typeof body.remaining === 'number') err.remaining = body.remaining
+    throw err
+  }
   return res.json()
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ── Shared: surface the server's error message ───────────────────────────────
 
-export interface DashboardImpact {
-  treesFunded: number
-  tco2eVerified: number
-  projectsActive: number
-  projectsFunded: number
+async function failWith(res: Response): Promise<never> {
+  const body = await res.json().catch(() => ({}))
+  throw new Error(body.error || `HTTP ${res.status}`)
+}
+
+// ── Business dashboard (the organisation's own funding) ──────────────────────
+
+export interface DashboardFunding {
+  id: string
+  projectId: string
+  date: string        // ISO timestamp
+  trees: number
+  tco2e: number       // estimate
+  amount: number      // ₹, incl. platform fee
+  verified: boolean
 }
 
 export interface DashboardProject {
@@ -126,28 +142,22 @@ export interface DashboardProject {
   name: string
   element: string
   elGlyph: string
-  heroBg: string
   location: string
   standard: string
-  tco2: string
-  fundedTrees: number
   totalTrees: number
-  progressPct: number
-  verified: boolean
+  fundedTrees: number  // whole project, all funders
   status: string
-  statusBg: string
 }
 
 export interface DashboardData {
-  impact: DashboardImpact
-  portfolio: DashboardProject[]
-  period: string
+  fundings: DashboardFunding[]
+  projects: DashboardProject[]
   updatedAt: string
 }
 
 export async function fetchDashboard(): Promise<DashboardData> {
   const res = await fetch(`${BASE_URL}/api/dashboard`, { headers: await getAuthHeaders() })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) return failWith(res)
   return res.json()
 }
 
@@ -164,7 +174,17 @@ export interface Report {
 
 export async function fetchReports(): Promise<{ reports: Report[] }> {
   const res = await fetch(`${BASE_URL}/api/reports`, { headers: await getAuthHeaders() })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) return failWith(res)
+  return res.json()
+}
+
+export async function createReport(input: { year: number; framework: string; name?: string }): Promise<{ report: Report }> {
+  const res = await fetch(`${BASE_URL}/api/reports`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) return failWith(res)
   return res.json()
 }
 
@@ -181,6 +201,7 @@ export interface ReportLedgerEntry {
   projectId: string
   trees: number
   tCO2e: number
+  amount: number
   verified: boolean
   txHash: string | null
 }
@@ -193,18 +214,21 @@ export interface ReportDetailData {
   period: string
   orgName: string
   date: string
+  emissionsMeasured: boolean
   scopeSummary: ReportScopeItem[]
   funding: {
     treesFunded: number
     treesFundedFmt: string
+    amount: number
+    tco2e: number
     verifiedLedgerEntries: number
   }
   ledgerEntries: ReportLedgerEntry[]
 }
 
 export async function fetchReportDetail(id: string): Promise<{ report: ReportDetailData }> {
-  const res = await fetch(`${BASE_URL}/api/reports/${id}`, { headers: await getAuthHeaders() })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const res = await fetch(`${BASE_URL}/api/reports/${encodeURIComponent(id)}`, { headers: await getAuthHeaders() })
+  if (!res.ok) return failWith(res)
   return res.json()
 }
 
@@ -219,54 +243,53 @@ export interface TeamMember {
 
 export async function fetchTeam(): Promise<{ members: TeamMember[] }> {
   const res = await fetch(`${BASE_URL}/api/team`, { headers: await getAuthHeaders() })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) return failWith(res)
   return res.json()
 }
 
-export async function inviteTeamMember(name: string, email: string, role: string): Promise<{ member: TeamMember }> {
-  const headers = await getAuthHeaders()
+export async function inviteTeamMember(name: string, email: string, role: string): Promise<{ member: TeamMember; emailed: boolean }> {
   const res = await fetch(`${BASE_URL}/api/team`, {
     method: 'POST',
-    headers,
+    headers: await getAuthHeaders(),
     body: JSON.stringify({ name, email, role }),
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) return failWith(res)
   return res.json()
 }
 
 export async function removeTeamMember(id: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/team/${id}`, { method: 'DELETE', headers: await getAuthHeaders() })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const res = await fetch(`${BASE_URL}/api/team/${encodeURIComponent(id)}`, { method: 'DELETE', headers: await getAuthHeaders() })
+  if (!res.ok) return failWith(res)
 }
 
-// ── Portfolio ─────────────────────────────────────────────────────────────────
+// ── Portfolio (the organisation's own funded projects) ───────────────────────
 
 export interface PortfolioProject {
   id: string
+  slug: string
   name: string
   element: string
   category: string
   partner: string
   location: string
-  fundedAmount: number
-  fundedAmountFmt: string
-  fundedTrees: number
-  totalTrees: number
-  progressPct: number
-  progressLabel: string
-  barColor: string
-  rowBg: string
-  verificationStatus: string
   standard: string
-  hasLedgerEntry: boolean
-  ledgerEntryId?: string
-  tco2e: string
+  trees: number
+  amount: number
+  fundings: number
+  verifiedFundings: number
+  verifiedTrees: number
+  tco2e: number
+  verification: 'verified' | 'partial' | 'pending'
+  projectFunded: number
+  projectTotal: number
+  lastFunded: string | null
 }
 
 export interface PortfolioSummary {
-  totalFunded: string
-  verifiedTco2: string
-  verifiedTrees: string
+  totalFunded: number
+  trees: number
+  verifiedTrees: number
+  tco2e: number
   projectCount: number
   elementsActive: number
   elementsTotal: number
@@ -279,7 +302,44 @@ export interface PortfolioData {
 
 export async function fetchPortfolio(): Promise<PortfolioData> {
   const res = await fetch(`${BASE_URL}/api/portfolio`, { headers: await getAuthHeaders() })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) return failWith(res)
+  return res.json()
+}
+
+// ── Business organisation (Settings + Public-profile settings) ───────────────
+
+export interface BusinessOrg {
+  profileSlug: string | null
+  orgName: string
+  industry: string
+  country: string
+  employees: string
+  framework: string
+  fyEnd: string
+  tagline: string
+  website: string
+  visibility: 'public' | 'private'
+  showTrees: boolean
+  showTco2e: boolean
+  showProjects: boolean
+  showLedger: boolean
+  saved: boolean
+  updatedAt: string | null
+}
+
+export async function fetchBusinessOrg(): Promise<{ org: BusinessOrg }> {
+  const res = await fetch(`${BASE_URL}/api/business/org`, { headers: await getAuthHeaders() })
+  if (!res.ok) return failWith(res)
+  return res.json()
+}
+
+export async function saveBusinessOrg(patch: Partial<BusinessOrg>): Promise<{ org: BusinessOrg }> {
+  const res = await fetch(`${BASE_URL}/api/business/org`, {
+    method: 'PUT',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(patch),
+  })
+  if (!res.ok) return failWith(res)
   return res.json()
 }
 // ── Public Profile ────────────────────────────────────────────────────────────
@@ -346,9 +406,13 @@ export async function fetchProfile(slug: string): Promise<ProfileData> {
 export interface UserImpactEntry {
   id: string
   date: string
+  projectId: string
   project: string
+  location: string
+  element: string
   trees: number
   tCO2e: number
+  amount: number
   verified: boolean
   txHash: string
 }

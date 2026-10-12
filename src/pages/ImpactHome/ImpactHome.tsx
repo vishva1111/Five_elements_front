@@ -1,22 +1,31 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  TreePine, Leaf, MapPin, ExternalLink,
-  TrendingUp, Award, ChevronRight,
-  Sprout, AlertCircle
-} from 'lucide-react'
+import { TreePine, Leaf, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
 import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
 import { fetchUserImpact, fetchPlatformStats } from '../../services/api'
 import type { UserImpactEntry, UserImpactStats } from '../../services/api'
+import { ProjectHero, RadarChart } from '../../components/dashboard/DashboardVisuals'
 import IndividualLayout from './IndividualLayout'
 import './ImpactHome.css'
 
-function getCO2Rank(tCO2e: number): string {
-  if (tCO2e === 0) return '—'
-  if (tCO2e >= 10) return 'Top 5%'
-  if (tCO2e >= 5)  return 'Top 12%'
-  if (tCO2e >= 2)  return 'Top 25%'
-  return 'Top 50%'
+const fmtINR  = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
+const fmtDate = (iso: string) =>
+  iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
+
+const ELEMENT_GLYPH: Record<string, string> = {
+  earth: '🌍', water: '💧', fire: '🔥', air: '💨', ether: '✨',
+}
+
+interface ProjectShare {
+  projectId: string
+  name: string
+  location: string
+  element: string
+  trees: number
+  tCO2e: number
+  amount: number
+  fundings: number
+  verifiedFundings: number
 }
 
 export default function ImpactHome() {
@@ -28,6 +37,7 @@ export default function ImpactHome() {
   const [platStats, setPlatStats] = useState({ treesFunded: 0, tCO2eVerified: 0, projectsActive: 0 })
   const [dataLoading, setDataLoading] = useState(true)
   const [dataError, setDataError]     = useState<string | null>(null)
+  const [reloadKey, setReloadKey]     = useState(0)
 
   // Redirect users who have NO individual role at all.
   // Multi-role users (e.g. individual + business) are allowed here even
@@ -45,15 +55,17 @@ export default function ImpactHome() {
   }, [authLoading, user, navigate])
 
   // Fetch user-specific impact data
+  const userId = user?.id
   useEffect(() => {
-    if (authLoading || !user) return
+    if (authLoading || !userId) return
 
     setDataLoading(true)
     setDataError(null)
 
     Promise.all([
-      fetchUserImpact(user.id),
-      fetchPlatformStats(),
+      fetchUserImpact(userId),
+      // Platform totals are a side panel — never let them hide the user's own data.
+      fetchPlatformStats().catch(() => ({ treesFunded: 0, tCO2eVerified: 0, projectsActive: 0 })),
     ])
       .then(([impact, plat]) => {
         setEntries(impact.entries)
@@ -62,230 +74,254 @@ export default function ImpactHome() {
       })
       .catch((err: Error) => setDataError(err.message || 'Failed to load impact data'))
       .finally(() => setDataLoading(false))
-  }, [authLoading, user])
+  }, [authLoading, userId, reloadKey])
 
-  // ── Loading skeleton ──────────────────────────────────────────────────────
-  if (authLoading) {
-    return (
-      <div className="ih-shell">
-        <div className="ih-loading-screen">
-          <div className="ih-spinner" />
-          <p>Loading your impact…</p>
-        </div>
-      </div>
-    )
-  }
+  // One card per funded project, largest first.
+  const projectShares = useMemo<ProjectShare[]>(() => {
+    const map = new Map<string, ProjectShare>()
+    for (const e of entries) {
+      const key = e.projectId || e.project
+      const cur = map.get(key) ?? {
+        projectId: e.projectId, name: e.project, location: e.location, element: e.element || 'earth',
+        trees: 0, tCO2e: 0, amount: 0, fundings: 0, verifiedFundings: 0,
+      }
+      cur.trees    += e.trees || 0
+      cur.tCO2e    += e.tCO2e || 0
+      cur.amount   += e.amount || 0
+      cur.fundings += 1
+      if (e.verified) cur.verifiedFundings += 1
+      map.set(key, cur)
+    }
+    return [...map.values()].sort((a, b) => b.trees - a.trees)
+  }, [entries])
 
-  // ── Not logged in ─────────────────────────────────────────────────────────
-  if (!user) {
-    return (
-      <div className="ih-shell">
-        <div className="ih-loading-screen">
-          <AlertCircle size={40} color="#F09125" />
-          <p>Please <Link to="/login" className="ih-link">log in</Link> to view your impact dashboard.</p>
-        </div>
-      </div>
-    )
-  }
-
-  const displayName = user.displayName || user.email
-  const recentEntries = entries.slice(0, 4)
-  const hasData     = entries.length > 0
+  const displayName   = user?.displayName || user?.email || ''
+  const firstName     = displayName.split(' ')[0]
+  const hasData       = entries.length > 0
+  const recentEntries = entries.slice(0, 5)
+  const verifiedCount = entries.filter(e => e.verified).length
+  const platformShare = platStats.treesFunded > 0
+    ? Math.min(100, (stats.trees / platStats.treesFunded) * 100)
+    : 0
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
-    <IndividualLayout title={displayName} topLabel="MY IMPACT">
+    <IndividualLayout
+      title="Dashboard"
+      subtitle={`My impact · updated ${today}`}
+      actions={
+        <button type="button" className="db-topbar__report-btn" onClick={() => navigate('/impact/projects')}>
+          🌳 Fund trees
+        </button>
+      }
+    >
 
-      {/* ── Error banner ── */}
+      {/* ERROR */}
       {dataError && (
-        <div className="ih-error-banner">
-          <AlertCircle size={16} />
-          <span>Could not load your data: {dataError}</span>
+        <div className="db-error-banner">
+          ⚠ Could not load your data: {dataError} — <button type="button" onClick={() => setReloadKey(k => k + 1)} className="db-link">Retry</button>
         </div>
       )}
 
-      {/* ── KPI cards ── */}
-      <section className="ih-kpi-row">
-        <div className="ih-kpi-card ih-kpi-card--green">
-          <div className="ih-kpi-card__icon">🌳</div>
-          <div className="ih-kpi-card__body">
-            <span className="ih-kpi-card__num">
-              {dataLoading ? '—' : stats.trees.toLocaleString()}
-            </span>
-            <span className="ih-kpi-card__label">Trees Funded</span>
+      {/* LOADING */}
+      {dataLoading && (
+        <>
+          <div className="db-grid-2">
+            {[1, 2].map(i => <div key={i} className="db-card db-skel" style={{ height: 240 }} />)}
           </div>
-          <TrendingUp size={16} className="ih-kpi-card__trend" />
-        </div>
+          <div className="db-grid-3">
+            {[1, 2, 3].map(i => <div key={i} className="db-card db-skel" style={{ height: 300 }} />)}
+          </div>
+        </>
+      )}
 
-        <div className="ih-kpi-card ih-kpi-card--teal">
-          <div className="ih-kpi-card__icon">🌿</div>
-          <div className="ih-kpi-card__body">
-            <span className="ih-kpi-card__num">
-              {dataLoading ? '—' : <>{stats.tCO2e} <small>tCO₂e</small></>}
-            </span>
-            <span className="ih-kpi-card__label">Carbon Offset</span>
-          </div>
-          <TrendingUp size={16} className="ih-kpi-card__trend" />
-        </div>
+      {!dataLoading && (
+        <>
+          {/* Impact + Platform row */}
+          <div className="db-grid-2">
 
-        <div className="ih-kpi-card ih-kpi-card--amber">
-          <div className="ih-kpi-card__icon">🗺️</div>
-          <div className="ih-kpi-card__body">
-            <span className="ih-kpi-card__num">
-              {dataLoading ? '—' : stats.projects}
-            </span>
-            <span className="ih-kpi-card__label">Projects Backed</span>
-          </div>
-          <ChevronRight size={16} className="ih-kpi-card__trend" />
-        </div>
-
-        <div className="ih-kpi-card ih-kpi-card--dark">
-          <div className="ih-kpi-card__icon">🏅</div>
-          <div className="ih-kpi-card__body">
-            <span className="ih-kpi-card__num">
-              {dataLoading ? '—' : getCO2Rank(stats.tCO2e)}
-            </span>
-            <span className="ih-kpi-card__label">CO₂ Rank</span>
-          </div>
-          <ChevronRight size={16} className="ih-kpi-card__trend" />
-        </div>
-      </section>
-
-      {/* ── Middle row: Map + Platform stats ── */}
-      <section className="ih-mid-row">
-        {/* Map */}
-        <div className="ih-card ih-map-card">
-          <div className="ih-card__header">
-            <h2>Where your trees are growing</h2>
-            {hasData && (
-              <span className="ih-card__meta">
-                {stats.trees} trees · {stats.projects} project{stats.projects !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-          {!hasData && !dataLoading ? (
-            <div className="ih-empty-map">
-              <Sprout size={36} color="#40916C" />
-              <p>No trees funded yet</p>
-              <span>Fund your first project to see your trees on the map</span>
-              <Link to="/projects" className="ih-btn ih-btn--primary" style={{ marginTop: 8 }}>
-                Browse projects →
-              </Link>
-            </div>
-          ) : (
-            <div className="ih-map-placeholder">
-              <MapPin size={36} color="#2D6A4F" />
-              <p>Interactive map — geo-tagged tree locations</p>
-              <span>Coming soon: live satellite view of your funded areas</span>
-            </div>
-          )}
-        </div>
-
-        {/* Platform stats */}
-        <div className="ih-card ih-platform-card">
-          <p className="ih-platform-card__label">PLATFORM TOTAL</p>
-          <div className="ih-platform-card__stat">
-            <span className="ih-platform-card__num">
-              {(platStats.treesFunded || 0).toLocaleString()}
-            </span>
-            <span>trees funded</span>
-          </div>
-          <div className="ih-platform-card__stat">
-            <span className="ih-platform-card__num">
-              {(platStats.tCO2eVerified || 0).toLocaleString()}
-            </span>
-            <span>tCO₂e verified</span>
-          </div>
-          <div className="ih-platform-card__stat">
-            <span className="ih-platform-card__num">
-              {platStats.projectsActive || 0}
-            </span>
-            <span>active projects</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Ledger entries ── */}
-      <section className="ih-card ih-ledger-card">
-        <div className="ih-card__header">
-          <h2>My Ledger Entries</h2>
-          {hasData && (
-            <div style={{ display: 'flex', gap: 16 }}>
-              <Link to="/my-projects" className="ih-link">My projects & evidence →</Link>
-              <Link to="/ledger" className="ih-link">See all →</Link>
-            </div>
-          )}
-        </div>
-
-        {dataLoading ? (
-          <div className="ih-loading">
-            <div className="ih-spinner ih-spinner--sm" />
-            <span>Loading your entries…</span>
-          </div>
-        ) : !hasData ? (
-          <div className="ih-empty">
-            <Sprout size={40} color="#40916C" />
-            <p>No ledger entries yet</p>
-            <span>Once you fund a project, your verified impact entries will appear here.</span>
-            <Link to="/projects" className="ih-btn ih-btn--primary" style={{ marginTop: 12 }}>
-              Fund your first project →
-            </Link>
-          </div>
-        ) : (
-          <div className="ih-entries">
-            {recentEntries.map((entry) => (
-              <div key={entry.id} className="ih-entry">
-                <div className="ih-entry__left">
-                  <span className="ih-entry__id">{entry.id}</span>
-                  <span className="ih-entry__project">{entry.project}</span>
-                  <div className="ih-entry__meta">
-                    <span><TreePine size={12} /> {entry.trees} trees</span>
-                    <span><Leaf size={12} /> {entry.tCO2e} tCO₂e</span>
-                    <span>{entry.date}</span>
+            {/* My impact */}
+            <div className="db-card db-impact-card">
+              <div className="db-impact-card__header">
+                <div className="db-impact-card__title">
+                  {hasData ? `Your impact, ${firstName}` : `Welcome, ${firstName}`}
+                </div>
+                <Link to="/my-projects" className="db-link" style={{ fontSize: 12 }}>My projects →</Link>
+              </div>
+              <div className="db-impact-card__body">
+                <div className="db-impact-radar">
+                  <RadarChart treesFunded={stats.trees} />
+                </div>
+                <div className="db-impact-stats">
+                  <div className="db-impact-stat">
+                    <div className="db-impact-stat__row">
+                      <span className="db-impact-stat__num">{stats.trees.toLocaleString('en-IN')}</span>
+                      {verifiedCount > 0 && <span className="db-verified-badge">✓ {verifiedCount} verified</span>}
+                    </div>
+                    <div className="db-impact-stat__label">trees funded · Earth</div>
+                  </div>
+                  <div className="db-impact-stat">
+                    <div className="db-impact-stat__row">
+                      <span className="db-impact-stat__num db-impact-stat__num--mono">{stats.tCO2e.toFixed(1)}</span>
+                      <span className="db-impact-stat__unit">tCO₂e</span>
+                    </div>
+                    <div className="db-impact-stat__label">estimated carbon offset</div>
+                  </div>
+                  <div className="db-impact-stat">
+                    <div className="db-impact-stat__row">
+                      <span className="db-impact-stat__num">{stats.projects}</span>
+                      <span className="ind-stat-divider" />
+                      <span className="db-impact-stat__num">{fmtINR(stats.fundsInvested)}</span>
+                    </div>
+                    <div className="db-impact-stat__label">projects backed · total contributed</div>
                   </div>
                 </div>
-                <div className="ih-entry__right">
-                  {entry.verified && (
-                    <span className="ih-badge ih-badge--verified">✓ Verified</span>
-                  )}
-                  {entry.txHash && (
-                    <a href="#" className="ih-tx-link">
-                      {entry.txHash.slice(0, 12)}… <ExternalLink size={10} />
-                    </a>
-                  )}
+              </div>
+            </div>
+
+            {/* Platform */}
+            <div className="db-card db-target-card">
+              <div className="db-target-card__header">
+                <div className="db-target-card__title">Your share of CARM</div>
+              </div>
+              <div className="ind-share">
+                <div className="ind-share__big">
+                  <span className="ind-share__pct">{platformShare < 1 && platformShare > 0 ? '<1' : Math.round(platformShare)}%</span>
+                  <span className="ind-share__of">of all trees funded on the platform are yours</span>
+                </div>
+                <div className="db-progress-track ind-share__track">
+                  <div className="db-progress-fill ind-share__fill" style={{ width: `${Math.max(platformShare, hasData ? 2 : 0)}%` }} />
+                </div>
+                <div className="ind-share__stats">
+                  <div>
+                    <span className="ind-share__num">{(platStats.treesFunded || 0).toLocaleString('en-IN')}</span>
+                    <span className="ind-share__lbl">trees funded</span>
+                  </div>
+                  <div>
+                    <span className="ind-share__num">{(platStats.tCO2eVerified || 0).toLocaleString('en-IN')}</span>
+                    <span className="ind-share__lbl">tCO₂e verified</span>
+                  </div>
+                  <div>
+                    <span className="ind-share__num">{platStats.projectsActive || 0}</span>
+                    <span className="ind-share__lbl">active projects</span>
+                  </div>
                 </div>
               </div>
-            ))}
-            {entries.length > 4 && (
-              <div className="ih-entries__more">
-                <Link to="/ledger" className="ih-link">
-                  +{entries.length - 4} more entries — view all on ledger →
-                </Link>
+            </div>
+          </div>
+
+          {/* Funded projects */}
+          <div className="db-portfolio-header">
+            <div>
+              <h2 className="db-portfolio-title">My funded projects</h2>
+              <div className="db-portfolio-sub">Where your trees are growing · evidence arrives as geo-tagged photos</div>
+            </div>
+            {hasData && <Link to="/my-projects" className="db-link">View all projects →</Link>}
+          </div>
+
+          <div className="db-grid-3">
+            {projectShares.length > 0 ? projectShares.map(p => {
+              const allVerified = p.verifiedFundings === p.fundings
+              const someVerified = p.verifiedFundings > 0
+              const status   = allVerified ? 'Verified' : someVerified ? 'Partly verified' : 'Awaiting evidence'
+              const statusBg = allVerified ? '#185FA5' : someVerified ? '#2B5341' : '#8B3A00'
+              const sharePct = stats.trees > 0 ? Math.round((p.trees / stats.trees) * 100) : 0
+              return (
+                <div
+                  key={p.projectId || p.name}
+                  className="db-project-card"
+                  onClick={() => p.projectId && navigate(`/impact/projects/${p.projectId}`)}
+                >
+                  <div className="db-project-card__hero-wrap">
+                    <ProjectHero statusBg={statusBg} status={status} />
+                  </div>
+                  <div className="db-project-card__body">
+                    <div className="db-project-card__tags">
+                      <span className="db-element-badge">{ELEMENT_GLYPH[p.element] || '🌍'} {p.element}</span>
+                      {allVerified && <span className="db-verified-badge">✓ Verified</span>}
+                    </div>
+                    <div className="db-project-card__name">{p.name}</div>
+                    <div className="db-project-card__location">{p.location || '—'}</div>
+                    <div style={{ margin: '8px 0 4px' }}>
+                      <div className="db-progress-track ind-card-track">
+                        <div className="db-progress-fill ind-card-fill" style={{ width: `${Math.max(sharePct, 2)}%` }} />
+                      </div>
+                      <div className="ind-card-labels">
+                        <span>{p.trees.toLocaleString('en-IN')} trees</span>
+                        <span>{sharePct}% of your trees</span>
+                      </div>
+                    </div>
+                    <div className="db-project-card__footer">
+                      <span className="db-project-card__standard">Contributed · {fmtINR(p.amount)}</span>
+                      <span className="db-project-card__tco2">{(Math.round(p.tCO2e * 10) / 10)} tCO₂e</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            }) : (
+              <div className="db-portfolio-empty">
+                <div className="db-portfolio-empty__title">No projects funded yet</div>
+                <div className="db-portfolio-empty__sub">
+                  Browse verified projects and fund your first trees — they'll show up here.
+                </div>
+                <button type="button" className="db-cta-btn" onClick={() => navigate('/impact/projects')}>
+                  Browse projects
+                </button>
               </div>
             )}
           </div>
-        )}
-      </section>
 
-      {/* ── CTA ── */}
-      <section className="ih-cta">
-        <div className="ih-cta__text">
-          <h2>
-            {hasData ? 'Keep growing your impact' : 'Start your climate journey'}
-          </h2>
-          <p>
-            {hasData
-              ? 'Fund more trees, back more projects, build a verifiable record of your climate action.'
-              : 'Fund real reforestation projects and build a transparent, verified record of your climate impact.'}
-          </p>
-        </div>
-        <div className="ih-cta__btns">
-          <Link to="/projects" className="ih-btn ih-btn--primary">
-            {hasData ? 'Fund more trees →' : 'Browse projects →'}
-          </Link>
-          <Link to="/ledger" className="ih-btn ih-btn--outline">View public ledger</Link>
-        </div>
-      </section>
+          {/* Recent fundings */}
+          {hasData && (
+            <>
+              <div className="db-portfolio-header">
+                <div>
+                  <h2 className="db-portfolio-title">Recent fundings</h2>
+                  <div className="db-portfolio-sub">Each funding is written to the public ledger once its evidence is approved</div>
+                </div>
+                <Link to="/my-ledger" className="db-link">My ledger →</Link>
+              </div>
 
+              <div className="db-card ind-recent">
+                {recentEntries.map(entry => (
+                  <div key={entry.id} className="ih-entry">
+                    <div className="ih-entry__icon"><TreePine size={18} /></div>
+                    <div className="ih-entry__left">
+                      <span className="ih-entry__project">{entry.project}</span>
+                      <div className="ih-entry__meta">
+                        <span><TreePine size={12} /> {entry.trees} trees</span>
+                        <span><Leaf size={12} /> {entry.tCO2e} tCO₂e</span>
+                        <span>{fmtDate(entry.date)}</span>
+                      </div>
+                    </div>
+                    <div className="ih-entry__right">
+                      {entry.amount > 0 && <span className="ih-entry__amount">{fmtINR(entry.amount)}</span>}
+                      {entry.verified ? (
+                        <span className="ih-badge ih-badge--verified"><CheckCircle2 size={11} /> Verified</span>
+                      ) : (
+                        <span className="ih-badge ih-badge--in-progress"><Clock size={11} /> Awaiting evidence</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {entries.length > recentEntries.length && (
+                  <div className="ih-entries__more">
+                    <Link to="/my-projects" className="ih-link">
+                      +{entries.length - recentEntries.length} more — view all my projects →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {!hasData && !dataError && (
+            <div className="ind-hint">
+              <AlertCircle size={14} /> Every tree you fund is geo-tagged in the field and recorded on the public ledger.
+            </div>
+          )}
+        </>
+      )}
     </IndividualLayout>
   )
 }

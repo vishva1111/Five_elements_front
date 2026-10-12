@@ -163,7 +163,8 @@
   border-radius: 10px;
   border: 1px solid;
   min-width: 64px;
-  transition: opacity 0.12s;
+  transition: opacity 0.12s, background 0.12s;
+  font-family: inherit;
 }
 
 .pf-element-pill__name {

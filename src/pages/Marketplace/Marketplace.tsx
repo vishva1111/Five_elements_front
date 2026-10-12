@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import type { ProjectFilters } from '../../types'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useProjects, useProjectCategories } from '../../hooks/useProjects'
 import Navbar from '../../components/layout/Navbar'
+import IndividualLayout from '../ImpactHome/IndividualLayout'
 import './Marketplace.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 
@@ -137,7 +138,7 @@ function SkeletonCard() {
 }
 
 // ── Project card ──────────────────────────────────────────────────────────────
-function ProjectCard({ project: p }: { project: any }) {
+function ProjectCard({ project: p, base }: { project: any; base: string }) {
   const navigate = useNavigate()
   const pct = p.totalTrees > 0 ? Math.round((p.fundedTrees / p.totalTrees) * 100) : 0
   const el  = ELEMENTS.find(e => e.key === p.element) || ELEMENTS[0]
@@ -159,7 +160,7 @@ function ProjectCard({ project: p }: { project: any }) {
   }
 
   return (
-    <Link to={`/projects/${p.slug || p.id}`} className="mp-card">
+    <Link to={`${base}/${p.slug || p.id}`} className="mp-card">
       {/* Pentagon thumbnail */}
       <div className="mp-card__thumb">
         <div
@@ -238,6 +239,10 @@ function ProjectCard({ project: p }: { project: any }) {
 
 // ── Main Marketplace page ─────────────────────────────────────────────────────
 export default function Marketplace() {
+  // Reached from inside the Individual panel (/impact/projects) — render in the
+  // panel shell instead of the public website chrome.
+  const inPanel = useLocation().pathname.startsWith('/impact/')
+  const base    = inPanel ? '/impact/projects' : '/projects'
   const [activeElement, setActiveElement] = useState('earth')
   const [category,      setCategory]      = useState('All')
   const [priceRange,    setPriceRange]    = useState('Any')
@@ -277,8 +282,8 @@ export default function Marketplace() {
   const activeEl = ELEMENTS.find(e => e.key === activeElement) || ELEMENTS[0]
   const hasFilters = category !== 'All' || priceRange !== 'Any' || progress !== 'any'
 
-  return (
-    <div className="mp">
+  const page = (
+    <div className={`mp${inPanel ? ' mp--in-panel' : ''}`}>
 
       {/* ── Pentagon clip-path definition (used by all cards) ── */}
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
@@ -289,13 +294,15 @@ export default function Marketplace() {
         </defs>
       </svg>
 
-      {/* ── SHARED NAVBAR ── */}
-      <Navbar dark={false} />
-
-      {/* ── PAGE TITLE ── */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px 8px' }}>
-        <h1 className="mp__title">Fund a real project</h1>
-      </div>
+      {/* ── SHARED NAVBAR + PAGE TITLE (public site only) ── */}
+      {!inPanel && (
+        <>
+          <Navbar dark={false} />
+          <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px 8px' }}>
+            <h1 className="mp__title">Fund a real project</h1>
+          </div>
+        </>
+      )}
 
       {/* ── ELEMENT FILTER BAR ── */}
       <div className="mp__elements">
@@ -433,7 +440,7 @@ export default function Marketplace() {
           {/* Grid */}
           {!loading && !error && projects.length > 0 && (
             <div className="mp__grid">
-              {projects.map(p => <ProjectCard key={p.id} project={p} />)}
+              {projects.map(p => <ProjectCard key={p.id} project={p} base={base} />)}
             </div>
           )}
         </main>
@@ -445,4 +452,8 @@ export default function Marketplace() {
       )}
     </div>
   )
+
+  return inPanel
+    ? <IndividualLayout title="Browse projects" subtitle="Fund verified Earth projects · every tree geo-tagged">{page}</IndividualLayout>
+    : page
 }

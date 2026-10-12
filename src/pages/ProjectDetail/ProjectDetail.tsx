@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '../../hooks/useProjects'
 import Navbar from '../../components/layout/Navbar'
+import IndividualLayout from '../ImpactHome/IndividualLayout'
 import './ProjectDetail.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 
@@ -68,15 +69,23 @@ export default function ProjectDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { project, loading, error } = useProject(id ?? '')
+  // Reached from inside the Individual panel (/impact/projects/:id) — render in
+  // the panel shell instead of the public website chrome.
+  const inPanel = useLocation().pathname.startsWith('/impact/')
+  const base    = inPanel ? '/impact/projects' : '/projects'
+  const pdClass = `pd${inPanel ? ' pd--in-panel' : ''}`
+  const shell   = (node: React.ReactNode, title = 'Project') => inPanel
+    ? <IndividualLayout title={title} subtitle="Browse projects">{node}</IndividualLayout>
+    : <>{node}</>
   const [tab, setTab] = useState<'overview' | 'evidence' | 'ledger'>('overview')
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
   useModalBehavior(() => setLightboxIdx(null), lightboxIdx !== null)
 
   // Loading
   if (loading) {
-    return (
-      <div className="pd">
-        <Navbar />
+    return shell(
+      <div className={pdClass}>
+        {!inPanel && <Navbar />}
         <div className="pd-breadcrumb">
           <div className="pd-skel" style={{ height: 14, width: 260 }} />
         </div>
@@ -96,15 +105,15 @@ export default function ProjectDetail() {
 
   // Error / not found
   if (error || !project) {
-    return (
-      <div className="pd">
-        <Navbar />
+    return shell(
+      <div className={pdClass}>
+        {!inPanel && <Navbar />}
         <div className="pd-cols" style={{ marginTop: 48 }}>
           <div className="pd-body" style={{ textAlign: 'center', padding: '48px 0' }}>
             <p style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 18, color: '#112121', marginBottom: 16 }}>
               Project not found
             </p>
-            <Link to="/projects" className="pd-btn pd-btn--orange">← Back to projects</Link>
+            <Link to={base} className="pd-btn pd-btn--orange">← Back to projects</Link>
           </div>
         </div>
       </div>
@@ -164,15 +173,15 @@ export default function ProjectDetail() {
   const ctaDisabled = isCompleted || isPaused
   const ctaLabel = isCompleted ? 'Fully funded' : isPaused ? 'Funding paused' : 'Fund this project'
 
-  return (
-    <div className="pd">
-      <Navbar />
+  return shell(
+    <div className={pdClass}>
+      {!inPanel && <Navbar />}
 
       {/* Breadcrumb */}
       <div className="pd-breadcrumb">
-        <Link to="/" className="pd-crumb-link">Five Elements</Link>
+        <Link to={inPanel ? '/impact' : '/'} className="pd-crumb-link">{inPanel ? 'Dashboard' : 'Five Elements'}</Link>
         <span className="pd-crumb-sep">›</span>
-        <Link to="/projects" className="pd-crumb-link">Earth</Link>
+        <Link to={base} className="pd-crumb-link">Earth</Link>
         <span className="pd-crumb-sep">›</span>
         <span className="pd-crumb-link" style={{ cursor: 'pointer' }} onClick={() => navigate(-1)}>
           {project.category}
@@ -441,6 +450,7 @@ export default function ProjectDetail() {
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    project.name
   )
 }

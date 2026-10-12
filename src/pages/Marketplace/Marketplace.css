@@ -767,3 +767,10 @@
   .mp__el-btn { width: 64px; }
   .mp__el-icon { width: 50px; height: 48px; }
 }
+
+/* Inside the Individual panel shell — no full-page chrome */
+.mp--in-panel {
+  min-height: 0;
+  background: transparent;
+  margin: -24px;
+}
