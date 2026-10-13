@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
-import { useToast } from '../../components/ui/Toast'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
@@ -47,24 +46,6 @@ interface EvidenceFileDetail {
   status:     string
 }
 
-interface PendingTask {
-  id:            string
-  task_code:     string | null
-  name:          string
-  project_name:  string
-  assignee_name: string
-  target_count:  number
-  location:      string | null
-  status:        string
-  completed_at:  string | null
-  created_at:    string
-  tree_id:       string | null
-  review_notes:  string | null
-  photo_url:     string | null
-  tree_species:  string | null
-  tree_health:   string | null
-}
-
 const STATUS_ORDER = ['pending_review', 'in_review', 'needs_more_info', 'approved', 'rejected']
 
 function statusLabel(s: string) {
@@ -81,7 +62,6 @@ function badgeClass(s: string) {
 
 export default function SubmissionTracker() {
   const { session } = useAuth()
-  const toast = useToast()
   const navigate    = useNavigate()
 
   const [submissions, setSubmissions] = useState<Submission[]>([])
@@ -94,15 +74,6 @@ export default function SubmissionTracker() {
   const [detailFiles,   setDetailFiles]   = useState<EvidenceFileDetail[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError,   setDetailError]   = useState<string | null>(null)
-
-  // Task review state
-  const [activeTab,      setActiveTab]      = useState<'submissions' | 'tasks'>('submissions')
-  const [pendingTasks,   setPendingTasks]   = useState<PendingTask[]>([])
-  const [tasksLoading,   setTasksLoading]   = useState(false)
-  const [reviewingId,    setReviewingId]    = useState<string | null>(null)
-  const [reviewNotes,    setReviewNotes]    = useState('')
-  const [reviewAction,   setReviewAction]   = useState<'approve' | 'reject' | null>(null)
-  const [submittingReview, setSubmittingReview] = useState(false)
 
   const token = session?.access_token
 
@@ -145,47 +116,6 @@ export default function SubmissionTracker() {
     setDetailError(null)
   }
 
-  const loadPendingTasks = useCallback(async () => {
-    if (!token) return
-    setTasksLoading(true)
-    try {
-      const res = await fetch(`${API}/api/admin/tasks/pending-review`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const json = await res.json()
-      setPendingTasks(json.tasks || [])
-    } catch {
-      setPendingTasks([])
-    } finally {
-      setTasksLoading(false)
-    }
-  }, [token])
-
-  useEffect(() => {
-    if (activeTab === 'tasks') loadPendingTasks()
-  }, [activeTab, loadPendingTasks])
-
-  const handleReview = async (taskId: string, action: 'approve' | 'reject') => {
-    setSubmittingReview(true)
-    try {
-      const res = await fetch(`${API}/api/admin/tasks/${taskId}/${action}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ review_notes: reviewNotes }),
-      })
-      if (!res.ok) throw new Error('Failed')
-      toast.success(action === 'approve' ? 'Task approved.' : 'Task rejected.')
-      setReviewingId(null)
-      setReviewNotes('')
-      setReviewAction(null)
-      loadPendingTasks()
-    } catch {
-      toast.error('Failed to submit review. Please try again.')
-    } finally {
-      setSubmittingReview(false)
-    }
-  }
-
   const filtered = filter === 'all' ? submissions : submissions.filter(s => s.status === filter)
 
   // P7: cards flow left to right as the Super Admin acts. Anything not yet
@@ -220,312 +150,138 @@ export default function SubmissionTracker() {
   return (
     <PartnerLayout title="Submission tracker">
 
-      {/* Top-level tabs: Submissions | Task Review */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '2px solid #e8f0e8' }}>
-        {[
-          { key: 'submissions', label: '📋 Project Submissions' },
-          { key: 'tasks',       label: `✅ Task Review${pendingTasks.length > 0 && activeTab !== 'tasks' ? ` (${pendingTasks.length})` : ''}` },
-        ].map(tab => (
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+        {['all', ...STATUS_ORDER].map(f => (
           <button
-            key={tab.key}
+            key={f}
             type="button"
-            onClick={() => setActiveTab(tab.key as 'submissions' | 'tasks')}
+            onClick={() => setFilter(f)}
             style={{
-              padding: '10px 20px',
-              fontSize: 14,
-              fontWeight: activeTab === tab.key ? 700 : 500,
-              border: 'none',
-              borderBottom: activeTab === tab.key ? '3px solid #2B5341' : '3px solid transparent',
-              background: 'none',
-              color: activeTab === tab.key ? '#2B5341' : '#6B7B6E',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              marginBottom: -2,
+              padding: '6px 14px', borderRadius: 9999, fontSize: 12.5, fontWeight: filter === f ? 700 : 500,
+              border: `1.5px solid ${filter === f ? '#2B5341' : '#D8CFC6'}`,
+              background: filter === f ? '#EAF3DE' : '#fff',
+              color: filter === f ? '#2B5341' : '#6B7B6E',
+              cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
-            {tab.label}
+            {f === 'all' ? 'All' : statusLabel(f)}
           </button>
         ))}
+        <button type="button" className="pl-btn pl-btn--primary" style={{ marginLeft: 'auto' }} onClick={() => navigate('/partner/projects/new')}>
+          + New project
+        </button>
       </div>
 
-      {/* ── Submissions Tab ── */}
-      {activeTab === 'submissions' && (
+      {loading ? (
+        <div className="pl-card">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[1,2,3].map(i => <div key={i} className="pl-skel" style={{ height: 48 }} />)}
+          </div>
+        </div>
+      ) : submissions.length === 0 ? (
+        <div className="pl-card">
+          <div className="pl-empty">
+            <div className="pl-empty__icon">📋</div>
+            <div className="pl-empty__title">No submissions yet</div>
+            <div className="pl-empty__sub">Register a project and submit it for admin review to see it here.</div>
+            <button type="button" className="pl-btn pl-btn--primary" onClick={() => navigate('/partner/projects/new')}>Register project</button>
+          </div>
+        </div>
+      ) : (
         <>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-            {['all', ...STATUS_ORDER].map(f => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                style={{
-                  padding: '6px 14px', borderRadius: 9999, fontSize: 12.5, fontWeight: filter === f ? 700 : 500,
-                  border: `1.5px solid ${filter === f ? '#2B5341' : '#D8CFC6'}`,
-                  background: filter === f ? '#EAF3DE' : '#fff',
-                  color: filter === f ? '#2B5341' : '#6B7B6E',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                {f === 'all' ? 'All' : statusLabel(f)}
-              </button>
+          {allApproved && (
+            <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, fontWeight: 600, color: '#27500A', marginBottom: 16 }}>
+              Everything's approved. Nice work.
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, alignItems: 'start' }}>
+            {columns.map(col => (
+              <div key={col.key} className="pl-card" style={{ padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 4, background: col.accent }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#112121' }}>{col.title}</span>
+                  <span style={{ fontSize: 12, color: '#9AA79C' }}>({col.items.length})</span>
+                </div>
+
+                {col.items.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: '#9AA79C', padding: '10px 0' }}>Nothing here.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {col.items.map(sub => (
+                      <div
+                        key={sub.id}
+                        onClick={() => openSubmission(sub.id)}
+                        style={{
+                          border: `1px solid ${sub.status === 'rejected' ? '#E07050' : '#EDE6DF'}`,
+                          borderRadius: 10, padding: 12, cursor: 'pointer', background: '#fff',
+                        }}
+                        title="Click to view project details"
+                      >
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: '#112121', lineHeight: 1.35 }}>{sub.title}</div>
+                        <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 4, textTransform: 'capitalize' }}>
+                          {sub.element} · {sub.evidenceCount} file{sub.evidenceCount !== 1 ? 's' : ''} · {sub.submittedAt}
+                        </div>
+
+                        <div style={{ marginTop: 8 }}>
+                          <span className={`pl-badge pl-badge--${badgeClass(sub.status)}`}>{statusLabel(sub.status)}</span>
+                        </div>
+
+                        {/* The reason is on the face of the card, never behind
+                            a click — rejection is not a black box (P7-01). */}
+                        {sub.status === 'rejected' && (
+                          <div style={{ marginTop: 10, background: '#FFF0EC', border: '1px solid #F0C4B4', borderRadius: 8, padding: '8px 10px' }}>
+                            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#8B3A00', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                              Why it was rejected
+                            </div>
+                            <div style={{ fontSize: 12.5, color: '#6B2E00', lineHeight: 1.5, marginTop: 3 }}>
+                              {sub.reviewNotes || 'No reason was recorded. Contact your reviewer.'}
+                            </div>
+                          </div>
+                        )}
+
+                        {sub.status === 'needs_more_info' && sub.reviewNotes && (
+                          <div style={{ marginTop: 10, background: '#FEF0E3', border: '1px solid #F5C27A', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, color: '#8B3A00', lineHeight: 1.5 }}>
+                            {sub.reviewNotes}
+                          </div>
+                        )}
+
+                        {(sub.status === 'rejected' || sub.status === 'needs_more_info') && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <button
+                              type="button"
+                              className="pl-btn pl-btn--orange"
+                              style={{ height: 30, fontSize: 11.5, padding: '0 12px' }}
+                              onClick={e => { e.stopPropagation(); navigate('/partner/evidence') }}
+                            >
+                              {sub.status === 'rejected' ? 'Correct & resubmit' : 'Add evidence'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
-            <button type="button" className="pl-btn pl-btn--primary" style={{ marginLeft: 'auto' }} onClick={() => navigate('/partner/projects/new')}>
-              + New project
-            </button>
           </div>
 
-          {loading ? (
-            <div className="pl-card">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[1,2,3].map(i => <div key={i} className="pl-skel" style={{ height: 48 }} />)}
-              </div>
-            </div>
-          ) : submissions.length === 0 ? (
-            <div className="pl-card">
-              <div className="pl-empty">
-                <div className="pl-empty__icon">📋</div>
-                <div className="pl-empty__title">No submissions yet</div>
-                <div className="pl-empty__sub">Register a project and submit it for admin review to see it here.</div>
-                <button type="button" className="pl-btn pl-btn--primary" onClick={() => navigate('/partner/projects/new')}>Register project</button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {allApproved && (
-                <div style={{ background: '#EAF3DE', border: '1px solid #AACBA7', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, fontWeight: 600, color: '#27500A', marginBottom: 16 }}>
-                  Everything's approved. Nice work.
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, alignItems: 'start' }}>
-                {columns.map(col => (
-                  <div key={col.key} className="pl-card" style={{ padding: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 4, background: col.accent }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#112121' }}>{col.title}</span>
-                      <span style={{ fontSize: 12, color: '#9AA79C' }}>({col.items.length})</span>
-                    </div>
-
-                    {col.items.length === 0 ? (
-                      <div style={{ fontSize: 12.5, color: '#9AA79C', padding: '10px 0' }}>Nothing here.</div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {col.items.map(sub => (
-                          <div
-                            key={sub.id}
-                            onClick={() => openSubmission(sub.id)}
-                            style={{
-                              border: `1px solid ${sub.status === 'rejected' ? '#E07050' : '#EDE6DF'}`,
-                              borderRadius: 10, padding: 12, cursor: 'pointer', background: '#fff',
-                            }}
-                            title="Click to view project details"
-                          >
-                            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#112121', lineHeight: 1.35 }}>{sub.title}</div>
-                            <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 4, textTransform: 'capitalize' }}>
-                              {sub.element} · {sub.evidenceCount} file{sub.evidenceCount !== 1 ? 's' : ''} · {sub.submittedAt}
-                            </div>
-
-                            <div style={{ marginTop: 8 }}>
-                              <span className={`pl-badge pl-badge--${badgeClass(sub.status)}`}>{statusLabel(sub.status)}</span>
-                            </div>
-
-                            {/* The reason is on the face of the card, never behind
-                                a click — rejection is not a black box (P7-01). */}
-                            {sub.status === 'rejected' && (
-                              <div style={{ marginTop: 10, background: '#FFF0EC', border: '1px solid #F0C4B4', borderRadius: 8, padding: '8px 10px' }}>
-                                <div style={{ fontSize: 10.5, fontWeight: 700, color: '#8B3A00', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                                  Why it was rejected
-                                </div>
-                                <div style={{ fontSize: 12.5, color: '#6B2E00', lineHeight: 1.5, marginTop: 3 }}>
-                                  {sub.reviewNotes || 'No reason was recorded. Contact your reviewer.'}
-                                </div>
-                              </div>
-                            )}
-
-                            {sub.status === 'needs_more_info' && sub.reviewNotes && (
-                              <div style={{ marginTop: 10, background: '#FEF0E3', border: '1px solid #F5C27A', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, color: '#8B3A00', lineHeight: 1.5 }}>
-                                {sub.reviewNotes}
-                              </div>
-                            )}
-
-                            {(sub.status === 'rejected' || sub.status === 'needs_more_info') && (
-                              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                                <button
-                                  type="button"
-                                  className="pl-btn pl-btn--orange"
-                                  style={{ height: 30, fontSize: 11.5, padding: '0 12px' }}
-                                  onClick={e => { e.stopPropagation(); navigate('/partner/evidence') }}
-                                >
-                                  {sub.status === 'rejected' ? 'Correct & resubmit' : 'Add evidence'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 12, lineHeight: 1.5 }}>
-                Resubmitting keeps the original photos and GPS — you only correct what was wrong.
-                The original rejection stays in the record.
-              </div>
-            </>
-          )}
-
-          {filtered.some(s => s.reviewNotes) && (
-            <div className="pl-card" style={{ marginTop: 16 }}>
-              <div className="pl-card__title">Review notes</div>
-              {filtered.filter(s => s.reviewNotes).map(s => (
-                <div key={s.id} style={{ marginBottom: 12, padding: '10px 14px', background: '#F5F0EC', borderRadius: 9 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#112121', marginBottom: 4 }}>{s.title}</div>
-                  <div style={{ fontSize: 13, color: '#6B7B6E', lineHeight: 1.5 }}>{s.reviewNotes}</div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 12, lineHeight: 1.5 }}>
+            Resubmitting keeps the original photos and GPS — you only correct what was wrong.
+            The original rejection stays in the record.
+          </div>
         </>
       )}
 
-      {/* ── Task Review Tab ── */}
-      {activeTab === 'tasks' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, color: '#6B7B6E' }}>
-              Tasks completed by field users — approve or reject each one.
+      {filtered.some(s => s.reviewNotes) && (
+        <div className="pl-card" style={{ marginTop: 16 }}>
+          <div className="pl-card__title">Review notes</div>
+          {filtered.filter(s => s.reviewNotes).map(s => (
+            <div key={s.id} style={{ marginBottom: 12, padding: '10px 14px', background: '#F5F0EC', borderRadius: 9 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#112121', marginBottom: 4 }}>{s.title}</div>
+              <div style={{ fontSize: 13, color: '#6B7B6E', lineHeight: 1.5 }}>{s.reviewNotes}</div>
             </div>
-            <button type="button" className="pl-btn" style={{ fontSize: 12 }} onClick={loadPendingTasks}>
-              ↻ Refresh
-            </button>
-          </div>
-
-          {tasksLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[1,2,3].map(i => <div key={i} className="pl-skel" style={{ height: 72 }} />)}
-            </div>
-          ) : pendingTasks.length === 0 ? (
-            <div className="pl-card">
-              <div className="pl-empty">
-                <div className="pl-empty__icon">✅</div>
-                <div className="pl-empty__title">No tasks pending review</div>
-                <div className="pl-empty__sub">All completed tasks have been reviewed. Check back later.</div>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {pendingTasks.map(task => (
-                <div key={task.id} className="pl-card" style={{ padding: '16px 20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                    {/* Photo captured in the app */}
-                    {task.photo_url && (
-                      <a href={task.photo_url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
-                        <img
-                          src={task.photo_url}
-                          alt="Field capture"
-                          style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', border: '1px solid #e8f0e8', display: 'block' }}
-                        />
-                      </a>
-                    )}
-                    <div style={{ flex: 1 }}>
-                      {/* Task code + name */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                        <span style={{
-                          fontFamily: 'monospace', fontSize: 11, background: '#f0f7f0',
-                          color: '#1a5c2a', padding: '2px 8px', borderRadius: 4, fontWeight: 700,
-                        }}>
-                          {task.task_code || task.id.slice(0, 8).toUpperCase()}
-                        </span>
-                      </div>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: '#112121', marginBottom: 4 }}>{task.name}</div>
-                      <div style={{ fontSize: 12, color: '#6B7B6E', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                        <span>👤 {task.assignee_name}</span>
-                        {task.tree_species && <span>🌳 {task.tree_species}{task.tree_health ? ` · ${task.tree_health}` : ''}</span>}
-                        {task.project_name && <span>🌿 {task.project_name}</span>}
-                        {task.location && <span>📍 {task.location}</span>}
-                        {task.completed_at && (
-                          <span>✅ Completed {new Date(task.completed_at).toLocaleDateString('en-GB')}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    {reviewingId !== task.id ? (
-                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                        <button
-                          type="button"
-                          onClick={() => { setReviewingId(task.id); setReviewAction('approve'); setReviewNotes('') }}
-                          style={{
-                            background: '#22c55e', color: '#fff', border: 'none',
-                            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                          }}
-                        >
-                          ✓ Approve
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setReviewingId(task.id); setReviewAction('reject'); setReviewNotes('') }}
-                          style={{
-                            background: '#ef4444', color: '#fff', border: 'none',
-                            borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                          }}
-                        >
-                          ✕ Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                        <button
-                          type="button"
-                          onClick={() => { setReviewingId(null); setReviewAction(null) }}
-                          style={{
-                            background: '#f5f5f5', color: '#555', border: '1px solid #ddd',
-                            borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer',
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Inline review form */}
-                  {reviewingId === task.id && (
-                    <div style={{ marginTop: 14, padding: '14px 16px', background: reviewAction === 'approve' ? '#f0fdf4' : '#fef2f2', borderRadius: 10, border: `1px solid ${reviewAction === 'approve' ? '#bbf7d0' : '#fecaca'}` }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: reviewAction === 'approve' ? '#15803d' : '#dc2626', marginBottom: 8 }}>
-                        {reviewAction === 'approve' ? '✓ Approving task' : '✕ Rejecting task'} — add notes (optional)
-                      </div>
-                      <textarea
-                        value={reviewNotes}
-                        onChange={e => setReviewNotes(e.target.value)}
-                        placeholder={reviewAction === 'approve' ? 'Enter a note (optional)' : 'Enter reason for rejection'}
-                        rows={2}
-                        style={{
-                          width: '100%', padding: '8px 10px', borderRadius: 8,
-                          border: '1.5px solid #e0e0e0', fontSize: 13, resize: 'vertical',
-                          boxSizing: 'border-box', fontFamily: 'inherit',
-                        }}
-                      />
-                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                        <button
-                          type="button"
-                          disabled={submittingReview}
-                          onClick={() => handleReview(task.id, reviewAction!)}
-                          style={{
-                            background: reviewAction === 'approve' ? '#22c55e' : '#ef4444',
-                            color: '#fff', border: 'none', borderRadius: 8,
-                            padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                          }}
-                        >
-                          {submittingReview ? 'Submitting…' : `Confirm ${reviewAction === 'approve' ? 'Approval' : 'Rejection'}`}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          ))}
         </div>
       )}
 
