@@ -33,7 +33,6 @@ export default function Team() {
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState('Viewer')
   const [inviting, setInviting] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null)
   const [removing, setRemoving] = useState(false)
@@ -53,7 +52,7 @@ export default function Team() {
     if (!email) return
     setInviting(true)
     try {
-      const res = await inviteTeamMember(name.trim(), email.trim(), role)
+      const res = await inviteTeamMember(name.trim(), email.trim(), 'Viewer')
       setMembers(prev => [...prev, res.member])
       setName('')
       setEmail('')
@@ -82,9 +81,6 @@ export default function Team() {
     }
   }
 
-  const adminCount  = members.filter(m => m.role.toLowerCase() === 'admin').length
-  const editorCount = members.filter(m => m.role.toLowerCase() === 'editor').length
-  const viewerCount = members.filter(m => m.role.toLowerCase() === 'viewer').length
 
   return (
     <BusinessLayout title="Team" subtitle="Manage who has access to your organisation's account.">
@@ -100,21 +96,10 @@ export default function Team() {
         <>
           {/* Summary strip */}
           <div className="tm-summary-strip">
+            {/* Members are Viewers only, so one count says it all. */}
             <div className="tm-stat-card">
-              <div className="tm-stat-card__label">Total members</div>
+              <div className="tm-stat-card__label">Team members · Viewers</div>
               <span className="tm-stat-card__num">{members.length}</span>
-            </div>
-            <div className="tm-stat-card">
-              <div className="tm-stat-card__label">Admins</div>
-              <span className="tm-stat-card__num">{adminCount}</span>
-            </div>
-            <div className="tm-stat-card">
-              <div className="tm-stat-card__label">Editors</div>
-              <span className="tm-stat-card__num">{editorCount}</span>
-            </div>
-            <div className="tm-stat-card">
-              <div className="tm-stat-card__label">Viewers</div>
-              <span className="tm-stat-card__num">{viewerCount}</span>
             </div>
           </div>
 
@@ -178,15 +163,9 @@ export default function Team() {
                   onChange={e => setEmail(e.target.value)}
                   required
                 />
-                <select
-                  className="tm-invite-select"
-                  value={role}
-                  onChange={e => setRole(e.target.value)}
-                >
-                  <option>Admin</option>
-                  <option>Editor</option>
-                  <option>Viewer</option>
-                </select>
+                <span className="tm-invite-select" style={{ display: 'inline-flex', alignItems: 'center', cursor: 'default' }} title="Team members are added as Viewers">
+                  Viewer
+                </span>
               </div>
               <button type="submit" className="tm-invite-btn" disabled={inviting}>
                 {inviting ? 'Sending…' : 'Send invite'}

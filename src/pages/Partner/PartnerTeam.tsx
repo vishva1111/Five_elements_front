@@ -70,7 +70,9 @@ const ROLE_OPTIONS: { value: TeamRole; label: string; group: string; desc: strin
 ]
 
 const ROLE_GROUPS = ['Your organisation', 'Platform accounts']
-const ORG_ROLES: TeamRole[]  = ['admin', 'field_officer', 'viewer']
+// The Team page manages field officers only — Partner admin / Viewer accounts
+// aren't listed, offered in Invite / Edit, or counted here.
+const ORG_ROLES: TeamRole[]  = ['field_officer']
 const USER_ROLES: TeamRole[] = ['business', 'individual']
 
 function roleLabel(r: string) {
@@ -99,6 +101,7 @@ interface PartnerTeamProps {
 
 export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
   const scopeRoles = scope === 'users' ? USER_ROLES : ORG_ROLES
+  const tabRoles   = scopeRoles
   const scopeGroup  = scope === 'users' ? 'Platform accounts' : 'Your organisation'
 
   const { session } = useAuth()
@@ -435,7 +438,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
       title={scope === 'users' ? 'Users' : 'Team management'}
       subtitle={scope === 'users'
         ? "Business and Individual accounts you've onboarded — each gets their own dashboard"
-        : 'Admins, field officers and viewers who work inside your organisation'}
+        : 'Field officers who work inside your organisation'}
     >
 
       {error && !showInvite && !editing && (
@@ -482,6 +485,13 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
 
       {/* Toolbar — filter tabs on the left, create on the right */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        {scopeRoles.length === 1 ? (
+          // One role only — a filter would have nothing to filter; just show the count.
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: '#4F5E52' }}>
+            {roleLabel(scopeRoles[0])}s
+            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: '#EAF3DE', color: '#27500A' }}>{scopedMembers.length}</span>
+          </div>
+        ) : (
         <div role="tablist" aria-label="Filter by account type" style={{ display: 'inline-flex', gap: 4, padding: 4, background: '#EFEAE3', borderRadius: 12, flexWrap: 'wrap' }}>
           {(['all', ...scopeRoles] as const).map(r => {
             const on    = roleFilter === r
@@ -505,6 +515,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
             )
           })}
         </div>
+        )}
 
         <button type="button" className="pl-btn pl-btn--primary" onClick={openInvite} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <UserPlus size={16} /> {scope === 'users' ? 'New user' : 'Invite team member'}
@@ -541,7 +552,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
           </>}
         >
           {/* Account type as tabs */}
-          <RoleTabs roles={scopeRoles} value={inviteRole} onChange={setInviteRole} />
+          <RoleTabs roles={tabRoles} value={inviteRole} onChange={setInviteRole} />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 18 }}>
             <div className="sp-field" style={{ minWidth: 0 }}>
@@ -788,7 +799,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
             </button>
           </>}
         >
-          <RoleTabs roles={scopeRoles} value={editRole} onChange={setEditRole} />
+          <RoleTabs roles={tabRoles} value={editRole} onChange={setEditRole} />
 
           {editRole !== editing.role && (
             <div style={{ background: '#FEF0E3', border: '1px solid #F5C27A', borderRadius: 10, padding: '9px 12px', fontSize: 12, color: '#8B3A00', lineHeight: 1.5, marginTop: 12 }}>
