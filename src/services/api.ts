@@ -99,6 +99,8 @@ export interface FundingPayload {
   publicAttribution: boolean
   funderName?: string
   userId?: string
+  /** Whose funding this is — the person's own (default) or their organisation's. */
+  fundedAs?: 'individual' | 'business'
 }
 
 export async function submitFunding(payload: FundingPayload): Promise<{ orderId: string; status: string }> {
@@ -435,10 +437,11 @@ export interface UserImpactData {
  * server-side (used to query individual_fundings directly, relying on RLS
  * to do that same scoping in the browser instead).
  */
-export async function fetchUserImpact(userId: string): Promise<UserImpactData> {
+export async function fetchUserImpact(userId: string, as: 'individual' | 'business' = 'individual'): Promise<UserImpactData> {
   if (!userId) return { entries: [], stats: { trees: 0, tCO2e: 0, projects: 0, fundsInvested: 0 } }
 
-  const res = await fetch(`${BASE_URL}/api/my-impact`, { headers: await getAuthHeaders() })
+  const qs = as === 'business' ? '?as=business' : ''
+  const res = await fetch(`${BASE_URL}/api/my-impact${qs}`, { headers: await getAuthHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

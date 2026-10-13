@@ -55,6 +55,14 @@ export const ROLE_HOME: Record<UserRole, string> = {
   field_user: '/impact',
 }
 
+// Where "Fund this project" goes. Business-only accounts fund through their
+// own panel; everyone else through /fund, which asks a person holding both
+// Individual and Business which of the two is funding.
+export function fundPath(user: AuthUser | null, query: string): string {
+  const businessOnly = !!user && user.roles.includes('business') && !user.roles.includes('individual')
+  return `${businessOnly ? '/business/fund' : '/fund'}${query}`
+}
+
 interface MeResponse {
   id: string
   email: string

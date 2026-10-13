@@ -1,5 +1,5 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth, ROLE_HOME, UserRole } from '../../contexts/AuthContext'
 import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './RoleSelect.css'
@@ -81,16 +81,37 @@ function RoleCard({
   )
 }
 
+// Pages each workspace owns, so a login that started on one of them can carry
+// on there once that workspace is picked.
+const ROLE_AREAS: Partial<Record<UserRole, string[]>> = {
+  individual: ['/impact', '/fund', '/my-ledger', '/my-reports', '/my-projects', '/confirmation', '/certificate'],
+  business:   ['/business'],
+  partner:    ['/partner'],
+  admin:      ['/admin'],
+}
+const SHARED_AREAS = ['/account', '/submit-project']
+
+function destinationFor(role: UserRole, from?: string): string {
+  if (!from) return ROLE_HOME[role]
+  const path = from.split('?')[0]
+  // Funding a project as the business goes to the business funding page.
+  if (role === 'business' && path === '/fund') return '/business/fund' + from.slice(path.length)
+  const areas = [...(ROLE_AREAS[role] ?? []), ...SHARED_AREAS]
+  return areas.some(a => path === a || path.startsWith(a + '/')) ? from : ROLE_HOME[role]
+}
+
 export default function RoleSelect() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, setActiveRole } = useAuth()
 
   const name  = user?.displayName?.split(' ')[0] || 'there'
   const roles = user?.roles ?? []
+  const from  = (location.state as { from?: string } | null)?.from
 
   async function handleSelect(role: UserRole) {
     await setActiveRole(role)
-    navigate(ROLE_HOME[role], { replace: true })
+    navigate(destinationFor(role, from), { replace: true })
   }
 
   return (
