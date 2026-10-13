@@ -68,9 +68,13 @@ interface TaskBoardProps {
   roleLabel: string // shown in the assignee dropdown, e.g. "Admin / Partner"
   /** Also list planting tasks, so they can be reviewed here. Partners review planting on Assign action. */
   showPlanting?: boolean
+  /** Show the "Generate from project trees" bulk-create button (Admin only). */
+  showBulkGenerate?: boolean
+  /** Show the "+ Create Task" button (Admin only). */
+  showCreate?: boolean
 }
 
-export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: TaskBoardProps) {
+export default function TaskBoard({ Layout, roleLabel, showPlanting = false, showBulkGenerate = true, showCreate = true }: TaskBoardProps) {
   const { session } = useAuth()
   const toast = useToast()
   const [tasks, setTasks]           = useState<Task[]>([])
@@ -373,10 +377,14 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false }: T
           </select>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            <button onClick={() => { setBulkResult(null); setBulkForm({ project_id: '', assignee_id: '' }); setShowBulkModal(true) }} style={btnSecondary}>
-              🌳 Generate from project trees
-            </button>
-            <button onClick={() => { setForm({ name: '', project_id: '', assignee_id: '', tree_id: '', target_count: 10, location: '', due_date: '' }); setShowModal(true) }} style={btnPrimary}>+ Create Task</button>
+            {showBulkGenerate && (
+              <button onClick={() => { setBulkResult(null); setBulkForm({ project_id: '', assignee_id: '' }); setShowBulkModal(true) }} style={btnSecondary}>
+                🌳 Generate from project trees
+              </button>
+            )}
+            {showCreate && (
+              <button onClick={() => { setForm({ name: '', project_id: '', assignee_id: '', tree_id: '', target_count: 10, location: '', due_date: '' }); setShowModal(true) }} style={btnPrimary}>+ Create Task</button>
+            )}
           </div>
         </div>
 
