@@ -19,7 +19,8 @@ const NAV_ITEMS = [
   { icon: '🔍', label: 'Submission review', to: '/partner/submission-review' },
   { icon: '📁', label: 'Evidence vault',to: '/partner/evidence' },
   { icon: '📋', label: 'Submissions',   to: '/partner/submissions' },
-  { icon: '🔗', label: 'Linked to me',  to: '/partner/linked-submissions' },
+  // "Linked to me" (/partner/linked-submissions) is hidden from the menu; the
+  // page and its route still exist.
   { icon: '💰', label: 'Web User',      to: '/partner/funders' },
   { icon: '👥', label: 'Team',          to: '/partner/team' },
   { icon: '⚙',  label: 'Settings',      to: '/partner/settings' },
