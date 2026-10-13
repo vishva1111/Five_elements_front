@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { signInWithOAuth } from '../../services/oauth'
-import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
+import { useAuth, ROLE_HOME, fundPath } from '../../contexts/AuthContext'
 import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './Login.css'
 
@@ -68,7 +68,15 @@ export default function Login() {
     if (user) {
       const intended = (location.state as { from?: string })?.from
       if (intended && intended !== '/login') {
-        navigate(intended, { replace: true })
+        // Multi-role users still pick a workspace first; RoleSelect then sends
+        // them on to the page they were heading for.
+        if (user.roles && user.roles.length > 1) {
+          navigate('/role-select', { replace: true, state: { from: intended } })
+        } else {
+          // A Business-only account that tried to fund carries on in its own panel.
+          const fund = intended.match(/^\/fund(\?.*)?$/)
+          navigate(fund ? fundPath(user, fund[1] ?? '') : intended, { replace: true })
+        }
       } else if (user.isFirstLogin) {
         navigate('/welcome', { replace: true })
       } else if (user.roles && user.roles.length > 1) {

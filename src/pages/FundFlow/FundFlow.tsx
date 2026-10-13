@@ -3,6 +3,8 @@ import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-do
 import { useProject } from '../../hooks/useProjects'
 import { submitFunding } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import type { UserRole } from '../../contexts/AuthContext'
+import Modal from '../../components/ui/Modal'
 import './FundFlow.css'
 import IndividualLayout from '../ImpactHome/IndividualLayout'
 
@@ -39,7 +41,12 @@ function FootPenta() {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-function FundFlowContent() {
+// Shared by both panels: /fund (the person's own funding) and /business/fund
+// (their organisation's), each rendered inside its own panel shell.
+export function FundFlowContent({ fundedAs = 'individual' }: { fundedAs?: 'individual' | 'business' }) {
+  const isBusiness   = fundedAs === 'business'
+  // Individuals browse inside their panel; Business users use the public marketplace.
+  const projectsHref = isBusiness ? '/projects' : '/impact/projects'
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -112,7 +119,14 @@ function FundFlowContent() {
         paymentMethod: 'card',
         publicAttribution: showName,
         userId: user.id,
+        fundedAs,
       })
+      // The Confirmation page belongs to the Individual panel — a business
+      // gets the success screen here instead.
+      if (isBusiness) {
+        setIsDone(true)
+        return
+      }
       // S6: redirect to confirmation page with stats in query params
       const tco2e = (trees * 0.017).toFixed(2)
       const total = trees * (project?.pricePerTree || 120) * 1.1
@@ -127,6 +141,7 @@ function FundFlowContent() {
         /trees? left|fully funded/i.test(msg) ? `${msg}. Please choose a smaller amount${e.remaining === 0 ? ' or another project' : ''}.`
         : /not accepting funding/i.test(msg) ? 'This project is not accepting funding right now. Please choose another project.'
         : /not found/i.test(msg)           ? 'This project could not be found. Please choose another project.'
+        : /database update needed|business account/i.test(msg) ? msg
         : 'Something went wrong and your funding was not recorded. Please try again in a moment.'
       )
     } finally {
@@ -145,7 +160,7 @@ function FundFlowContent() {
           </svg>
           <h1 className="ff-success__title">Your trees are funded.</h1>
           <p className="ff-success__sub">
-            <strong>{trees} trees</strong> in <strong>{project?.name || 'your project'}</strong> — funded in your name.
+            <strong>{trees} trees</strong> in <strong>{project?.name || 'your project'}</strong> — funded {isBusiness ? 'by your organisation' : 'in your name'}.
             Evidence will arrive as geo-tagged photos, and your entry will appear on the public ledger.
           </p>
           <div className="ff-success__stats">
@@ -162,7 +177,14 @@ function FundFlowContent() {
               <span className="ff-success__stat-label">total paid</span>
             </div>
           </div>
-          <Link to="/impact/projects" className="ff-btn ff-btn--orange">Back to projects</Link>
+          {isBusiness ? (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Link to="/business/portfolio" className="ff-btn ff-btn--orange">View portfolio</Link>
+              <Link to={projectsHref} className="ff-btn">Fund another project</Link>
+            </div>
+          ) : (
+            <Link to={projectsHref} className="ff-btn ff-btn--orange">Back to projects</Link>
+          )}
         </div>
       </div>
     )
@@ -172,8 +194,9 @@ function FundFlowContent() {
   if (!projectId) {
     return (
       <div className="ff">
-        <div className="ff-fund" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-          <p style={{ color: '#6B7280', fontSize: 16 }}>No project selected. Please go back and choose a project to fund.</p>
+        <div className="ff-fund" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: 16 }}>
+          <p style={{ color: '#6B7280', fontSize: 16, margin: 0 }}>No project selected. Please go back and choose a project to fund.</p>
+          <Link to={projectsHref} className="ff-btn ff-btn--orange">Browse projects</Link>
         </div>
       </div>
     )
@@ -197,7 +220,7 @@ function FundFlowContent() {
       <div className="ff">
         <div className="ff-fund" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: 16 }}>
           <p style={{ color: '#6B7280', fontSize: 16, margin: 0 }}>We couldn't find this project. It may have been removed.</p>
-          <Link to="/impact/projects" className="ff-btn ff-btn--orange">Browse projects</Link>
+          <Link to={projectsHref} className="ff-btn ff-btn--orange">Browse projects</Link>
         </div>
       </div>
     )
@@ -278,7 +301,9 @@ function FundFlowContent() {
                 {/* Certificate note */}
                 <div className="ff-ctx-cert">
                   <span>📜</span>
-                  <span>You'll receive a certificate and a public ledger entry.</span>
+                  <span>{isBusiness
+                    ? "It's added to your organisation's portfolio, ledger and reports, with a public ledger entry."
+                    : "You'll receive a certificate and a public ledger entry."}</span>
                 </div>
               </div>
             </div>
@@ -387,9 +412,11 @@ function FundFlowContent() {
               onClick={() => setShowName(s => !s)}
             >
               <span className="ff-anon-toggle__text">
-                <span className="ff-anon-toggle__title">Show my name on the public ledger</span>
+                <span className="ff-anon-toggle__title">{isBusiness ? "Show our organisation's name on the public ledger" : 'Show my name on the public ledger'}</span>
                 <span className="ff-anon-toggle__note">
-                  {showName ? 'Your name will appear on the public ledger.' : "You\u2019ll appear as Anonymous."}
+                  {showName
+                    ? (isBusiness ? "Your organisation\u2019s name will appear on the public ledger." : 'Your name will appear on the public ledger.')
+                    : "You\u2019ll appear as Anonymous."}
                 </span>
               </span>
               <span className={`ff-switch${showName ? ' ff-switch--on' : ''}`}>
@@ -439,11 +466,80 @@ function FundFlowContent() {
   )
 }
 
+// ── "Fund as" chooser — for people who hold both Individual and Business ─────
+const FUND_AS = [
+  { role: 'individual' as const, glyph: '🌍', title: 'As an individual', desc: 'Funded in your own name, shown in your impact home and certificate.', color: '#2B5341', tint: '#EAF3DE' },
+  { role: 'business'   as const, glyph: '🏢', title: 'As your business',  desc: 'Funded by your organisation, counted in its portfolio and reports.', color: '#185FA5', tint: '#EAF2FA' },
+]
+
+function FundAsChooser({ onPick, onClose }: { onPick: (role: UserRole) => void; onClose: () => void }) {
+  return (
+    <Modal
+      icon={<span style={{ fontSize: 18 }}>🌳</span>}
+      title="Who is funding this project?"
+      subtitle="Your account has both an Individual and a Business workspace."
+      onClose={onClose}
+      width={480}
+      footer={
+        <button type="button" onClick={onClose} style={{ background: 'none', border: '1px solid #DDD5CB', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, color: '#3B4A40', cursor: 'pointer' }}>
+          Cancel
+        </button>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {FUND_AS.map(o => (
+          <button
+            key={o.role}
+            type="button"
+            onClick={() => onPick(o.role)}
+            style={{ display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', width: '100%', background: '#fff', border: `1.5px solid ${o.color}`, borderRadius: 14, padding: '14px 16px', cursor: 'pointer' }}
+          >
+            <span style={{ width: 42, height: 42, borderRadius: 12, background: o.tint, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{o.glyph}</span>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: o.color }}>{o.title}</span>
+              <span style={{ fontSize: 12.5, color: '#6B7B6E', lineHeight: 1.4 }}>{o.desc}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </Modal>
+  )
+}
+
 // Signed-in only — always shown inside the Individual panel shell.
 export default function FundFlow() {
+  const { user, setActiveRole } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Holding both roles while working as something other than Individual (e.g.
+  // browsing the website as the Business) — ask whose funding this is instead
+  // of silently funding in the personal name.
+  const mustChoose = !!user
+    && user.role !== 'individual'
+    && user.roles.includes('individual')
+    && user.roles.includes('business')
+
+  function pick(role: UserRole) {
+    if (role === 'individual') {
+      setActiveRole('individual').catch(() => {})
+      return
+    }
+    if (user?.role !== 'business') setActiveRole('business').catch(() => {})
+    navigate(`/business/fund${location.search}`, { replace: true })
+  }
+
+  function cancel() {
+    // React Router keeps the history index in history.state — go back when
+    // there's somewhere to go back to, otherwise to the projects list.
+    if ((window.history.state?.idx ?? 0) > 0) navigate(-1)
+    else navigate('/projects', { replace: true })
+  }
+
   return (
     <IndividualLayout title="Fund trees" subtitle="Choose how many trees · pay securely">
       <FundFlowContent />
+      {mustChoose && <FundAsChooser onPick={pick} onClose={cancel} />}
     </IndividualLayout>
   )
 }

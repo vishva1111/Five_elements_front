@@ -6,6 +6,7 @@ import Navbar from '../../components/layout/Navbar'
 import IndividualLayout from '../ImpactHome/IndividualLayout'
 import './Marketplace.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import { useAuth, fundPath } from '../../contexts/AuthContext'
 
 // ── Pentagon geometry helper ──────────────────────────────────────────────────
 function pentaPoints(cx: number, cy: number, r: number, rot = -Math.PI / 2): string {
@@ -153,10 +154,11 @@ function ProjectCard({ project: p, base }: { project: any; base: string }) {
 
   const imageUrl = p.coverImage || ELEMENT_FALLBACKS[p.element] || ELEMENT_FALLBACKS.earth
 
+  const { user } = useAuth()
   const handleFund = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    navigate(`/fund?project=${p.slug || p.id}`)
+    navigate(fundPath(user, `?project=${p.slug || p.id}`))
   }
 
   return (

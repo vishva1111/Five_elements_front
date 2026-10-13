@@ -5,6 +5,7 @@ import Navbar from '../../components/layout/Navbar'
 import IndividualLayout from '../ImpactHome/IndividualLayout'
 import './ProjectDetail.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
+import { useAuth, fundPath } from '../../contexts/AuthContext'
 
 // ── Pentagon geometry helper ──────────────────────────────────────────────────
 function penta(cx: number, cy: number, r: number, rot = -Math.PI / 2): string {
@@ -68,6 +69,7 @@ function MapPlaceholder({ pinCount }: { pinCount: number }) {
 export default function ProjectDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { project, loading, error } = useProject(id ?? '')
   // Reached from inside the Individual panel (/impact/projects/:id) — render in
   // the panel shell instead of the public website chrome.
@@ -394,7 +396,7 @@ export default function ProjectDetail() {
             <button
               className={`pd-cta-btn${ctaDisabled ? ' pd-cta-btn--disabled' : ''}`}
               disabled={ctaDisabled}
-              onClick={() => !ctaDisabled && navigate(`/fund?project=${project.slug || project.id}`)}
+              onClick={() => !ctaDisabled && navigate(fundPath(user, `?project=${project.slug || project.id}`))}
             >
               {ctaLabel}
             </button>
@@ -415,7 +417,7 @@ export default function ProjectDetail() {
         <button
           className={`pd-cta-btn pd-cta-btn--sm${ctaDisabled ? ' pd-cta-btn--disabled' : ''}`}
           disabled={ctaDisabled}
-          onClick={() => !ctaDisabled && navigate(`/fund?project=${project.slug || project.id}`)}
+          onClick={() => !ctaDisabled && navigate(fundPath(user, `?project=${project.slug || project.id}`))}
         >
           {ctaLabel}
         </button>

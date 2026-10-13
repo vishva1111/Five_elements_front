@@ -48,11 +48,11 @@ function LedgerPage({ variant }: { variant: Variant }) {
     if (!userId) return
     setLoading(true)
     setError(null)
-    fetchUserImpact(userId)
+    fetchUserImpact(userId, variant)
       .then(d => setEntries(d.entries))
       .catch((e: Error) => setError(e.message || 'Failed to load your ledger'))
       .finally(() => setLoading(false))
-  }, [userId])
+  }, [userId, variant])
 
   const verifiedCount = entries.filter(e => e.verified).length
   const totalTrees    = entries.reduce((s, e) => s + (e.trees || 0), 0)
