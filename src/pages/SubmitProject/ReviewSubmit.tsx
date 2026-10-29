@@ -456,6 +456,7 @@ export default function ReviewSubmit() {
 }
 
 function DevSwitcher({ current, onChange }: { current: ReviewState; onChange: (s: ReviewState) => void }) {
+  if (!import.meta.env.DEV) return null
   const states: ReviewState[] = ['draft', 'inreview', 'moreinfo', 'verified', 'selfreported', 'rejected']
   return (
     <div style={{ marginTop: 32, padding: '12px 16px', background: '#F0EDE9', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>

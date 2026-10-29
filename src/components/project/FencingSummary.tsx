@@ -24,7 +24,7 @@ export function fencingValue(f: Fencing | null | undefined, key: keyof Fencing) 
 /** Compact fencing block for a project card. */
 export default function FencingSummary({ fencing, boundary, compact = false }: { fencing: Fencing | null | undefined; boundary?: Boundary | null; compact?: boolean }) {
   const st = fencing?.status ? FENCING_STATUS[fencing.status] : null
-  const hasAny = !!fencing && Object.keys(fencing).some(k => k !== 'updated_at' && (fencing as any)[k] !== '' && (fencing as any)[k] != null)
+  const hasAny = !!fencing && (Object.keys(fencing) as (keyof Fencing)[]).some(k => k !== 'updated_at' && fencing[k] !== '' && fencing[k] != null)
   return (
     <div style={{ borderRadius: 10, border: '1px solid #EEE9E1', background: '#FCFBF8', padding: '10px 12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: hasAny || boundary ? 6 : 0 }}>

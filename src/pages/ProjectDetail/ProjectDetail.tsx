@@ -65,6 +65,11 @@ function MapPlaceholder({ pinCount }: { pinCount: number }) {
   )
 }
 
+// ── Local data types ──────────────────────────────────────────────────────────
+interface CoBenefit { icon: string; title: string; note: string }
+interface EvidenceItem { id: string; qty: string; species: string; gps: string; date: string; bg: string }
+interface LedgerRow { id: string; qty: string; date: string; hash: string }
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function ProjectDetail() {
   const { id } = useParams()
@@ -234,7 +239,7 @@ export default function ProjectDetail() {
               <span>Executed by <strong className="pd-meta-executor">{project.partner}</strong></span>
             </div>
             <div className="pd-cert-row">
-              <a href="#" className="pd-cert-link">
+              <a href={`https://registry.example.com/${project.certificationId}`} target="_blank" rel="noopener noreferrer" className="pd-cert-link">
                 ✓ {project.certification} · <span className="pd-cert-id">{project.certificationId}</span> ↗
               </a>
               <button className="pd-share-btn">Share</button>
@@ -279,7 +284,7 @@ export default function ProjectDetail() {
               </div>
 
               <div className="pd-cobenefits">
-                {cobenefits.map((b: any) => (
+                {cobenefits.map((b: CoBenefit) => (
                   <div key={b.title} className="pd-cobenefit-card">
                     <div className="pd-cobenefit-card__icon">{b.icon}</div>
                     <div className="pd-cobenefit-card__title">{b.title}</div>
@@ -295,7 +300,7 @@ export default function ProjectDetail() {
             <div className="pd-tab-content">
               {hasEvidence ? (
                 <div className="pd-evidence-grid">
-                  {evidence.map((e: any, idx: number) => (
+                  {evidence.map((e: EvidenceItem, idx: number) => (
                     <button
                       key={e.id}
                       className="pd-evidence-card"
@@ -333,7 +338,7 @@ export default function ProjectDetail() {
                     <span className="pd-ledger__dot" />
                     Approved entries only · anyone can verify these on the public ledger
                   </div>
-                  {ledger.map((l: any) => (
+                  {ledger.map((l: LedgerRow) => (
                     <div key={l.id} className="pd-ledger-row">
                       <div className="pd-ledger-row__left">
                         <div className="pd-ledger-row__top">
@@ -342,7 +347,7 @@ export default function ProjectDetail() {
                         </div>
                         <span className="pd-ledger-row__hash">{l.hash}</span>
                       </div>
-                      <a href="#" className="pd-ledger-row__link">View on ledger ↗</a>
+                      <Link to={`/ledger/${l.id}`} className="pd-ledger-row__link">View on ledger ↗</Link>
                     </div>
                   ))}
                 </div>
@@ -447,7 +452,7 @@ export default function ProjectDetail() {
                   <span className="pd-lightbox__meta-val">EV-{String(lbItem.id).padStart(4, '0')}</span>
                 </div>
               </div>
-              <a href="#" className="pd-lightbox__ledger-link">View this entry on the ledger ↗</a>
+              <Link to={lbItem ? `/ledger/${lbItem.id}` : '/ledger'} className="pd-lightbox__ledger-link">View this entry on the ledger ↗</Link>
             </div>
           </div>
         </div>

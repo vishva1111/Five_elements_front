@@ -65,7 +65,7 @@ export default function Configuration() {
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Save failed.')
       setMsg('✅ Feature flags saved.')
-    } catch (e: any) { setMsg(e.message || 'Save failed.') }
+    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : 'Save failed.') }
     finally { setSaving(false) }
   }
 
@@ -77,7 +77,7 @@ export default function Configuration() {
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Save failed.')
       setMsg('✅ Emission factors saved.')
-    } catch (e: any) { setMsg(e.message || 'Save failed.') }
+    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : 'Save failed.') }
     finally { setSaving(false) }
   }
 
@@ -89,7 +89,7 @@ export default function Configuration() {
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Save failed.')
       setMsg('✅ Platform settings saved.')
-    } catch (e: any) { setMsg(e.message || 'Save failed.') }
+    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : 'Save failed.') }
     finally { setSaving(false) }
   }
 

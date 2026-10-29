@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import type { ProjectFilters } from '../../types'
+import type { ProjectFilters, Project } from '../../types'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useProjects, useProjectCategories } from '../../hooks/useProjects'
 import Navbar from '../../components/layout/Navbar'
@@ -139,7 +139,7 @@ function SkeletonCard() {
 }
 
 // ── Project card ──────────────────────────────────────────────────────────────
-function ProjectCard({ project: p, base }: { project: any; base: string }) {
+function ProjectCard({ project: p, base }: { project: Project; base: string }) {
   const navigate = useNavigate()
   const pct = p.totalTrees > 0 ? Math.round((p.fundedTrees / p.totalTrees) * 100) : 0
   const el  = ELEMENTS.find(e => e.key === p.element) || ELEMENTS[0]

@@ -71,8 +71,8 @@ export default function EvidenceReview() {
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       setDone('approved')
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }
@@ -91,8 +91,8 @@ export default function EvidenceReview() {
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       setDone('rejected')
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }

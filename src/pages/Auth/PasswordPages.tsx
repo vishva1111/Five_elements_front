@@ -192,8 +192,8 @@ export function ChangePassword() {
       await postJson('/api/auth/change-password', { currentPassword: current, newPassword: password }, token)
       setDone(true)
       setCurrent(''); setPassword(''); setConfirm('')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred.')
     } finally {
       setBusy(false)
     }

@@ -77,8 +77,8 @@ export default function UsersAndTenants() {
         ? (newStatus === 'active' ? 'approved — they have been emailed' : 'rejected')
         : (newStatus === 'suspended' ? 'suspended' : 'reactivated')
       setMsg(`User ${user.email} ${verb}.`)
-    } catch (e: any) {
-      setMsg(e.message || 'Action failed.')
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }
@@ -99,7 +99,7 @@ export default function UsersAndTenants() {
       {/* Stats */}
       <div className="ad-stats ad-grid-4" style={{ marginBottom: 20 }}>
         {Object.entries(counts).map(([role, count]) => (
-          <div key={role} className="ad-stat" style={{ cursor: 'pointer' }} onClick={() => setRoleFilter(role as any)}>
+          <div key={role} className="ad-stat" style={{ cursor: 'pointer' }} onClick={() => setRoleFilter(role as 'individual' | 'business' | 'partner' | 'admin')}>
             <div className="ad-stat__num">{count}</div>
             <div className="ad-stat__label" style={{ textTransform: 'capitalize' }}>{role}s</div>
           </div>

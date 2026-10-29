@@ -113,8 +113,16 @@ export default function AddEvidence() {
     }, 300)
   }
 
-  const photos = PHOTO_DEFS
-  const docs = DOC_OPTIONS.slice(0, docsCount)
+  const photos = import.meta.env.DEV
+    ? PHOTO_DEFS
+    : draft.evidenceFiles
+        .filter(f => f.type.startsWith('image/'))
+        .map(f => ({ date: '', gps: null as string | null, bg: '#E3EDD9', flag: false }))
+  const docs: DocItem[] = import.meta.env.DEV
+    ? DOC_OPTIONS.slice(0, docsCount)
+    : draft.evidenceFiles
+        .filter(f => !f.type.startsWith('image/'))
+        .map(f => ({ name: f.name, meta: `${f.type} ${Math.round(f.size / 1024)} KB` }))
   const gpsCount = photos.filter(p => p.gps).length
   const sigDated = true
   const sigGps = gpsCount >= 3

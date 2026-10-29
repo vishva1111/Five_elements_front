@@ -333,13 +333,13 @@ export default function Signup() {
 
         <p className="su-terms">
           By creating an account you agree to the{' '}
-          <a href="#">terms</a> and <a href="#">privacy policy</a>.
+          <Link to="/terms">terms</Link> and <Link to="/privacy">privacy policy</Link>.
         </p>
 
         <div className="su-partner-note">
           Field partners don't sign up here — they join through partner onboarding by invitation.{' '}
-          New accounts land on the <a href="#">one-time welcome choice</a>, then your{' '}
-          <a href="#">impact home</a>.
+          New accounts land on the <Link to="/welcome">one-time welcome choice</Link>, then your{' '}
+          <Link to="/impact">impact home</Link>.
         </div>
       </div>
 

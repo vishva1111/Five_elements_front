@@ -132,8 +132,8 @@ export default function PartnerManagement() {
       setMsg(action === 'approve' ? '✅ Partner approved — they can now access the partner portal.' : '❌ Partner rejected — they have been notified.')
       setSelected(null)
       setNotes('')
-    } catch (e: any) {
-      setMsg(e.message)
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }

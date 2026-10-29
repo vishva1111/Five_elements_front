@@ -180,7 +180,10 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
     setSubmitting(true)
     try {
       const token = await getValidAccessToken()
-      const body: Record<string, any> = {
+      const body: {
+        name: string; assignee_id: string; target_count: number;
+        project_id?: string; tree_id?: string; location?: string; due_date?: string
+      } = {
         name:         form.name,
         assignee_id:  form.assignee_id,
         target_count: form.target_count,

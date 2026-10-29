@@ -73,8 +73,8 @@ export default function LedgerAdmin() {
       setMsg('✅ Entry superseded — a corrected entry has been created.')
       setSelected(null)
       setNotes('')
-    } catch (e: any) {
-      setMsg(e.message)
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(false)
     }

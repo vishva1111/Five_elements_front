@@ -102,8 +102,8 @@ export default function ProjectsOversight() {
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       setProjects(prev => prev.map(p => p.id === id ? { ...p, status: 'approved' } : p))
       setMsg('✅ Project approved — now visible on the public marketplace.')
-    } catch (e: any) {
-      setMsg(e.message)
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }

@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SubmitProjectLayout from './SubmitProjectLayout'
 import { useSubmitProject } from './useSubmitProject'
 import { getValidAccessToken } from '../../services/authTokens'
+import { API_URL } from '../../config/api'
 import './SubmitProject.css'
 
 // ── Pentagon SVG ──────────────────────────────────────────────────────────────
@@ -28,11 +29,6 @@ interface SearchResult {
   meta: string
 }
 
-const MOCK_RESULTS: SearchResult[] = [
-  { id: 'tr', name: 'Terra Roots Foundation', initials: 'TR', meta: 'Afforestation · Gujarat & Karnataka · 212 approved captures' },
-  { id: 'tv', name: 'Terra Verde Collective', initials: 'TV', meta: 'Agroforestry · Maharashtra · 48 approved captures' },
-]
-
 export default function AddPartner() {
   const navigate = useNavigate()
   const { draft, updateDraft, saveDraftToAPI } = useSubmitProject()
@@ -43,6 +39,7 @@ export default function AddPartner() {
   const [linked, setLinked] = useState<SearchResult | null>(null)
   const [noResults, setNoResults] = useState(false)
   const [searchError, setSearchError] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Custom partner fields
   const [customName, setCustomName] = useState(draft.partnerName || '')
@@ -54,17 +51,30 @@ export default function AddPartner() {
     setSearchVal(val)
     setNoResults(false)
     setResults([])
+    setSearchError(false)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     if (!val.trim()) return
     setSearching(true)
-    setTimeout(() => {
-      setSearching(false)
-      const filtered = MOCK_RESULTS.filter(r => r.name.toLowerCase().includes(val.toLowerCase()))
-      if (filtered.length > 0) {
-        setResults(filtered)
-      } else {
-        setNoResults(true)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const res = await fetch(
+          `${API_URL}/api/partners/search?q=${encodeURIComponent(val.trim())}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        if (!res.ok) throw new Error('Search failed')
+        const data: SearchResult[] = await res.json()
+        setSearching(false)
+        if (data.length > 0) {
+          setResults(data)
+        } else {
+          setNoResults(true)
+        }
+      } catch {
+        setSearching(false)
+        setSearchError(true)
       }
-    }, 700)
+    }, 500)
   }
 
   function handleLink(r: SearchResult) {
