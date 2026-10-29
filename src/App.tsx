@@ -80,7 +80,7 @@ const ImportFunders = lazy(() => import('./pages/Partner/ImportFunders'))
 const PartnerTasks = lazy(() => import('./pages/Partner/PartnerTasks'))
 const PartnerSubmissionReview = lazy(() => import('./pages/Partner/PartnerSubmissionReview'))
 const FundersView = lazy(() => import('./pages/Partner/FundersView'))
-const PartnerTeam = lazy(() => import('./pages/Partner/PartnerTeam'))
+const PartnerTeam = lazy(() => import('./pages/Partner/PartnerTeam').then(m => ({ default: m.PartnerTeam })))
 const PartnerUsers = lazy(() => import('./pages/Partner/PartnerUsers'))
 const PartnerSettings = lazy(() => import('./pages/Partner/PartnerSettings'))
 
