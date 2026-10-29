@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
@@ -37,14 +38,20 @@ export default function DataQuality() {
   const [filter,  setFilter]  = useState<'open' | 'resolved' | 'dismissed' | 'all'>('open')
   const [acting,  setActing]  = useState<string | null>(null)
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
-    fetch(`${API}/api/admin/data-quality`, { headers })
-      .then(r => r.json())
-      .then(d => setFlags(d.flags || []))
-      .catch(() => setFlags([]))
-      .finally(() => setLoading(false))
+    setLoading(true)
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/data-quality`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setFlags(d.flags || [])
+      } catch {
+        setFlags([])
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session])
 
   const filtered = filter === 'all' ? flags : flags.filter(f => f.status === filter)
@@ -54,8 +61,10 @@ export default function DataQuality() {
   async function updateFlag(id: string, status: 'resolved' | 'dismissed') {
     setActing(id)
     try {
+      const token = await getValidAccessToken()
       await fetch(`${API}/api/admin/data-quality/${id}`, {
-        method: 'PATCH', headers,
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status }),
       })
       setFlags(prev => prev.map(f => f.id === id ? { ...f, status } : f))

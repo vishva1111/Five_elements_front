@@ -8,6 +8,7 @@ import { FencingMapBlock, FencingRequestBanner } from '../../components/project/
 import ProjectTreeList from '../../components/project/ProjectTreeList'
 import { DEFAULT_PROJECT_COLOR, formatDate, type Boundary, type Fencing } from '../../components/tree/treeLabels'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
@@ -50,18 +51,22 @@ export default function ProjectManage() {
   const { id } = useParams<{ id: string }>()
   const { session } = useAuth()
   const navigate = useNavigate()
-  const token = session?.access_token
 
   const [project, setProject] = useState<FullProject | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(() => {
-    fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${token || ''}` } })
-      .then(r => r.json())
-      .then(d => setProject((d.projects || []).find((p: FullProject) => p.id === id) || null))
-      .catch(() => setProject(null))
-      .finally(() => setLoading(false))
-  }, [token, id])
+  const load = useCallback(async () => {
+    try {
+      const token = await getValidAccessToken()
+      const r = await fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${token}` } })
+      const d = await r.json()
+      setProject((d.projects || []).find((p: FullProject) => p.id === id) || null)
+    } catch {
+      setProject(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [session, id])
   useEffect(() => { load() }, [load])
 
   if (loading) {

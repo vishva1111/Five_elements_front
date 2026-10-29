@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
@@ -40,14 +41,18 @@ export default function FinanceConsole() {
   const [loading, setLoading] = useState(true)
   const [filter,  setFilter]  = useState<'all' | 'funding' | 'payout' | 'refund' | 'fee'>('all')
 
-  const headers = { Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
-    fetch(`${API}/api/admin/finance`, { headers })
-      .then(r => r.json())
-      .then(d => { setSummary(d.summary || null); setTxns(d.transactions || []) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/finance`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setSummary(d.summary || null)
+        setTxns(d.transactions || [])
+      } catch {}
+      finally { setLoading(false) }
+    })()
   }, [session])
 
   const filtered = filter === 'all' ? txns : txns.filter(t => t.type === filter)

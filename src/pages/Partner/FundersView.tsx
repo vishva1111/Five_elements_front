@@ -6,6 +6,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
@@ -45,10 +46,9 @@ export default function FundersView() {
     else toast.success(m)
   }
 
-  const token = session?.access_token
-
   async function reload() {
-    const res = await fetch(`${API}/api/partner/funders`, { headers: { Authorization: `Bearer ${token || ''}` } })
+    const token = await getValidAccessToken()
+    const res = await fetch(`${API}/api/partner/funders`, { headers: { Authorization: `Bearer ${token}` } })
     const d = await res.json()
     if (res.ok) { setFunders(d.funders || []); setSummary(d.summary || null) }
   }
@@ -70,6 +70,7 @@ export default function FundersView() {
     setSavingEdit(true)
     setEditError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/funders/${editing.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -97,6 +98,7 @@ export default function FundersView() {
     if (!confirmDelete) return
     setDeleting(true)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/funders/${confirmDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -114,14 +116,20 @@ export default function FundersView() {
   }
 
   useEffect(() => {
-    fetch(
-      `${API}/api/partner/funders`,
-      { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
-    )
-      .then(r => r.json())
-      .then(d => { setFunders(d.funders || []); setSummary(d.summary || null) })
-      .catch(() => { setFunders([]); setSummary(null) })
-      .finally(() => setLoading(false))
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/partner/funders`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setFunders(d.funders || [])
+        setSummary(d.summary || null)
+      } catch {
+        setFunders([])
+        setSummary(null)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session])
 
   const filtered = funders.filter(f =>

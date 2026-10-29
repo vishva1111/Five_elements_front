@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
@@ -32,14 +33,20 @@ export default function UsersAndTenants() {
   const [acting,  setActing]  = useState<string | null>(null)
   const [msg,     setMsg]     = useState('')
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
-    fetch(`${API}/api/admin/users`, { headers })
-      .then(r => r.json())
-      .then(d => setUsers(d.users || []))
-      .catch(() => setUsers([]))
-      .finally(() => setLoading(false))
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/users`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setUsers(d.users || [])
+      } catch {
+        setUsers([])
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session])
 
   const filtered = users
@@ -58,8 +65,10 @@ export default function UsersAndTenants() {
   async function setStatus(user: User, newStatus: User['status']) {
     setActing(user.id)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/users/${user.id}`, {
-        method: 'PATCH', headers,
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Action failed.')

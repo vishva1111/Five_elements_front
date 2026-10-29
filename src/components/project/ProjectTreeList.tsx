@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import TreeDetailModal from '../tree/TreeHistory'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import type { Tone } from '../tree/treeLabels'
 
@@ -41,13 +42,17 @@ export default function ProjectTreeList({ projectId, added, planted, onOpenMap }
     const next = !open
     setOpen(next)
     if (next && trees === null) {
-      fetch(`${API}/api/partner/trees?project_id=${encodeURIComponent(projectId)}`, { headers: { Authorization: `Bearer ${session?.access_token || ''}` } })
-        .then(async r => {
+      ;(async () => {
+        try {
+          const token = await getValidAccessToken()
+          const r = await fetch(`${API}/api/partner/trees?project_id=${encodeURIComponent(projectId)}`, { headers: { Authorization: `Bearer ${token}` } })
           const d = await r.json()
           if (!r.ok) throw new Error(d.error || 'Could not load trees')
           setTrees(d.trees || [])
-        })
-        .catch(e => setError(e.message))
+        } catch (e: any) {
+          setError(e.message)
+        }
+      })()
     }
   }
 

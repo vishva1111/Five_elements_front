@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL } from '../../config/api'
 import { CheckCircle2 } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
@@ -30,11 +31,18 @@ export default function FencingRequests() {
 
   const load = useCallback(() => {
     setLoading(true)
-    fetch(`${API_URL}/api/admin/change-requests?status=${tab}`, { headers: { Authorization: `Bearer ${session?.access_token || ''}` } })
-      .then(r => r.json())
-      .then(d => setRows((d.requests || []).filter((r: ChangeRequest) => r.type === 'fencing' || r.type === 'boundary')))
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false))
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API_URL}/api/admin/change-requests?status=${tab}`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setRows((d.requests || []).filter((r: ChangeRequest) => r.type === 'fencing' || r.type === 'boundary'))
+      } catch {
+        setRows([])
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [tab, session])
   useEffect(() => { load() }, [load])
 

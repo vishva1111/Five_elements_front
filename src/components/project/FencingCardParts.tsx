@@ -7,6 +7,7 @@ import React, { useState } from 'react'
 import TreeMap from '../map/TreeMap'
 import { useToast } from '../ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import { conditionColor, formatLength, formatDate, type Boundary } from '../tree/treeLabels'
 
@@ -97,9 +98,10 @@ export function FencingRequestBanner({ projectId, request, onDecided }: { projec
     setBusy(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/projects/${projectId}/fencing-requests/${request.id}/${decision}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ review_notes: note }),
       })
       const d = await res.json()

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL } from '../../config/api'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
@@ -52,12 +53,18 @@ export default function ApprovalQueue() {
   const [opening,   setOpening]   = useState<string | null>(null)
 
   const load = React.useCallback(() => {
-    const headers = { Authorization: `Bearer ${session?.access_token || ''}` }
-    fetch(`${API_URL}/api/admin/queue`, { headers })
-      .then(r => r.json())
-      .then(d => setItems(d.items || []))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false))
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API_URL}/api/admin/queue`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setItems(d.items || [])
+      } catch {
+        setItems([])
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session])
   useEffect(() => { load() }, [load])
 
@@ -65,7 +72,8 @@ export default function ApprovalQueue() {
   async function openChange(item: QueueItem) {
     setOpening(item.id)
     try {
-      const res = await fetch(`${API_URL}/api/admin/change-requests?status=pending`, { headers: { Authorization: `Bearer ${session?.access_token || ''}` } })
+      const token = await getValidAccessToken()
+      const res = await fetch(`${API_URL}/api/admin/change-requests?status=pending`, { headers: { Authorization: `Bearer ${token}` } })
       const json = await res.json()
       const found = (json.requests || []).find((r: ChangeRequest) => r.id === item.id)
       if (found) setReviewing(found)

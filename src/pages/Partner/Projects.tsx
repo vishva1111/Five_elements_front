@@ -5,6 +5,7 @@ import PartnerLayout from './PartnerLayout'
 import { FencingMapBlock } from '../../components/project/FencingCardParts'
 import { DEFAULT_PROJECT_COLOR, formatDate, type Boundary, type Fencing } from '../../components/tree/treeLabels'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
@@ -54,14 +55,18 @@ export default function Projects() {
   const [projects, setProjects] = useState<PartnerProject[]>([])
   const [loading,  setLoading]  = useState(true)
 
-  const token = session?.access_token
-  const load = useCallback(() => {
-    fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${token || ''}` } })
-      .then(r => r.json())
-      .then(d => setProjects(d.projects || []))
-      .catch(() => setProjects([]))
-      .finally(() => setLoading(false))
-  }, [token])
+  const load = useCallback(async () => {
+    try {
+      const token = await getValidAccessToken()
+      const r = await fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${token}` } })
+      const d = await r.json()
+      setProjects(d.projects || [])
+    } catch {
+      setProjects([])
+    } finally {
+      setLoading(false)
+    }
+  }, [session])
   useEffect(() => { load() }, [load])
 
   const pg = usePagination(projects, 10)

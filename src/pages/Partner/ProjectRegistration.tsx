@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useGoBack } from '../../hooks/useGoBack'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL } from '../../config/api'
 import './Partner.css'
 
@@ -48,13 +49,14 @@ export default function ProjectRegistration() {
     setSubmitting(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(
         `${API_URL}/api/partner/projects`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token || ''}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ element, category, title, description, location, startDate, endDate, targetTrees, targetArea }),
         }

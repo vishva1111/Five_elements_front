@@ -13,6 +13,7 @@ import { useGoBack } from '../../hooks/useGoBack'
 import PartnerLayout from './PartnerLayout'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
@@ -41,7 +42,6 @@ export default function ImportFunders() {
   const navigate    = useNavigate()
   const goBack      = useGoBack('/partner/funders')
   const fileRef     = useRef<HTMLInputElement>(null)
-  const token       = session?.access_token
 
   const [projects,  setProjects]  = useState<PartnerProject[]>([])
   const [projectId, setProjectId] = useState('')
@@ -55,13 +55,20 @@ export default function ImportFunders() {
   const toast = useToast()
 
   useEffect(() => {
-    if (!token) return
-    fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => setProjects((d.projects || []).map((p: PartnerProject) => ({ id: p.id, name: p.name }))))
-      .catch(() => setProjects([]))
-      .finally(() => setLoading(false))
-  }, [token])
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setProjects((d.projects || []).map((p: PartnerProject) => ({ id: p.id, name: p.name })))
+      } catch {
+        setProjects([])
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [session])
 
   async function checkFile(f: File) {
     if (!projectId) {
@@ -72,6 +79,7 @@ export default function ImportFunders() {
     setError(null)
     setSummary(null)
     try {
+      const token = await getValidAccessToken()
       const form = new FormData()
       form.append('file', f)
       form.append('project_id', projectId)
@@ -79,7 +87,7 @@ export default function ImportFunders() {
 
       const res = await fetch(`${API}/api/partner/funders/import`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       })
       const data = await res.json()
@@ -101,13 +109,14 @@ export default function ImportFunders() {
     setImporting(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const form = new FormData()
       form.append('file', file)
       form.append('project_id', projectId)
 
       const res = await fetch(`${API}/api/partner/funders/import`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       })
       const data = await res.json()
@@ -127,8 +136,9 @@ export default function ImportFunders() {
 
   async function downloadTemplate() {
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/funders/import/template`, {
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error()
       const blob = await res.blob()

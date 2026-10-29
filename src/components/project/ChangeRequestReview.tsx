@@ -10,6 +10,7 @@ import Modal from '../ui/Modal'
 import TreeMap from '../map/TreeMap'
 import { useToast } from '../ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import { DEFAULT_PROJECT_COLOR, formatDate, formatLength, type Boundary, type Fencing } from '../tree/treeLabels'
 import { FENCING_ROWS, fencingValue } from './FencingSummary'
@@ -59,21 +60,26 @@ export default function ChangeRequestReview({ request, onClose, onDone }: { requ
 
   // A list row may not carry the project as it is right now — fetch it so the comparison is true.
   useEffect(() => {
-    if (request.live || !session?.access_token) return
-    fetch(`${API}/api/admin/change-requests`, { headers: { Authorization: `Bearer ${session.access_token}` } })
-      .then(r => r.json())
-      .then(d => setLive((d.requests || []).find((r: ChangeRequest) => r.id === request.id)?.live || null))
-      .catch(() => {})
-  }, [request, session?.access_token])
+    if (request.live) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/change-requests`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setLive((d.requests || []).find((r: ChangeRequest) => r.id === request.id)?.live || null)
+      } catch { /* ignore */ }
+    })()
+  }, [request, session])
 
   async function decide(decision: 'approve' | 'reject') {
     if (decision === 'reject' && !notes.trim()) { setError('Write why this is being rejected — the partner sees it.'); return }
     setBusy(decision)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/change-requests/${request.source}/${request.id}/${decision}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ review_notes: notes.trim() || null }),
       })
       const json = await res.json()

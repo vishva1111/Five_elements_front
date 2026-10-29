@@ -18,6 +18,7 @@ import { useToast } from '../../components/ui/Toast'
 import { TREE_STAGES, DEFAULT_STAGE, STAGE_STYLE } from '../../constants/treeStages'
 import { useSpecies, type TreeSpecies } from '../../constants/treeSpecies'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import TreeDetailModal from '../../components/tree/TreeHistory'
 import TreeMap from '../../components/map/TreeMap'
@@ -127,7 +128,6 @@ function verificationLabel(t: { taskStatus: string | null; taskNeedsAssignee?: b
 
 export default function MyTrees({ title = 'Tree listing', showAdd = false, compact = false }: { title?: string; showAdd?: boolean; compact?: boolean }) {
   const { session } = useAuth()
-  const token = session?.access_token
   const { species: speciesList, find: findSpecies, add: addSpecies } = useSpecies()
 
   const [trees,   setTrees]   = useState<TreeRow[]>([])
@@ -188,7 +188,8 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     setAddError(null)
     setAdding(true)
     try {
-      const headers = { Authorization: `Bearer ${token || ''}` }
+      const token = await getValidAccessToken()
+      const headers = { Authorization: `Bearer ${token}` }
       const [u, p] = await Promise.all([
         fetch(`${API}/api/partner/team-users`, { headers }).then(r => r.json()),
         fetch(`${API}/api/partner/projects`,   { headers }).then(r => r.json()),
@@ -226,6 +227,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     setSavingAdd(true)
     setAddError(null)
     try {
+      const token = await getValidAccessToken()
       const form = new FormData()
       form.append('user_id', addForm.userId)
       form.append('project_id', addForm.projectId)
@@ -239,7 +241,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
 
       const res = await fetch(`${API}/api/partner/trees`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       })
       const d = await res.json()
@@ -265,9 +267,10 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
   }
 
   const load = useCallback(async () => {
-    if (!token) return
+    if (!session) return
     setLoading(true)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/trees`, { headers: { Authorization: `Bearer ${token}` } })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to load')
@@ -277,7 +280,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [session])
 
   useEffect(() => { load() }, [load])
 
@@ -286,10 +289,12 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     setEditError(null)
     // Records with nobody named on them can be given their person — load the team for that.
     if (t.canSetAssignee && teamUsers.length === 0) {
-      fetch(`${API}/api/partner/team-users`, { headers: { Authorization: `Bearer ${token || ''}` } })
-        .then(r => r.json())
-        .then(u => setTeamUsers(u.users || []))
-        .catch(() => {})
+      getValidAccessToken().then(token =>
+        fetch(`${API}/api/partner/team-users`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(u => setTeamUsers(u.users || []))
+          .catch(() => {})
+      )
     }
     setEditForm({
       species: t.species || '',
@@ -319,6 +324,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
   const codeOf = (t: TreeRow) => t.treeCode || `TREE-${t.id.slice(0, 8).toUpperCase()}`
 
   async function patchStage(id: string, stage: string) {
+    const token = await getValidAccessToken()
     const res = await fetch(`${API}/api/partner/trees/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -358,7 +364,8 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     setPlantError(null)
     if (fieldOps.length === 0) {
       try {
-        const res = await fetch(`${API}/api/admin/tasks/assignable-users?pool=field`, { headers: { Authorization: `Bearer ${token || ''}` } })
+        const token = await getValidAccessToken()
+        const res = await fetch(`${API}/api/admin/tasks/assignable-users?pool=field`, { headers: { Authorization: `Bearer ${token}` } })
         const d = await res.json()
         setFieldOps(d.users || [])
       } catch {
@@ -372,9 +379,10 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     if (action === 'reject' && !reviewNote.trim()) { toast.error('Say why the planting is rejected'); return }
     setReviewBusy(action)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/tasks/${reviewing.taskId}/${action === 'approve' ? 'approve' : 'request-changes'}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ review_notes: reviewNote.trim() || null }),
       })
       const d = await res.json()
@@ -396,9 +404,10 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     setBulkPlanting(true)
     setPlantError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/trees/assign-planting`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ tree_ids: plantFor, assignee_id: plantAssignee }),
       })
       const d = await res.json()
@@ -419,6 +428,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     setSavingEdit(true)
     setEditError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/trees/${editing.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -453,6 +463,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
     if (!confirmDelete) return
     setDeleting(true)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/trees/${confirmDelete.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },

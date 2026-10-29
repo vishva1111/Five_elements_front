@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { Camera, Eye, LayoutGrid, Map as MapIcon, X } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import AdminLayout from './AdminLayout'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
@@ -71,8 +72,9 @@ export default function TreeRecords() {
     if (showSpinner) setLoading(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/tree-records?with=audit&limit=1000`, {
-        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to load tree records')
@@ -82,7 +84,7 @@ export default function TreeRecords() {
     } finally {
       if (showSpinner) setLoading(false)
     }
-  }, [session?.access_token])
+  }, [session])
 
   useEffect(() => {
     fetchRecords()

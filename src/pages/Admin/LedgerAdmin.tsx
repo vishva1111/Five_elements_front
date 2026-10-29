@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
@@ -31,14 +32,20 @@ export default function LedgerAdmin() {
   const [acting,   setActing]   = useState(false)
   const [msg,      setMsg]      = useState('')
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
-    fetch(`${API}/api/admin/ledger`, { headers })
-      .then(r => r.json())
-      .then(d => setEntries(d.entries || []))
-      .catch(() => setEntries([]))
-      .finally(() => setLoading(false))
+    setLoading(true)
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/ledger`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setEntries(d.entries || [])
+      } catch {
+        setEntries([])
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session])
 
   const filtered = entries.filter(e =>
@@ -55,8 +62,10 @@ export default function LedgerAdmin() {
     setActing(true)
     setMsg('')
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/ledger/${selected.id}/supersede`, {
-        method: 'POST', headers,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ reason: notes }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')

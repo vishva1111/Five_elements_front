@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SubmitProjectLayout from './SubmitProjectLayout'
 import { useSubmitProject } from './useSubmitProject'
-import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import './SubmitProject.css'
 
 // ── Element definitions ───────────────────────────────────────────────────────
@@ -122,8 +122,6 @@ function MapPlaceholder({ location, onLocationChange, hasError }: {
 export default function SubmitProjectDetails() {
   const navigate = useNavigate()
   const { draft, updateDraft, saveDraftToAPI } = useSubmitProject()
-  const { session } = useAuth()
-
   const [element,     setElement]     = useState(draft.element || 'earth')
   const [category,    setCategory]    = useState(draft.category || '')
   const [type,        setType]        = useState(draft.type || '')
@@ -152,11 +150,8 @@ export default function SubmitProjectDetails() {
     const partial = { element, category, type, title, description, location, startDate, endDate, treeCount }
     setSaving(true)
     try {
-      if (session?.access_token) {
-        await saveDraftToAPI(partial, session.access_token)
-      } else {
-        updateDraft(partial)
-      }
+      const token = await getValidAccessToken()
+      await saveDraftToAPI(partial, token)
     } finally {
       setSaving(false)
     }

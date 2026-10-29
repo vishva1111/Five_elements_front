@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import PartnerLayout from './PartnerLayout'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
@@ -25,12 +26,12 @@ export default function PartnerSettings() {
   const [saving, setSaving] = useState(false)
   const toast = useToast()
 
-  const token = session?.access_token
-
   useEffect(() => {
-    if (!token) return
-    fetch(`${API}/api/partner/profile`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async r => {
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/partner/profile`, { headers: { Authorization: `Bearer ${token}` } })
         const json = await r.json()
         if (r.status === 404) { setNotFound(true); return }
         if (!r.ok) throw new Error(json.error || 'Failed to load profile')
@@ -44,18 +45,22 @@ export default function PartnerSettings() {
         setAddress(p.address || '')
         setDescription(p.description || '')
         setStatus(p.status || '')
-      })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [token])
+      } catch (e: any) {
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [session])
 
   async function handleSave() {
     setSaving(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/profile`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ orgName, orgType, website, contactName, contactEmail, contactPhone, address, description }),
       })
       const json = await res.json()

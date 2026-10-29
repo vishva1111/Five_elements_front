@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import NotificationBell from '../../components/ui/NotificationBell'
 import { FiveElementsIcon } from '../../components/ui/FiveElementsLogo'
 import './Admin.css'
@@ -84,12 +85,16 @@ export default function AdminLayout({ title, subtitle, children, pendingCounts =
 
   // Approval-queue badge on every admin page, not just the queue itself.
   useEffect(() => {
-    if (!session?.access_token) return
-    fetch(`${API_URL}/api/admin/queue/count`, { headers: { Authorization: `Bearer ${session.access_token}` } })
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => { if (d && typeof d.total === 'number') { cachedQueueCount = d.total; setQueueCount(d.total) } })
-      .catch(() => {})
-  }, [session?.access_token, location.pathname])
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API_URL}/api/admin/queue/count`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = r.ok ? await r.json() : null
+        if (d && typeof d.total === 'number') { cachedQueueCount = d.total; setQueueCount(d.total) }
+      } catch {}
+    })()
+  }, [session, location.pathname])
 
   const badges: Record<string, number> = { '/admin': queueCount, ...pendingCounts }
 

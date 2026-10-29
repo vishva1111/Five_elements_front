@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SubmitProjectLayout from './SubmitProjectLayout'
 import { useSubmitProject } from './useSubmitProject'
-import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import './SubmitProject.css'
 
 // ── Pentagon SVG ──────────────────────────────────────────────────────────────
@@ -36,8 +36,6 @@ const MOCK_RESULTS: SearchResult[] = [
 export default function AddPartner() {
   const navigate = useNavigate()
   const { draft, updateDraft, saveDraftToAPI } = useSubmitProject()
-  const { session } = useAuth()
-
   const [mode, setMode] = useState<Mode>('platform')
   const [searchVal, setSearchVal] = useState('')
   const [searching, setSearching] = useState(false)
@@ -89,11 +87,8 @@ export default function AddPartner() {
     } else {
       partial = { partnerType: 'self', partnerName: '', partnerContact: '', partnerRole: '' }
     }
-    if (session?.access_token) {
-      await saveDraftToAPI(partial, session.access_token)
-    } else {
-      updateDraft(partial)
-    }
+    const token = await getValidAccessToken()
+    await saveDraftToAPI(partial, token)
     navigate('/submit-project/evidence')
   }
 

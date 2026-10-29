@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { FileText, X } from 'lucide-react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
@@ -69,9 +70,10 @@ export default function SubmissionQueue() {
     setLoading(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(
         `${API_URL}/api/admin/submissions?status=${status}`,
-        { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to load')
@@ -188,7 +190,7 @@ export default function SubmissionQueue() {
           )}
 
           {/* Action footer */}
-          <SubmissionActions submissionId={sub.id} currentStatus={sub.status} token={session?.access_token || ''} onDone={() => load(statusFilter)} defaultExpanded={sub.id === focusId} />
+          <SubmissionActions submissionId={sub.id} currentStatus={sub.status} onDone={() => load(statusFilter)} defaultExpanded={sub.id === focusId} />
         </div>
       ))}
       <Pagination {...pg} noun="submission" />
@@ -199,11 +201,10 @@ export default function SubmissionQueue() {
 
 // ── Inline action panel ───────────────────────────────────────────────────────
 function SubmissionActions({
-  submissionId, currentStatus, token, onDone, defaultExpanded = false,
+  submissionId, currentStatus, onDone, defaultExpanded = false,
 }: {
   submissionId: string
   currentStatus: string
-  token: string
   onDone: () => void
   defaultExpanded?: boolean
 }) {
@@ -264,6 +265,7 @@ function SubmissionActions({
     setSubmitting(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(
         `${API_URL}/api/admin/submissions/${submissionId}/review`,
         {

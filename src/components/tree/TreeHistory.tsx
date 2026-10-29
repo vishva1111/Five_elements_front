@@ -12,6 +12,7 @@ import Modal from '../ui/Modal'
 import TreeMap from '../map/TreeMap'
 import PhotoLightbox, { type Photo } from './PhotoLightbox'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { taskStatus, conditionTone, conditionColor, capitalise, formatDate, DEFAULT_PROJECT_COLOR } from './treeLabels'
 
 export interface Measurements {
@@ -85,16 +86,16 @@ export interface TreeHistoryData {
 
 export function useTreeHistory(url: string | null) {
   const { session } = useAuth()
-  const token = session?.access_token
   const [data, setData] = useState<TreeHistoryData | null>(null)
   const [loading, setLoading] = useState(!!url)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    if (!url || !token) return
+    if (!url) return
     setLoading(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Could not load the tree history')
@@ -104,7 +105,7 @@ export function useTreeHistory(url: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [url, token])
+  }, [url, session])
 
   useEffect(() => { setData(null); load() }, [load])
   return { data, loading, error, reload: load }
