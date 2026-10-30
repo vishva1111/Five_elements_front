@@ -134,9 +134,9 @@ export default function Landing() {
   ]
 
   const profiles = [
-    { name: 'Aditi Sharma',           kind: 'Individual · Pune',    stat: '312 trees · 4.1 tCO₂e',    avatar: avatarPenta('AS', '#2B5341'), href: '/profiles' },
-    { name: 'Meridian Manufacturing', kind: 'Business · Chennai',   stat: '12,400 trees · 214 tCO₂e', avatar: avatarPenta('MM', '#185FA5'), href: '/profiles' },
-    { name: 'Rahul Nair',             kind: 'Individual · Kochi',   stat: '96 trees · 1.3 tCO₂e',     avatar: avatarPenta('RN', '#2B5341'), href: '/profiles' },
+    { name: 'Aditi Sharma',           kind: 'Individual · Pune',    stat: '312 trees · 4.1 tCO₂e',    avatar: avatarPenta('AS', '#2B5341'), href: '/profile/aditi-sharma' },
+    { name: 'Meridian Manufacturing', kind: 'Business · Chennai',   stat: '12,400 trees · 214 tCO₂e', avatar: avatarPenta('MM', '#185FA5'), href: '/profile/meridian-manufacturing' },
+    { name: 'Rahul Nair',             kind: 'Individual · Kochi',   stat: '96 trees · 1.3 tCO₂e',     avatar: avatarPenta('RN', '#2B5341'), href: '/profile/rahul-nair' },
   ]
 
 
