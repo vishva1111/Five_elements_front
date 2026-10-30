@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import { formatDate } from '../../components/tree/treeLabels'
 import '../Partner/Partner.css'
@@ -76,7 +77,6 @@ const field: React.CSSProperties = { height: 34, padding: '0 10px', borderRadius
 /** The Activity report. `role` picks whose projects it covers: a partner's own, or everyone's. */
 export default function ActivityReport({ Layout, role }: { Layout: React.ComponentType<LayoutProps>; role: 'partner' | 'admin' }) {
   const { session } = useAuth()
-  const token = session?.access_token || ''
 
   const [preset, setPreset] = useState<Preset>('30')
   const [from, setFrom] = useState(daysAgo(29))
@@ -91,11 +91,17 @@ export default function ActivityReport({ Layout, role }: { Layout: React.Compone
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch(`${API}/api/${role}/projects`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => setProjects((d.projects || []).map((p: { id: string; name?: string; title?: string }) => ({ id: p.id, name: p.name || p.title || p.id }))))
-      .catch(() => setProjects([]))
-  }, [token, role])
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/${role}/projects`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setProjects((d.projects || []).map((p: { id: string; name?: string; title?: string }) => ({ id: p.id, name: p.name || p.title || p.id })))
+      } catch {
+        setProjects([])
+      }
+    })()
+  }, [session, role])
 
   const load = useCallback(() => {
     if (from > to) { setError('The start date is after the end date.'); return }
@@ -103,16 +109,22 @@ export default function ActivityReport({ Layout, role }: { Layout: React.Compone
     setError(null)
     const qs = new URLSearchParams({ from, to })
     if (projectId) qs.set('project_id', projectId)
-    fetch(`${API}/api/${role}/activity?${qs}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async r => {
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/${role}/activity?${qs}`, { headers: { Authorization: `Bearer ${token}` } })
         const d = await r.json()
         if (!r.ok) throw new Error(d.error || 'Could not load the report')
         setEvents(d.events || [])
         setTruncated(!!d.truncated)
-      })
-      .catch(e => { setEvents([]); setError(e.message) })
-      .finally(() => setLoading(false))
-  }, [from, to, projectId, token, role])
+      } catch (e: any) {
+        setEvents([])
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [from, to, projectId, session, role])
   useEffect(() => { load() }, [load])
 
   function pickPreset(p: Preset) {

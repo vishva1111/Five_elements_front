@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import FencingSummary from '../../components/project/FencingSummary'
@@ -48,24 +49,37 @@ export default function ProjectsOversight() {
   const [fenceReqs, setFenceReqs] = useState<ChangeRequest[] | null>(null)
   const [reviewing, setReviewing] = useState<ChangeRequest | null>(null)
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
-
   const load = () => {
-    fetch(`${API}/api/admin/projects`, { headers })
-      .then(r => r.json())
-      .then(d => setProjects(d.projects || []))
-      .catch(() => setProjects([]))
-      .finally(() => setLoading(false))
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+        const r = await fetch(`${API}/api/admin/projects`, { headers })
+        const d = await r.json()
+        setProjects(d.projects || [])
+      } catch {
+        setProjects([])
+      } finally {
+        setLoading(false)
+      }
+    })()
   }
   useEffect(load, [session])
 
   const fenceProjectId = dialog?.kind === 'fencing' ? dialog.project.id : null
   const loadFenceReqs = () => {
     if (!fenceProjectId) return
-    fetch(`${API}/api/admin/change-requests`, { headers })
-      .then(r => r.json())
-      .then(d => setFenceReqs((d.requests || []).filter((r: ChangeRequest) => r.projectId === fenceProjectId && (r.type === 'fencing' || r.type === 'boundary'))))
-      .catch(() => setFenceReqs([]))
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+        const r = await fetch(`${API}/api/admin/change-requests`, { headers })
+        const d = await r.json()
+        setFenceReqs((d.requests || []).filter((r: ChangeRequest) => r.projectId === fenceProjectId && (r.type === 'fencing' || r.type === 'boundary')))
+      } catch {
+        setFenceReqs([])
+      }
+    })()
   }
   useEffect(() => { setFenceReqs(null); loadFenceReqs() }, [fenceProjectId])  // eslint-disable-line react-hooks/exhaustive-deps
   useModalBehavior(() => setDialog(null), dialog?.kind === 'fencing')
@@ -82,12 +96,14 @@ export default function ProjectsOversight() {
     setActing(id)
     setMsg('')
     try {
+      const token = await getValidAccessToken()
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       const res = await fetch(`${API}/api/admin/projects/${id}/approve`, { method: 'POST', headers })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       setProjects(prev => prev.map(p => p.id === id ? { ...p, status: 'approved' } : p))
       setMsg('✅ Project approved — now visible on the public marketplace.')
-    } catch (e: any) {
-      setMsg(e.message)
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }
@@ -96,6 +112,8 @@ export default function ProjectsOversight() {
   async function rejectProject(id: string) {
     setActing(id)
     try {
+      const token = await getValidAccessToken()
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       await fetch(`${API}/api/admin/projects/${id}/reject`, { method: 'POST', headers })
       setProjects(prev => prev.map(p => p.id === id ? { ...p, status: 'rejected' } : p))
       setMsg('❌ Project rejected.')

@@ -7,6 +7,7 @@ import PartnerLayout from './PartnerLayout'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL as API } from '../../config/api'
+import { getValidAccessToken } from '../../services/authTokens'
 import './Partner.css'
 
 type TeamRole = 'admin' | 'field_officer' | 'viewer' | 'business' | 'individual'
@@ -155,23 +156,40 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
   const [newCredentials, setNewCredentials] = useState<{ email: string; tempPassword: string | null; reused: boolean; roleLabel?: string; passwordWasChosen?: boolean } | null>(null)
 
   useEffect(() => {
-    fetch(
-      `${API}/api/partner/team`,
-      { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
-    )
-      .then(r => r.json())
-      .then(d => setMembers(d.members || []))
-      .catch(() => setMembers([]))
-      .finally(() => setLoading(false))
+    let cancelled = false
+    async function loadTeam() {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/partner/team`, { headers: { Authorization: `Bearer ${token || ''}` } })
+        const d = await r.json()
+        if (!cancelled) setMembers(d.members || [])
+      } catch {
+        if (!cancelled) setMembers([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    loadTeam()
+    return () => { cancelled = true }
   }, [session])
 
   useEffect(() => {
-    if (scope !== 'users' || !session?.access_token) return
-    fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${session.access_token}` } })
-      .then(r => r.json())
-      .then(d => setProjects((d.projects || []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))))
-      .catch(() => setProjects([]))
-  }, [scope, session?.access_token])
+    if (scope !== 'users') return
+    let cancelled = false
+    async function loadProjects() {
+      try {
+        const token = await getValidAccessToken()
+        if (!token) return
+        const r = await fetch(`${API}/api/partner/projects`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        if (!cancelled) setProjects((d.projects || []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })))
+      } catch {
+        if (!cancelled) setProjects([])
+      }
+    }
+    loadProjects()
+    return () => { cancelled = true }
+  }, [scope, session])
 
   function generatePassword() {
     // Same shape the server would generate — upper, lower, digit, symbol.
@@ -198,8 +216,9 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
   }
 
   async function reload() {
+    const token = await getValidAccessToken()
     const res = await fetch(`${API}/api/partner/team`, {
-      headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      headers: { Authorization: `Bearer ${token || ''}` },
     })
     const d = await res.json()
     if (res.ok) setMembers(d.members || [])
@@ -207,11 +226,12 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
 
   async function uploadDocs(memberId: string, files: File[]) {
     if (files.length === 0) return null
+    const token = await getValidAccessToken()
     const form = new FormData()
     files.forEach(f => form.append('files', f))
     const res = await fetch(`${API}/api/partner/team/${memberId}/documents`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      headers: { Authorization: `Bearer ${token || ''}` },
       body: form,
     })
     const d = await res.json().catch(() => ({}))
@@ -237,11 +257,12 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
     setInviting(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/team/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || ''}`,
+          Authorization: `Bearer ${token || ''}`,
         },
         body: JSON.stringify({
           email: inviteEmail,
@@ -297,9 +318,10 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
     setRemovingDoc(doc.path)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/team/${editing.id}/documents?path=${encodeURIComponent(doc.path)}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { Authorization: `Bearer ${token || ''}` },
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to remove document')
@@ -329,11 +351,12 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
     setSavingEdit(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const body: Record<string, string> = { name: editName.trim(), role: editRole }
       if (editPassword.trim()) body.password = editPassword.trim()
       const res = await fetch(`${API}/api/partner/team/${editing.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
         body: JSON.stringify(body),
       })
       const d = await res.json()
@@ -341,7 +364,7 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
       if (editIsBusiness) {
         const bres = await fetch(`${API}/api/partner/team/${editing.id}/business`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
           body: JSON.stringify({ gst_number: editGst, pan_number: editPan, address: editAddress.trim() }),
         })
         const bd = await bres.json()
@@ -366,9 +389,10 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
     setError(null)
     setBusyId(m.id)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/team/${m.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token || ''}` },
         body: JSON.stringify({ status }),
       })
       const d = await res.json()
@@ -386,9 +410,10 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
     setError(null)
     setBusyId(m.id)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/team/${m.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { Authorization: `Bearer ${token || ''}` },
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to remove member')
@@ -397,28 +422,6 @@ export function PartnerTeam({ scope = 'org' }: PartnerTeamProps) {
       await reload()
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Failed to remove member')
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  async function removeOrDeactivate(id: string) {
-    setError(null)
-    setBusyId(id)
-    try {
-      const res = await fetch(`${API}/api/partner/team/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || ''}`,
-        },
-        body: JSON.stringify({ status: 'inactive' }),
-      })
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error || 'Failed to deactivate member')
-      await reload()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to deactivate member')
     } finally {
       setBusyId(null)
     }

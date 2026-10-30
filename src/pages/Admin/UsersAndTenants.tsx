@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
@@ -32,14 +33,20 @@ export default function UsersAndTenants() {
   const [acting,  setActing]  = useState<string | null>(null)
   const [msg,     setMsg]     = useState('')
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
-    fetch(`${API}/api/admin/users`, { headers })
-      .then(r => r.json())
-      .then(d => setUsers(d.users || []))
-      .catch(() => setUsers([]))
-      .finally(() => setLoading(false))
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/users`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setUsers(d.users || [])
+      } catch {
+        setUsers([])
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session])
 
   const filtered = users
@@ -58,8 +65,10 @@ export default function UsersAndTenants() {
   async function setStatus(user: User, newStatus: User['status']) {
     setActing(user.id)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/users/${user.id}`, {
-        method: 'PATCH', headers,
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Action failed.')
@@ -68,8 +77,8 @@ export default function UsersAndTenants() {
         ? (newStatus === 'active' ? 'approved — they have been emailed' : 'rejected')
         : (newStatus === 'suspended' ? 'suspended' : 'reactivated')
       setMsg(`User ${user.email} ${verb}.`)
-    } catch (e: any) {
-      setMsg(e.message || 'Action failed.')
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }
@@ -90,7 +99,7 @@ export default function UsersAndTenants() {
       {/* Stats */}
       <div className="ad-stats ad-grid-4" style={{ marginBottom: 20 }}>
         {Object.entries(counts).map(([role, count]) => (
-          <div key={role} className="ad-stat" style={{ cursor: 'pointer' }} onClick={() => setRoleFilter(role as any)}>
+          <div key={role} className="ad-stat" style={{ cursor: 'pointer' }} onClick={() => setRoleFilter(role as 'individual' | 'business' | 'partner' | 'admin')}>
             <div className="ad-stat__num">{count}</div>
             <div className="ad-stat__label" style={{ textTransform: 'capitalize' }}>{role}s</div>
           </div>

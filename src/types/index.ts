@@ -29,6 +29,17 @@ export interface Project {
   // Optional extended fields used in ProjectDetail
   evidenceEntries?: EvidenceEntry[]
   evidenceLocations?: Array<{ lat: number; lng: number; label: string }>
+  fencingPolygon?: { points: [number, number][]; areaSqM?: number; status?: string } | null
+  monitoringPhotos?: Array<{
+    id: string
+    treeId: string | null
+    photoUrl: string
+    photoUrls: string[]
+    lat: number | null
+    lng: number | null
+    surveyDate: string | null
+    condition: string | null
+  }>
   funders?: Array<{ name: string; trees: number; date: string }>
   lastEvidence?: string | null
 }

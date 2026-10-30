@@ -20,6 +20,7 @@ const Maintenance = lazy(() => import('./pages/Maintenance/Maintenance'))
 
 // ── Core pages ───────────────────────────────────────────────────────────────
 const Landing = lazy(() => import('./pages/Landing/Landing'))
+const HowItWorks = lazy(() => import('./pages/HowItWorks/HowItWorks'))
 const Marketplace = lazy(() => import('./pages/Marketplace/Marketplace'))
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail/ProjectDetail'))
 const Ledger = lazy(() => import('./pages/Ledger/Ledger'))
@@ -80,7 +81,7 @@ const ImportFunders = lazy(() => import('./pages/Partner/ImportFunders'))
 const PartnerTasks = lazy(() => import('./pages/Partner/PartnerTasks'))
 const PartnerSubmissionReview = lazy(() => import('./pages/Partner/PartnerSubmissionReview'))
 const FundersView = lazy(() => import('./pages/Partner/FundersView'))
-const PartnerTeam = lazy(() => import('./pages/Partner/PartnerTeam'))
+const PartnerTeam = lazy(() => import('./pages/Partner/PartnerTeam').then(m => ({ default: m.PartnerTeam })))
 const PartnerUsers = lazy(() => import('./pages/Partner/PartnerUsers'))
 const PartnerSettings = lazy(() => import('./pages/Partner/PartnerSettings'))
 
@@ -113,6 +114,7 @@ export default function App(): React.JSX.Element {
         <Routes>
           {/* ── Landing ── */}
           <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+          <Route path="/how-it-works" element={<PublicRoute><HowItWorks /></PublicRoute>} />
 
           {/* ── Auth ── */}
           <Route path="/login" element={<Login />} />

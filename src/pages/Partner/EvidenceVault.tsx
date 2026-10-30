@@ -4,6 +4,7 @@ import PartnerLayout from './PartnerLayout'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
@@ -57,12 +58,11 @@ export default function EvidenceVault() {
   const [submissions,  setSubmissions]  = useState<SubmissionOption[]>([])
   const [submissionId, setSubmissionId] = useState('')
 
-  const token = session?.access_token
-
   const loadEvidence = useCallback(async () => {
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/evidence`, {
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed to load evidence')
@@ -73,16 +73,22 @@ export default function EvidenceVault() {
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [session])
 
   useEffect(() => { loadEvidence() }, [loadEvidence])
 
   useEffect(() => {
-    fetch(`${API}/api/partner/submissions`, { headers: { Authorization: `Bearer ${token || ''}` } })
-      .then(r => r.json())
-      .then(d => setSubmissions((d.submissions || []).map((x: { id: string; title: string }) => ({ id: x.id, title: x.title }))))
-      .catch(() => setSubmissions([]))
-  }, [token])
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/partner/submissions`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setSubmissions((d.submissions || []).map((x: { id: string; title: string }) => ({ id: x.id, title: x.title })))
+      } catch {
+        setSubmissions([])
+      }
+    })()
+  }, [session])
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return
@@ -95,13 +101,14 @@ export default function EvidenceVault() {
     setUploading(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const form = new FormData()
       form.append('submissionId', submissionId)
       Array.from(files).forEach(f => form.append('files', f))
 
       const res = await fetch(`${API}/api/submit-project/upload`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       })
       const d = await res.json()

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Admin.css'
 
@@ -38,50 +39,57 @@ export default function Configuration() {
   const [msg,      setMsg]      = useState('')
   const [tab,      setTab]      = useState<'flags' | 'factors' | 'settings'>('flags')
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
-    fetch(`${API}/api/admin/config`, { headers })
-      .then(r => r.json())
-      .then(d => {
+    setLoading(true)
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/config`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
         setFlags(d.featureFlags || [])
         setFactors(d.emissionFactors || [])
         setSettings(d.platformSettings || [])
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session])
 
   async function saveFlags() {
     setSaving(true); setMsg('')
     try {
-      const res = await fetch(`${API}/api/admin/config/flags`, { method: 'PATCH', headers, body: JSON.stringify({ flags }) })
+      const token = await getValidAccessToken()
+      const res = await fetch(`${API}/api/admin/config/flags`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ flags }) })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Save failed.')
       setMsg('✅ Feature flags saved.')
-    } catch (e: any) { setMsg(e.message || 'Save failed.') }
+    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : 'Save failed.') }
     finally { setSaving(false) }
   }
 
   async function saveFactors() {
     setSaving(true); setMsg('')
     try {
-      const res = await fetch(`${API}/api/admin/config/factors`, { method: 'PATCH', headers, body: JSON.stringify({ factors }) })
+      const token = await getValidAccessToken()
+      const res = await fetch(`${API}/api/admin/config/factors`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ factors }) })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Save failed.')
       setMsg('✅ Emission factors saved.')
-    } catch (e: any) { setMsg(e.message || 'Save failed.') }
+    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : 'Save failed.') }
     finally { setSaving(false) }
   }
 
   async function saveSettings() {
     setSaving(true); setMsg('')
     try {
-      const res = await fetch(`${API}/api/admin/config/settings`, { method: 'PATCH', headers, body: JSON.stringify({ settings }) })
+      const token = await getValidAccessToken()
+      const res = await fetch(`${API}/api/admin/config/settings`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ settings }) })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || 'Save failed.')
       setMsg('✅ Platform settings saved.')
-    } catch (e: any) { setMsg(e.message || 'Save failed.') }
+    } catch (e: unknown) { setMsg(e instanceof Error ? e.message : 'Save failed.') }
     finally { setSaving(false) }
   }
 

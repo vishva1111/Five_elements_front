@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
@@ -23,21 +24,18 @@ export default function PartnerOnboarding() {
   const [error,       setError]       = useState<string | null>(null)
   const [checking,    setChecking]    = useState(true)
 
-  const token = session?.access_token
-
   // An application already exists for most returning visitors — read its real
   // status so the pending / needs-info / rejected / approved banners can show.
   // Without this the banners below were unreachable: appStatus never left 'draft'.
   useEffect(() => {
-    if (!token) return
-    fetch(`${API}/api/partner/profile`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async r => {
-        if (r.status === 404) return null          // no application yet — show the form
-        if (r.status === 403) return null          // not a partner account yet
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/partner/profile`, { headers: { Authorization: `Bearer ${token}` } })
+        if (r.status === 404 || r.status === 403) return  // no application yet or not a partner
         const json = await r.json()
-        return r.ok ? json.profile : null
-      })
-      .then(profile => {
+        const profile = r.ok ? json.profile : null
         if (!profile) return
         const serverStatus = String(profile.status || 'pending')
         const mapped: AppStatus =
@@ -47,10 +45,13 @@ export default function PartnerOnboarding() {
           : 'pending'
         setAppStatus(mapped)
         setStep(2)
-      })
-      .catch(() => { /* leave the blank form in place */ })
-      .finally(() => setChecking(false))
-  }, [token])
+      } catch {
+        /* leave the blank form in place */
+      } finally {
+        setChecking(false)
+      }
+    })()
+  }, [session])
 
   // Form fields — step 0
   const [orgName,     setOrgName]     = useState('')
@@ -72,13 +73,14 @@ export default function PartnerOnboarding() {
     setSubmitting(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(
         `${API}/api/partner/apply`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token || ''}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             orgName, orgType, regNumber, website,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import { X } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
@@ -47,14 +48,20 @@ export default function PartnerManagement() {
   const setField = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
-    fetch(`${API}/api/admin/partners`, { headers })
-      .then(r => r.json())
-      .then(d => setPartners(d.partners || []))
-      .catch(() => setPartners([]))
-      .finally(() => setLoading(false))
+    setLoading(true)
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/partners`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setPartners(d.partners || [])
+      } catch {
+        setPartners([])
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session])
 
   // Arriving from the approval queue (?review=<id>) opens that application.
@@ -71,7 +78,8 @@ export default function PartnerManagement() {
   const pg = usePagination(filtered, 10, filter)
 
   async function reloadPartners() {
-    const res = await fetch(`${API}/api/admin/partners`, { headers })
+    const token = await getValidAccessToken()
+    const res = await fetch(`${API}/api/admin/partners`, { headers: { Authorization: `Bearer ${token}` } })
     const d = await res.json()
     if (res.ok) setPartners(d.partners || [])
   }
@@ -84,9 +92,10 @@ export default function PartnerManagement() {
     setCreating(true)
     setCreateErr('')
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/partners`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
       })
       const d = await res.json()
@@ -112,9 +121,10 @@ export default function PartnerManagement() {
     setActing(action)
     setMsg('')
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/partners/${selected.id}`, {
         method: 'PATCH',
-        headers,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: action === 'approve' ? 'approved' : 'rejected', reviewNotes: notes }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
@@ -122,8 +132,8 @@ export default function PartnerManagement() {
       setMsg(action === 'approve' ? '✅ Partner approved — they can now access the partner portal.' : '❌ Partner rejected — they have been notified.')
       setSelected(null)
       setNotes('')
-    } catch (e: any) {
-      setMsg(e.message)
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Partner.css'
 
@@ -75,18 +76,23 @@ export default function SubmissionTracker() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError,   setDetailError]   = useState<string | null>(null)
 
-  const token = session?.access_token
-
   useEffect(() => {
-    fetch(
-      `${API}/api/partner/submissions`,
-      { headers: { Authorization: `Bearer ${token || ''}` } }
-    )
-      .then(r => r.json())
-      .then(d => setSubmissions(d.submissions || []))
-      .catch(() => setSubmissions([]))
-      .finally(() => setLoading(false))
-  }, [token])
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/partner/submissions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const d = await r.json()
+        setSubmissions(d.submissions || [])
+      } catch {
+        setSubmissions([])
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [session])
 
   const openSubmission = useCallback(async (id: string) => {
     setDetailId(id)
@@ -95,8 +101,9 @@ export default function SubmissionTracker() {
     setDetailError(null)
     setDetailLoading(true)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/submissions/${id}`, {
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to load project')
@@ -107,7 +114,7 @@ export default function SubmissionTracker() {
     } finally {
       setDetailLoading(false)
     }
-  }, [token])
+  }, [session])
 
   const closeSubmission = () => {
     setDetailId(null)

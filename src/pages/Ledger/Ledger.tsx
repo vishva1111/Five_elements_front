@@ -1,13 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { ExternalLink, CheckCircle, Search } from 'lucide-react'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import { useLedger } from '../../hooks/useLedger'
 import './Ledger.css'
 
+const FUNDER_LABELS: Record<string, string> = {
+  'field-delivery':    'Field Delivery',
+  'evidence-delivery': 'Evidence Delivery',
+  'Anonymous':         'Anonymous',
+}
+
+function funderDisplay(funder: string | null | undefined): string {
+  if (!funder) return '—'
+  return FUNDER_LABELS[funder] ?? funder
+}
+
 export default function Ledger() {
-  const [search, setSearch] = useState('')
+  const location = useLocation()
+  const [search, setSearch] = useState(() => {
+    // Pre-populate search from ?q= query param (e.g. linked from ProjectDetail)
+    return new URLSearchParams(location.search).get('q') ?? ''
+  })
   const { entries, stats, loading, error } = useLedger({ search })
+
+  // Sync if the URL changes while the component is mounted
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get('q') ?? ''
+    setSearch(q)
+  }, [location.search])
 
   return (
     <div className="ledger">
@@ -91,20 +113,34 @@ export default function Ledger() {
                   <td className="ledger__id">{entry.id}</td>
                   <td className="ledger__date">{entry.date}</td>
                   <td className="ledger__project">{entry.project}</td>
-                  <td className="ledger__funder">{entry.funder}</td>
+                  <td className="ledger__funder">{funderDisplay(entry.funder)}</td>
                   <td className="ledger__trees">{entry.trees.toLocaleString()}</td>
                   <td className="ledger__co2">{entry.tCO2e}</td>
                   <td>
-                    {entry.verified && (
+                    {entry.verified ? (
                       <span className="badge badge-verified">
                         <CheckCircle size={11} /> Verified
+                      </span>
+                    ) : (
+                      <span className="badge badge-pending">
+                        Pending
                       </span>
                     )}
                   </td>
                   <td>
-                    <a href="#" className="ledger__tx-link">
-                      {entry.txHash} <ExternalLink size={11} />
-                    </a>
+                    {entry.txHash && /^0x[0-9a-fA-F]{40,}$/.test(entry.txHash) ? (
+                      <a
+                        href={`https://polygonscan.com/tx/${entry.txHash}`}
+                        className="ledger__tx-link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {entry.txHash.slice(0, 10)}…{entry.txHash.slice(-6)}{' '}
+                        <ExternalLink size={11} />
+                      </a>
+                    ) : (
+                      <span className="ledger__tx-none">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

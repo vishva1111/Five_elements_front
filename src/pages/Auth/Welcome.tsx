@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
+import { getValidAccessToken } from '../../services/authTokens'
 import './Welcome.css'
 
 // ── Pentagon helper ───────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ function PathCard({
 
 export default function Welcome() {
   const navigate = useNavigate()
-  const { user, session } = useAuth()
+  const { user } = useAuth()
 
   const name = user?.displayName?.split(' ')[0] || 'there'
   // Funding and submitting projects are individual/business journeys.
@@ -59,12 +60,16 @@ export default function Welcome() {
 
   // Shown once: clear the first-login flag so the next sign-in goes straight to the dashboard.
   useEffect(() => {
-    if (!session?.access_token) return
-    fetch(`${API_URL}/api/auth/first-login-done`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    }).catch(() => {})
-  }, [session?.access_token])
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        await fetch(`${API_URL}/api/auth/first-login-done`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      } catch { /* ignore */ }
+    })()
+  }, [])
 
   return (
     <div className="welcome-page">

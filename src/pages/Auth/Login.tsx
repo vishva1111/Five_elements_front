@@ -211,7 +211,7 @@ export default function Login() {
 
         <p className="li-terms">
           By logging in you agree to the{' '}
-          <a href="#">terms</a> and <a href="#">privacy policy</a>.
+          <Link to="/terms" className="li-terms__link">terms</Link> and <Link to="/privacy" className="li-terms__link">privacy policy</Link>.
         </p>
       </div>
 

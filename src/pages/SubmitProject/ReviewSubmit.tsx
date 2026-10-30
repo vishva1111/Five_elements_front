@@ -4,6 +4,7 @@ import SubmitProjectLayout from './SubmitProjectLayout'
 import { useSubmitProject } from './useSubmitProject'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
+import { getValidAccessToken } from '../../services/authTokens'
 import './SubmitProject.css'
 
 type ReviewState = 'draft' | 'inreview' | 'moreinfo' | 'verified' | 'selfreported' | 'rejected'
@@ -36,8 +37,6 @@ function partnerTypeLabel(t: string) {
 export default function ReviewSubmit() {
   const navigate = useNavigate()
   const { draft, updateDraft, clearDraft } = useSubmitProject()
-  const { session } = useAuth()
-
   const [reviewState, setReviewState] = useState<ReviewState>('draft')
   const [declaration, setDeclaration] = useState(draft.declarationAccepted || false)
   const [submitting,  setSubmitting]  = useState(false)
@@ -59,11 +58,12 @@ export default function ReviewSubmit() {
     setSubmitting(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(
         `${API_URL}/api/submit-project`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             draftId: draft.draftId || undefined,
             element: draft.element, category: draft.category, type: draft.type,
@@ -456,6 +456,7 @@ export default function ReviewSubmit() {
 }
 
 function DevSwitcher({ current, onChange }: { current: ReviewState; onChange: (s: ReviewState) => void }) {
+  if (!import.meta.env.DEV) return null
   const states: ReviewState[] = ['draft', 'inreview', 'moreinfo', 'verified', 'selfreported', 'rejected']
   return (
     <div style={{ marginTop: 32, padding: '12px 16px', background: '#F0EDE9', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>

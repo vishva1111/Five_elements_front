@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import PartnerLayout from './PartnerLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
+import { getValidAccessToken } from '../../services/authTokens'
 import './Partner.css'
 
 // project_submissions.status carries values like pending_review / in_review /
@@ -75,14 +76,26 @@ export default function PartnerDashboard() {
   const [error,   setError]   = useState<string | null>(null)
 
   useEffect(() => {
-    fetch(
-      `${API_URL}/api/partner/dashboard`,
-      { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
-    )
-      .then(r => r.json())
-      .then(d => { if (d.error) throw new Error(d.error); setData(d) })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
+    let cancelled = false
+    async function load() {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(
+          `${API_URL}/api/partner/dashboard`,
+          { headers: { Authorization: `Bearer ${token || ''}` } }
+        )
+        const d = await r.json()
+        if (cancelled) return
+        if (d.error) throw new Error(d.error)
+        setData(d)
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load dashboard')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
   }, [session])
 
   const stats = data?.stats

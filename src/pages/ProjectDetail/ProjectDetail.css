@@ -268,6 +268,7 @@
   overflow: hidden;
   border: 0.5px solid #AACBA7;
   background: radial-gradient(circle at 30% 30%, #E8F0DD, #DCE7CF);
+  isolation: isolate; /* contain Leaflet's z-index layers inside this stacking context */
 }
 
 .pd-map__svg {
@@ -415,10 +416,22 @@
 
 .pd-evidence-card__img {
   height: 130px;
+  position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: flex-start;
   padding: 8px;
+  overflow: hidden;
+}
+
+.pd-evidence-card__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 0;
 }
 
 .pd-evidence-card__date {
@@ -748,7 +761,7 @@
 .pd-lightbox {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 9999;
   background: rgba(17, 33, 33, 0.62);
   display: flex;
   align-items: center;
@@ -792,9 +805,20 @@
 
 .pd-lightbox__img {
   height: 280px;
+  position: relative;
   display: flex;
   align-items: flex-end;
   padding: 12px;
+  overflow: hidden;
+}
+
+.pd-lightbox__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .pd-lightbox__img-date {

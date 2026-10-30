@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
+import { MapContainer, TileLayer, CircleMarker, Tooltip, Polygon } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
 import { useProject } from '../../hooks/useProjects'
 import Navbar from '../../components/layout/Navbar'
 import IndividualLayout from '../ImpactHome/IndividualLayout'
@@ -44,26 +46,104 @@ function HeroSVG() {
   )
 }
 
-// ── Map placeholder ───────────────────────────────────────────────────────────
-function MapPlaceholder({ pinCount }: { pinCount: number }) {
+// ── Real Leaflet map with GPS pins + fencing polygon ─────────────────────────
+interface GpsPin { lat: number; lng: number; label: string }
+interface FencingPolygon { points: [number, number][]; areaSqM?: number; status?: string }
+
+function ProjectMap({
+  pinCount,
+  locations,
+  fencingPolygon,
+}: {
+  pinCount: number
+  locations?: GpsPin[]
+  fencingPolygon?: FencingPolygon | null
+}) {
+  const hasLocations = locations && locations.length > 0
+  const hasFence = fencingPolygon && fencingPolygon.points && fencingPolygon.points.length >= 3
+
+  // Compute map center: GPS pins → fence centroid → India default
+  let center: [number, number] = [20.5937, 78.9629]
+  let zoom = 5
+  if (hasLocations) {
+    const avgLat = locations!.reduce((s, l) => s + l.lat, 0) / locations!.length
+    const avgLng = locations!.reduce((s, l) => s + l.lng, 0) / locations!.length
+    center = [avgLat, avgLng]
+    zoom = locations!.length === 1 ? 14 : 13
+  } else if (hasFence) {
+    const pts = fencingPolygon!.points
+    const avgLat = pts.reduce((s, p) => s + p[0], 0) / pts.length
+    const avgLng = pts.reduce((s, p) => s + p[1], 0) / pts.length
+    center = [avgLat, avgLng]
+    zoom = 17
+  }
+
   return (
-    <div className="pd-map">
-      <svg viewBox="0 0 600 220" preserveAspectRatio="none" className="pd-map__svg" aria-hidden="true">
-        <path d="M60 40 H540 M60 90 H540 M60 140 H540 M60 190 H540" stroke="#CBD9BC" strokeWidth="1" />
-        <path d="M120 30 V210 M240 30 V210 M360 30 V210 M480 30 V210" stroke="#CBD9BC" strokeWidth="1" />
-        <polygon
-          points="150,60 430,45 480,150 300,190 130,150"
-          fill="rgba(43,83,65,0.10)"
-          stroke="#2B5341"
-          strokeWidth="2"
-          strokeDasharray="7 5"
-          strokeLinejoin="round"
+    <div className="pd-map" style={{ position: 'relative' }}>
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        scrollWheelZoom={false}
+        style={{ height: '220px', width: '100%', borderRadius: '12px' }}
+        attributionControl={false}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
-      </svg>
-      <span className="pd-map__label">project boundary · GPS evidence pins</span>
+        {/* Fencing boundary polygon */}
+        {hasFence && (
+          <Polygon
+            positions={fencingPolygon!.points}
+            pathOptions={{
+              color: '#EF9F27',
+              weight: 2.5,
+              fillColor: '#EF9F27',
+              fillOpacity: 0.12,
+              dashArray: '6 4',
+            }}
+          >
+            <Tooltip sticky>
+              <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12 }}>
+                🔒 Fenced boundary
+                {fencingPolygon!.areaSqM
+                  ? ` · ${Number(fencingPolygon!.areaSqM).toLocaleString('en-IN')} m²`
+                  : ''}
+              </span>
+            </Tooltip>
+          </Polygon>
+        )}
+        {/* GPS tree pins */}
+        {hasLocations && locations!.map((loc, i) => (
+          <CircleMarker
+            key={i}
+            center={[loc.lat, loc.lng]}
+            radius={8}
+            pathOptions={{ color: '#FFFFFF', weight: 2, fillColor: '#2B5341', fillOpacity: 0.9 }}
+          >
+            <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
+              <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12 }}>
+                🌳 {loc.label}<br />
+                <span style={{ color: '#6B7B6E', fontSize: 11 }}>{loc.lat.toFixed(5)}° N, {loc.lng.toFixed(5)}° E</span>
+              </span>
+            </Tooltip>
+          </CircleMarker>
+        ))}
+      </MapContainer>
+      <span className="pd-map__label" style={{ position: 'absolute', bottom: 6, left: 10, zIndex: 1000, background: 'rgba(255,255,255,0.85)', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: '#2B5341', fontWeight: 600 }}>
+        {hasLocations
+          ? `${locations!.length} GPS location${locations!.length !== 1 ? 's' : ''}${hasFence ? ' · fenced' : ''} · OpenStreetMap`
+          : hasFence ? 'Fenced boundary · OpenStreetMap'
+          : pinCount > 0 ? `${pinCount} evidence location${pinCount !== 1 ? 's' : ''}` : 'project location'}
+      </span>
     </div>
   )
 }
+
+// ── Local data types ──────────────────────────────────────────────────────────
+interface CoBenefit { icon: string; title: string; note: string }
+interface EvidenceItem { id: string; qty: string; species: string; gps: string; date: string; bg: string; photoUrl: string | null }
+interface LedgerRow { id: string; qty: string; date: string; hash: string }
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function ProjectDetail() {
@@ -136,38 +216,37 @@ export default function ProjectDetail() {
     { icon: '💧', title: 'Water retention', note: 'Improves groundwater recharge' },
     { icon: '🐦', title: 'Biodiversity', note: 'Habitat for 40+ bird species' },
   ]
-  // Build evidence from evidenceEntries if available, else use mock
-  const evidence = (project.evidenceEntries && project.evidenceEntries.length > 0)
-    ? project.evidenceEntries.map((e, i) => ({
-        id: e.id,
-        qty: `${e.treeCount} trees`,
-        species: e.species || 'Mixed',
-        gps: e.lat && e.lng ? `${e.lat.toFixed(4)}° N, ${e.lng.toFixed(4)}° E` : 'GPS logged',
-        date: new Date(e.date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
-        bg: ['repeating-linear-gradient(135deg,#EAF3DE,#EAF3DE 8px,#DCEBD0 8px,#DCEBD0 16px)',
-             'repeating-linear-gradient(135deg,#E4EFD6,#E4EFD6 8px,#D3E6C4 8px,#D3E6C4 16px)',
-             'repeating-linear-gradient(135deg,#EAF3DE,#EAF3DE 8px,#D8E9CC 8px,#D8E9CC 16px)',
-             'repeating-linear-gradient(135deg,#E1EEDA,#E1EEDA 8px,#CFE3C2 8px,#CFE3C2 16px)'][i % 4],
-      }))
-    : [
-        { id: '1', qty: '200 trees', species: 'Neem', gps: '23.0225° N, 72.5714° E', date: 'Mar 2025', bg: 'repeating-linear-gradient(135deg,#EAF3DE,#EAF3DE 8px,#DCEBD0 8px,#DCEBD0 16px)' },
-        { id: '2', qty: '150 trees', species: 'Peepal', gps: '23.0301° N, 72.5801° E', date: 'Apr 2025', bg: 'repeating-linear-gradient(135deg,#E4EFD6,#E4EFD6 8px,#D3E6C4 8px,#D3E6C4 16px)' },
-        { id: '3', qty: '180 trees', species: 'Banyan', gps: '23.0189° N, 72.5698° E', date: 'May 2025', bg: 'repeating-linear-gradient(135deg,#EAF3DE,#EAF3DE 8px,#D8E9CC 8px,#D8E9CC 16px)' },
-        { id: '4', qty: '120 trees', species: 'Gulmohar', gps: '23.0244° N, 72.5755° E', date: 'Jun 2025', bg: 'repeating-linear-gradient(135deg,#E1EEDA,#E1EEDA 8px,#CFE3C2 8px,#CFE3C2 16px)' },
-      ]
-  const ledger = (project.evidenceEntries && project.evidenceEntries.length > 0)
-    ? project.evidenceEntries.map(e => ({
-        id: e.id,
-        qty: `${e.treeCount} trees planted`,
-        date: new Date(e.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-        hash: e.txHash || '0x…',
-      }))
-    : [
-        { id: '1', qty: '200 trees planted', date: 'Mar 15, 2025', hash: '0x4a7f…c3e1' },
-        { id: '2', qty: '150 trees planted', date: 'Apr 22, 2025', hash: '0x9b2d…f7a4' },
-        { id: '3', qty: '180 trees planted', date: 'May 30, 2025', hash: '0x1e8c…b2d9' },
-        { id: '4', qty: '120 trees planted', date: 'Jun 18, 2025', hash: '0x7f3a…e5c2' },
-      ]
+  // Build evidence cards: prefer monitoring photos (real photo + GPS) matched by index,
+  // falling back to ledger entry data when no monitoring record is available.
+  const monPhotos = project.monitoringPhotos || []
+  const bgPatterns = [
+    'repeating-linear-gradient(135deg,#EAF3DE,#EAF3DE 8px,#DCEBD0 8px,#DCEBD0 16px)',
+    'repeating-linear-gradient(135deg,#E4EFD6,#E4EFD6 8px,#D3E6C4 8px,#D3E6C4 16px)',
+    'repeating-linear-gradient(135deg,#EAF3DE,#EAF3DE 8px,#D8E9CC 8px,#D8E9CC 16px)',
+    'repeating-linear-gradient(135deg,#E1EEDA,#E1EEDA 8px,#CFE3C2 8px,#CFE3C2 16px)',
+  ]
+  const evidence = (project.evidenceEntries || []).map((e, i) => {
+    const mon = monPhotos[i] ?? null
+    const lat = mon?.lat ?? e.lat
+    const lng = mon?.lng ?? e.lng
+    return {
+      id: e.id,
+      qty: `${e.treeCount} trees`,
+      species: e.species || 'Mixed',
+      gps: lat != null && lng != null
+        ? `${Number(lat).toFixed(4)}° N, ${Number(lng).toFixed(4)}° E`
+        : 'GPS not recorded',
+      date: new Date(mon?.surveyDate ?? e.date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+      bg: bgPatterns[i % 4],
+      photoUrl: mon?.photoUrl ?? null,
+    }
+  })
+  const ledger = (project.evidenceEntries || []).map(e => ({
+    id: e.id,
+    qty: `${e.treeCount} trees planted`,
+    date: new Date(e.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+    hash: e.txHash || '—',
+  }))
 
   const hasEvidence = evidence.length > 0
   const lbItem = lightboxIdx !== null ? evidence[lightboxIdx] : null
@@ -234,7 +313,7 @@ export default function ProjectDetail() {
               <span>Executed by <strong className="pd-meta-executor">{project.partner}</strong></span>
             </div>
             <div className="pd-cert-row">
-              <a href="#" className="pd-cert-link">
+              <a href={`https://registry.example.com/${project.certificationId}`} target="_blank" rel="noopener noreferrer" className="pd-cert-link">
                 ✓ {project.certification} · <span className="pd-cert-id">{project.certificationId}</span> ↗
               </a>
               <button className="pd-share-btn">Share</button>
@@ -247,7 +326,11 @@ export default function ProjectDetail() {
               <h2 className="pd-map-section__title">Where it's happening</h2>
               <span className="pd-map-section__note">{evidence.length} evidence locations</span>
             </div>
-            <MapPlaceholder pinCount={evidence.length} />
+            <ProjectMap
+              pinCount={evidence.length}
+              locations={project.evidenceLocations}
+              fencingPolygon={project.fencingPolygon ?? null}
+            />
           </div>
 
           {/* Tabs */}
@@ -279,7 +362,7 @@ export default function ProjectDetail() {
               </div>
 
               <div className="pd-cobenefits">
-                {cobenefits.map((b: any) => (
+                {cobenefits.map((b: CoBenefit) => (
                   <div key={b.title} className="pd-cobenefit-card">
                     <div className="pd-cobenefit-card__icon">{b.icon}</div>
                     <div className="pd-cobenefit-card__title">{b.title}</div>
@@ -295,13 +378,16 @@ export default function ProjectDetail() {
             <div className="pd-tab-content">
               {hasEvidence ? (
                 <div className="pd-evidence-grid">
-                  {evidence.map((e: any, idx: number) => (
+                  {evidence.map((e: EvidenceItem, idx: number) => (
                     <button
                       key={e.id}
                       className="pd-evidence-card"
                       onClick={() => setLightboxIdx(idx)}
                     >
-                      <div className="pd-evidence-card__img" style={{ background: e.bg }}>
+                      <div className="pd-evidence-card__img" style={{ background: e.photoUrl ? 'transparent' : e.bg }}>
+                        {e.photoUrl
+                          ? <img src={e.photoUrl} alt="Tree monitoring photo" className="pd-evidence-card__photo" />
+                          : null}
                         <span className="pd-evidence-card__date">{e.date}</span>
                       </div>
                       <div className="pd-evidence-card__body">
@@ -333,7 +419,7 @@ export default function ProjectDetail() {
                     <span className="pd-ledger__dot" />
                     Approved entries only · anyone can verify these on the public ledger
                   </div>
-                  {ledger.map((l: any) => (
+                  {ledger.map((l: LedgerRow) => (
                     <div key={l.id} className="pd-ledger-row">
                       <div className="pd-ledger-row__left">
                         <div className="pd-ledger-row__top">
@@ -342,7 +428,7 @@ export default function ProjectDetail() {
                         </div>
                         <span className="pd-ledger-row__hash">{l.hash}</span>
                       </div>
-                      <a href="#" className="pd-ledger-row__link">View on ledger ↗</a>
+                      <Link to={`/ledger?q=${encodeURIComponent(l.id)}`} className="pd-ledger-row__link">View on ledger ↗</Link>
                     </div>
                   ))}
                 </div>
@@ -428,7 +514,10 @@ export default function ProjectDetail() {
         <div className="pd-lightbox" onClick={() => setLightboxIdx(null)}>
           <div className="pd-lightbox__card" onClick={e => e.stopPropagation()}>
             <button className="pd-lightbox__close" onClick={() => setLightboxIdx(null)} aria-label="Close">×</button>
-            <div className="pd-lightbox__img" style={{ background: lbItem.bg }}>
+            <div className="pd-lightbox__img" style={{ background: lbItem.photoUrl ? 'transparent' : lbItem.bg }}>
+              {lbItem.photoUrl
+                ? <img src={lbItem.photoUrl} alt="Tree monitoring photo" className="pd-lightbox__photo" />
+                : null}
               <span className="pd-lightbox__img-date">📷 {lbItem.date}</span>
             </div>
             <div className="pd-lightbox__body">
@@ -444,10 +533,10 @@ export default function ProjectDetail() {
                 </div>
                 <div className="pd-lightbox__meta-row">
                   <span className="pd-lightbox__meta-key">Verified ID</span>
-                  <span className="pd-lightbox__meta-val">EV-{String(lbItem.id).padStart(4, '0')}</span>
+                  <span className="pd-lightbox__meta-val">EV-{String(lbItem.id).replace(/-/g, '').slice(-8).toUpperCase()}</span>
                 </div>
               </div>
-              <a href="#" className="pd-lightbox__ledger-link">View this entry on the ledger ↗</a>
+              <Link to={lbItem ? `/ledger?q=${encodeURIComponent(lbItem.id)}` : '/ledger'} className="pd-lightbox__ledger-link">View this entry on the ledger ↗</Link>
             </div>
           </div>
         </div>

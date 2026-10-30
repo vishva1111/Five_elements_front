@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import './Admin.css'
 
@@ -36,37 +37,42 @@ export default function EvidenceReview() {
   const [done,        setDone]        = useState<'approved' | 'rejected' | null>(null)
   const [error,       setError]       = useState('')
 
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
-    if (!id) return
-    fetch(`${API}/api/admin/evidence/${id}`, { headers })
-      .then(async r => {
+    if (!id || !session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/evidence/${id}`, {
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        })
         const d = await r.json()
-        // An error body ({ error }) has no files list — rendering it would crash the page.
         if (!r.ok) { setDetail(null); return }
         setDetail(d)
         setTreesVerified(String(d.treeCount || ''))
         setCo2eVerified(String(d.co2e || ''))
-      })
-      .catch(() => setDetail(null))
-      .finally(() => setLoading(false))
-  }, [id])
+      } catch {
+        setDetail(null)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [id, session])
 
   async function handleApprove() {
     if (!id) return
     setActing('approve')
     setError('')
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/evidence/${id}/approve`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ reviewNotes, treesVerified: parseInt(treesVerified, 10) || 0, co2eVerified: parseFloat(co2eVerified) || 0 }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       setDone('approved')
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }
@@ -77,15 +83,16 @@ export default function EvidenceReview() {
     setActing('reject')
     setError('')
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/evidence/${id}/reject`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ reviewNotes }),
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       setDone('rejected')
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Action failed.')
     } finally {
       setActing(null)
     }

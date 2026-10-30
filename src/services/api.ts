@@ -354,6 +354,7 @@ export interface ProfileStat {
 
 export interface ProfileTile {
   id: string
+  projectId: string | null
   icon: string
   qty: string
   date: string
@@ -362,7 +363,8 @@ export interface ProfileTile {
   tco2e: number
   location: string
   standard: string
-  txHash: string
+  txHash: string | null
+  verified: boolean
 }
 
 export interface ProfileProject {

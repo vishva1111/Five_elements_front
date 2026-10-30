@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { TreePine, Leaf, MapPin, Globe, Share2, Copy, Check, ArrowLeft, ExternalLink } from 'lucide-react'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
-import { fetchProfile, type ProfileData } from '../../services/api'
+import { fetchProfile, type ProfileData, type ProfileStat, type ProfileTile, type ProfileProject, type ProfileBadge } from '../../services/api'
 import './PublicProfile.css'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 
@@ -80,7 +80,7 @@ const ELEMENTS = [
 ]
 
 // ── Tile detail modal ─────────────────────────────────────────────────────────
-function TileModal({ tile, onClose }: { tile: any; onClose: () => void }) {
+function TileModal({ tile, onClose }: { tile: ProfileTile; onClose: () => void }) {
   useModalBehavior(onClose)
   return (
     <div className="pp-modal-backdrop" onClick={onClose}>
@@ -125,8 +125,25 @@ function TileModal({ tile, onClose }: { tile: any; onClose: () => void }) {
           </div>
 
           <div className="pp-modal__actions">
-            <button className="btn btn-primary btn-sm">Verify on public ledger</button>
-            <Link to="/projects" className="btn btn-outline btn-sm">Project page →</Link>
+            {tile.txHash && /^0x[0-9a-fA-F]{40,}$/.test(tile.txHash) ? (
+              <a
+                href={`https://polygonscan.com/tx/${tile.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary btn-sm"
+              >
+                Verify on public ledger ↗
+              </a>
+            ) : (
+              <Link to="/ledger" className="btn btn-primary btn-sm">
+                View on public ledger
+              </Link>
+            )}
+            {tile.projectId ? (
+              <Link to={`/projects/${tile.projectId}`} className="btn btn-outline btn-sm">Project page →</Link>
+            ) : (
+              <Link to="/projects" className="btn btn-outline btn-sm">Project page →</Link>
+            )}
           </div>
         </div>
       </div>
@@ -249,7 +266,7 @@ export default function PublicProfile() {
       {/* ── Stats strip ── */}
       <div className="container">
         <div className="pp-stats">
-          {profile.stats.map((s: any) => (
+          {profile.stats.map((s: ProfileStat) => (
             <div key={s.label} className="pp-stat card">
               <div className="pp-stat__label">
                 {s.label}
@@ -333,7 +350,7 @@ export default function PublicProfile() {
         {hasTiles && sortedTiles.length > 0 && (
           <div className="pp-tiles card">
             <div className="pp-tiles__grid">
-              {sortedTiles.map((t: any, i: number) => (
+              {sortedTiles.map((t: ProfileTile, i: number) => (
                 <button
                   key={i}
                   className="pp-tile"
@@ -372,7 +389,7 @@ export default function PublicProfile() {
             {profile.projects.length === 0 && (
               <p className="pp-projects__empty">No projects yet.</p>
             )}
-            {profile.projects.map((p: any, i: number) => (
+            {profile.projects.map((p: ProfileProject, i: number) => (
               <div key={i} className="pp-project-row">
                 <div className="pp-project-row__avatar" style={{ background: p.hero }} />
                 <div className="pp-project-row__info">
@@ -389,7 +406,7 @@ export default function PublicProfile() {
             <div className="card pp-milestones">
               <h2 className="pp-milestones__title">Milestones</h2>
               <div className="pp-milestones__grid">
-                {profile.badges.map((b: any, i: number) => (
+                {profile.badges.map((b: ProfileBadge, i: number) => (
                   <div key={i} className="pp-milestone" style={{ opacity: b.opacity }}>
                     <svg width="44" height="46" viewBox="0 0 40 42">
                       <polygon points="20,4 36.2,15.75 30.0,34.75 10.0,34.75 3.83,15.75" fill={b.fill} stroke="#AACBA7" strokeWidth="1.5" strokeLinejoin="round" />
@@ -415,7 +432,7 @@ export default function PublicProfile() {
                 </button>
               </div>
               {profile.isOrg && (
-                <a href="#" className="pp-share__widget-link">Get the embeddable widget →</a>
+                <Link to="/widget" className="pp-share__widget-link">Get the embeddable widget →</Link>
               )}
             </div>
           </div>

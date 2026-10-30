@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth, ROLE_HOME } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
+import { getValidAccessToken } from '../../services/authTokens'
 import FiveElementsLogo from '../../components/ui/FiveElementsLogo'
 import './Login.css'
 
@@ -170,7 +171,7 @@ export function ResetPassword() {
 
 // ── /account/password (signed in) ─────────────────────────────────────────────
 export function ChangePassword() {
-  const { user, session } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [current, setCurrent]   = useState('')
   const [password, setPassword] = useState('')
@@ -187,11 +188,12 @@ export function ChangePassword() {
     if (problem) { setError(problem); return }
     setBusy(true); setError(null)
     try {
-      await postJson('/api/auth/change-password', { currentPassword: current, newPassword: password }, session?.access_token)
+      const token = await getValidAccessToken()
+      await postJson('/api/auth/change-password', { currentPassword: current, newPassword: password }, token)
       setDone(true)
       setCurrent(''); setPassword(''); setConfirm('')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred.')
     } finally {
       setBusy(false)
     }

@@ -15,6 +15,7 @@ import Modal from '../../components/ui/Modal'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import { TreeHistoryView, useTreeHistory } from '../../components/tree/TreeHistory'
 import PhotoLightbox from '../../components/tree/PhotoLightbox'
@@ -94,20 +95,14 @@ export default function SubmissionReview({ Layout }: SubmissionReviewProps) {
   // The submission open for review
   const [reviewingId,     setReviewingId]     = useState<string | null>(null)
 
-  const token = session?.access_token
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }), [token])
-
   // Always fetches the FULL task list, unfiltered — filtering is client-side so
   // the counts always show true totals whichever filter is selected.
   const loadTasks = useCallback(async () => {
-    if (!token) return
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API}/api/admin/tasks`, { headers: authHeaders() })
+      const token = await getValidAccessToken()
+      const res = await fetch(`${API}/api/admin/tasks`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to load tasks')
       setTasks(json.tasks || [])
@@ -116,17 +111,20 @@ export default function SubmissionReview({ Layout }: SubmissionReviewProps) {
     } finally {
       setLoading(false)
     }
-  }, [token, authHeaders])
+  }, [session])
 
   useEffect(() => { loadTasks() }, [loadTasks])
   // Only the project names are needed here, for the project filter.
   useEffect(() => {
-    if (!token) return
-    fetch(`${API}/api/admin/projects`, { headers: authHeaders() })
-      .then(r => r.json())
-      .then(j => setProjects(j.projects || []))
-      .catch(() => {})
-  }, [token, authHeaders])
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/projects`, { headers: { Authorization: `Bearer ${token}` } })
+        const j = await r.json()
+        setProjects(j.projects || [])
+      } catch { /* non-critical */ }
+    })()
+  }, [session])
 
   // Everything a field user has submitted from the app is reviewable here — planting or audit,
   // whatever stage its tree record currently shows.
@@ -264,7 +262,6 @@ export default function SubmissionReview({ Layout }: SubmissionReviewProps) {
       {reviewing && (
         <ReviewModal
           task={reviewing}
-          token={token}
           onClose={() => setReviewingId(null)}
           onDone={(status, notes) => {
             setTasks(prev => prev.map(t => t.id === reviewing.id ? { ...t, status, review_notes: notes, reviewed_at: new Date().toISOString() } : t))
@@ -439,9 +436,8 @@ function SubmissionCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
 }
 
 /** Full details for one submission, with Approve / Reject. */
-function ReviewModal({ task, token, onClose, onDone }: {
+function ReviewModal({ task, onClose, onDone }: {
   task: Task
-  token: string | undefined
   onClose: () => void
   onDone: (status: string, notes: string | null) => void
 }) {
@@ -459,6 +455,7 @@ function ReviewModal({ task, token, onClose, onDone }: {
     setBusy(kind)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/tasks/${task.id}/${kind === 'approve' ? 'approve' : 'request-changes'}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

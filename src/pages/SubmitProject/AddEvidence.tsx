@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SubmitProjectLayout from './SubmitProjectLayout'
 import { useSubmitProject } from './useSubmitProject'
-import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import './SubmitProject.css'
 
 type EvidenceView = 'empty' | 'uploading' | 'evidence'
@@ -46,7 +46,6 @@ function PentaSVG({ size = 34, fill = '#EAF3DE', stroke = '#2B5341' }: { size?: 
 export default function AddEvidence() {
   const navigate = useNavigate()
   const { draft, updateDraft, saveDraftToAPI, uploadEvidenceFiles } = useSubmitProject()
-  const { session } = useAuth()
   const [view, setView] = useState<EvidenceView>('empty')
   const [docsCount, setDocsCount] = useState(0)
   const [hasRef, setHasRef] = useState(false)
@@ -60,48 +59,52 @@ export default function AddEvidence() {
     setUploadPct(0)
     setUploadErr(false)
 
-    // If we have a real token, ensure a draft exists then upload files
-    if (session?.access_token && filesToUpload.length > 0) {
-      // Ensure draft is saved to get a draftId
-      let draftId = draft.draftId
-      if (!draftId) {
-        const id = await saveDraftToAPI({}, session.access_token)
-        if (id) draftId = id
-      }
-
-      if (draftId) {
-        // Simulate progress while uploading
-        let pct = 0
-        const iv = setInterval(() => {
-          pct = Math.min(pct + 8, 85)
-          setUploadPct(pct)
-        }, 200)
-
-        const results = await uploadEvidenceFiles(filesToUpload, draftId, session.access_token)
-        clearInterval(iv)
-
-        const ok = results.filter(r => r.ok)
-        if (ok.length === 0 && results.length > 0) {
-          setUploadErr(true)
-          setView('empty')
-          return
+    if (filesToUpload.length > 0) {
+      try {
+        const token = await getValidAccessToken()
+        // Ensure draft is saved to get a draftId
+        let draftId = draft.draftId
+        if (!draftId) {
+          const id = await saveDraftToAPI({}, token)
+          if (id) draftId = id
         }
 
-        // Update local draft with file metadata
-        const newFiles = filesToUpload.map((f, i) => ({
-          id:   results[i]?.id || `local-${Date.now()}-${i}`,
-          name: f.name,
-          size: f.size,
-          type: f.type,
-        }))
-        updateDraft({ evidenceFiles: [...draft.evidenceFiles, ...newFiles] })
-        setUploadPct(100)
-        setTimeout(() => setView('evidence'), 300)
-        return
+        if (draftId) {
+          // Simulate progress while uploading
+          let pct = 0
+          const iv = setInterval(() => {
+            pct = Math.min(pct + 8, 85)
+            setUploadPct(pct)
+          }, 200)
+
+          const results = await uploadEvidenceFiles(filesToUpload, draftId, token)
+          clearInterval(iv)
+
+          const ok = results.filter(r => r.ok)
+          if (ok.length === 0 && results.length > 0) {
+            setUploadErr(true)
+            setView('empty')
+            return
+          }
+
+          // Update local draft with file metadata
+          const newFiles = filesToUpload.map((f, i) => ({
+            id:   results[i]?.id || `local-${Date.now()}-${i}`,
+            name: f.name,
+            size: f.size,
+            type: f.type,
+          }))
+          updateDraft({ evidenceFiles: [...draft.evidenceFiles, ...newFiles] })
+          setUploadPct(100)
+          setTimeout(() => setView('evidence'), 300)
+          return
+        }
+      } catch {
+        // fall through to simulated progress
       }
     }
 
-    // Fallback: simulate upload progress (no token or no files)
+    // Fallback: simulate upload progress
     let pct = 0
     const iv = setInterval(() => {
       pct += 12
@@ -110,8 +113,16 @@ export default function AddEvidence() {
     }, 300)
   }
 
-  const photos = PHOTO_DEFS
-  const docs = DOC_OPTIONS.slice(0, docsCount)
+  const photos = import.meta.env.DEV
+    ? PHOTO_DEFS
+    : draft.evidenceFiles
+        .filter(f => f.type.startsWith('image/'))
+        .map(f => ({ date: '', gps: null as string | null, bg: '#E3EDD9', flag: false }))
+  const docs: DocItem[] = import.meta.env.DEV
+    ? DOC_OPTIONS.slice(0, docsCount)
+    : draft.evidenceFiles
+        .filter(f => !f.type.startsWith('image/'))
+        .map(f => ({ name: f.name, meta: `${f.type} ${Math.round(f.size / 1024)} KB` }))
   const gpsCount = photos.filter(p => p.gps).length
   const sigDated = true
   const sigGps = gpsCount >= 3

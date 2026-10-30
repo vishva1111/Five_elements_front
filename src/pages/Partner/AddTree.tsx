@@ -13,6 +13,7 @@ import { useGoBack } from '../../hooks/useGoBack'
 import PartnerLayout from './PartnerLayout'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import { useSpecies } from '../../constants/treeSpecies'
 import { TREE_STAGES, DEFAULT_STAGE, STAGE_STYLE } from '../../constants/treeStages'
@@ -57,7 +58,6 @@ export default function AddTree() {
   const navigate    = useNavigate()
   const goBack      = useGoBack('/partner/actions')
   const [searchParams] = useSearchParams()
-  const token       = session?.access_token
   const { species: speciesList, find: findSpecies, error: speciesError } = useSpecies()
 
   const [users,    setUsers]    = useState<TeamUser[]>([])
@@ -85,14 +85,15 @@ export default function AddTree() {
   const [errors,    setErrors]    = useState<Record<string, string>>({})
 
   useEffect(() => {
-    if (!token) return
-    const headers = { Authorization: `Bearer ${token}` }
-
-    Promise.all([
-      fetch(`${API}/api/partner/team-users`, { headers }).then(r => r.json()),
-      fetch(`${API}/api/partner/projects`,   { headers }).then(r => r.json()),
-    ])
-      .then(([u, p]) => {
+    if (!session) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const headers = { Authorization: `Bearer ${token}` }
+        const [u, p] = await Promise.all([
+          fetch(`${API}/api/partner/team-users`, { headers }).then(r => r.json()),
+          fetch(`${API}/api/partner/projects`,   { headers }).then(r => r.json()),
+        ])
         const list: TeamUser[] = u.users || []
         setUsers(list)
         setProjects((p.projects || []).map((x: PartnerProject) => ({ id: x.id, name: x.name })))
@@ -107,10 +108,13 @@ export default function AddTree() {
             if (match.projectId) setProjectId(match.projectId)
           }
         }
-      })
-      .catch(() => setError('Could not load your team or projects.'))
-      .finally(() => setLoading(false))
-  }, [token, searchParams])
+      } catch {
+        setError('Could not load your team or projects.')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [session, searchParams])
 
   /** Server-side parse with nothing written, so the partner sees what will land. */
   async function checkSheet(file: File) {
@@ -122,6 +126,7 @@ export default function AddTree() {
     setImportError(null)
     setSummary(null)
     try {
+      const token = await getValidAccessToken()
       const form = new FormData()
       form.append('file', file)
       form.append('user_id', userId)
@@ -130,7 +135,7 @@ export default function AddTree() {
 
       const res = await fetch(`${API}/api/partner/trees/import`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       })
       const data = await res.json()
@@ -152,6 +157,7 @@ export default function AddTree() {
     setImporting(true)
     setImportError(null)
     try {
+      const token = await getValidAccessToken()
       const form = new FormData()
       form.append('file', sheet)
       form.append('user_id', userId)
@@ -159,7 +165,7 @@ export default function AddTree() {
 
       const res = await fetch(`${API}/api/partner/trees/import`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       })
       const data = await res.json()
@@ -181,8 +187,9 @@ export default function AddTree() {
 
   async function downloadTemplate() {
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/partner/trees/import/template`, {
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error()
       const blob = await res.blob()
@@ -213,6 +220,7 @@ export default function AddTree() {
     setSaving(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const form = new FormData()
       form.append('user_id', userId)
       form.append('project_id', projectId)
@@ -226,7 +234,7 @@ export default function AddTree() {
 
       const res = await fetch(`${API}/api/partner/trees`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       })
       const data = await res.json()

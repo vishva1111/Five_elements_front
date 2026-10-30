@@ -3,6 +3,7 @@ import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useModalBehavior } from '../../hooks/useModalBehavior'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 
 interface Task {
@@ -115,22 +116,16 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
   })
   const [bulkForm, setBulkForm] = useState({ project_id: '', assignee_id: '' })
 
-  const token = session?.access_token
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }), [token])
-
   // Always fetches the FULL task list, unfiltered. Status/project filtering happens
   // entirely client-side (see filteredTasks below) — this is what lets the summary
   // cards always show true totals across every status, regardless of which filter
   // is currently selected for the table.
   const loadTasks = useCallback(async () => {
-    if (!token) return
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API}/api/admin/tasks`, { headers: authHeaders() })
+      const token = await getValidAccessToken()
+      const res = await fetch(`${API}/api/admin/tasks`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to load tasks')
       setTasks(json.tasks || [])
@@ -139,15 +134,16 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
     } finally {
       setLoading(false)
     }
-  }, [token, authHeaders])
+  }, [session])
 
   const loadFormData = useCallback(async () => {
-    if (!token) return
     try {
+      const token = await getValidAccessToken()
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       const [usersRes, fieldRes, projRes] = await Promise.all([
-        fetch(`${API}/api/admin/tasks/assignable-users`, { headers: authHeaders() }),
-        fetch(`${API}/api/admin/tasks/assignable-users?pool=field`, { headers: authHeaders() }),
-        fetch(`${API}/api/admin/projects`, { headers: authHeaders() }),
+        fetch(`${API}/api/admin/tasks/assignable-users`, { headers }),
+        fetch(`${API}/api/admin/tasks/assignable-users?pool=field`, { headers }),
+        fetch(`${API}/api/admin/projects`, { headers }),
       ])
       const usersJson = await usersRes.json()
       const fieldJson = await fieldRes.json()
@@ -158,26 +154,36 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
     } catch {
       // non-critical
     }
-  }, [token, authHeaders])
+  }, [session])
 
   useEffect(() => { loadTasks() }, [loadTasks])
   useEffect(() => { loadFormData() }, [loadFormData])
 
   // Load trees for the selected project in the single-task modal
   useEffect(() => {
-    if (!token || !form.project_id) { setTreeRecords([]); return }
-    fetch(`${API}/api/admin/tree-records?project_id=${form.project_id}&limit=500`, { headers: authHeaders() })
-      .then(r => r.ok ? r.json() : { records: [] })
-      .then(j => setTreeRecords(j.records || []))
-      .catch(() => setTreeRecords([]))
-  }, [form.project_id, token, authHeaders])
+    if (!form.project_id) { setTreeRecords([]); return }
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/tree-records?project_id=${form.project_id}&limit=500`, { headers: { Authorization: `Bearer ${token}` } })
+        const j = r.ok ? await r.json() : { records: [] }
+        setTreeRecords(j.records || [])
+      } catch {
+        setTreeRecords([])
+      }
+    })()
+  }, [form.project_id, session])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name || !form.assignee_id) return
     setSubmitting(true)
     try {
-      const body: Record<string, any> = {
+      const token = await getValidAccessToken()
+      const body: {
+        name: string; assignee_id: string; target_count: number;
+        project_id?: string; tree_id?: string; location?: string; due_date?: string
+      } = {
         name:         form.name,
         assignee_id:  form.assignee_id,
         target_count: form.target_count,
@@ -189,7 +195,7 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
 
       const res = await fetch(`${API}/api/admin/tasks`, {
         method: 'POST',
-        headers: authHeaders(),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       })
       const json = await res.json()
@@ -211,9 +217,10 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
     setBulkSubmitting(true)
     setBulkResult(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/tasks/bulk-generate`, {
         method: 'POST',
-        headers: authHeaders(),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(bulkForm),
       })
       const json = await res.json()
@@ -231,7 +238,8 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Delete task "${name}"?`)) return
     try {
-      const res = await fetch(`${API}/api/admin/tasks/${id}`, { method: 'DELETE', headers: authHeaders() })
+      const token = await getValidAccessToken()
+      const res = await fetch(`${API}/api/admin/tasks/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
       if (!res.ok) throw new Error('Failed to delete')
       toast.success('Task deleted.')
       loadTasks()
@@ -244,9 +252,10 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
     if (!reassignUserId) return
     setReassigning(true)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/tasks/${taskId}`, {
         method: 'PUT',
-        headers: authHeaders(),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ assignee_id: reassignUserId }),
       })
       const json = await res.json()
@@ -275,9 +284,10 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
     setReviewing(true)
     setReviewAction(action) // so the button that was pressed shows its own busy label
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(`${API}/api/admin/tasks/${taskId}/${action}`, {
         method: 'PUT',
-        headers: authHeaders(),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ review_notes: reviewNotes }),
       })
       const json = await res.json()

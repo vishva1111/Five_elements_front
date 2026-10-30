@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import './Admin.css'
@@ -45,18 +46,20 @@ export default function PlatformHealth() {
   const [loading, setLoading] = useState(true)
   const [refresh, setRefresh] = useState(0)
 
-  const headers = { Authorization: `Bearer ${session?.access_token || ''}` }
-
   useEffect(() => {
     setLoading(true)
-    fetch(`${API}/api/admin/health`, { headers })
-      .then(async r => {
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/admin/health`, { headers: { Authorization: `Bearer ${token}` } })
         const d = await r.json()
-        // An error body ({ error }) has no metrics — rendering it would crash the page.
         setData(r.ok ? d : null)
-      })
-      .catch(() => setData(null))
-      .finally(() => setLoading(false))
+      } catch {
+        setData(null)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [session, refresh])
 
   const pg = usePagination(data?.recentErrors || [], 10, refresh)

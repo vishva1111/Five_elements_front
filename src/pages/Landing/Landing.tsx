@@ -230,7 +230,7 @@ export default function Landing() {
           </div>
           <div className="l0-proof__verified">
             <span className="l0-proof__badge">✓ Verified</span>
-            on the public ledger — <a href="#" className="l0-proof__link">check any entry yourself</a>.
+            on the public ledger — <Link to="/ledger" className="l0-proof__link">check any entry yourself</Link>.
           </div>
         </div>
       </section>
@@ -388,35 +388,35 @@ export default function Landing() {
             <div className="l0-footer__col">
               <span className="l0-footer__col-title">Platform</span>
               <Link to="/projects">Projects</Link>
-              <a href="#">Public ledger</a>
+              <Link to="/ledger">Public ledger</Link>
               <Link to="/profiles">Explore profiles</Link>
             </div>
             <div className="l0-footer__col">
               <span className="l0-footer__col-title">For businesses</span>
-              <a href="#">Targets &amp; SBTi</a>
-              <a href="#">Regulatory reports</a>
-              <a href="#">Project portfolio</a>
+              <a href="#targets">Targets &amp; SBTi</a>
+              <a href="#reports">Regulatory reports</a>
+              <a href="#portfolio">Project portfolio</a>
             </div>
             <div className="l0-footer__col">
               <span className="l0-footer__col-title">Company</span>
-              <a href="#">About</a>
-              <a href="#">Partners</a>
-              <a href="#">Methodology</a>
-              <a href="#">Contact</a>
+              <Link to="/about">About</Link>
+              <Link to="/partners">Partners</Link>
+              <Link to="/methodology">Methodology</Link>
+              <Link to="/contact">Contact</Link>
             </div>
             <div className="l0-footer__col">
               <span className="l0-footer__col-title">Connect</span>
-              <a href="#">LinkedIn</a>
-              <a href="#">Instagram</a>
-              <a href="#">YouTube</a>
-              <a href="#">Help centre</a>
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">Instagram</a>
+              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer">YouTube</a>
+              <Link to="/help">Help centre</Link>
             </div>
           </div>
           <div className="l0-footer__bottom">
             <div className="l0-footer__bottom-left">
               <span className="l0-footer__copy">© 2026 Five Elements CARM · Rooted in Earth · Prithvi</span>
-              <a href="#">Privacy</a>
-              <a href="#">Terms</a>
+              <Link to="/privacy">Privacy</Link>
+              <Link to="/terms">Terms</Link>
             </div>
             <span className="l0-footer__beta">Beta · Earth active. Water, Fire, Air &amp; Ether coming.</span>
           </div>

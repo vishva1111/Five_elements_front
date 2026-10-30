@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import PartnerLayout from './PartnerLayout'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL } from '../../config/api'
 
 interface EvidenceFile {
@@ -52,9 +53,10 @@ export default function LinkedSubmissions() {
     setLoading(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(
         `${API_URL}/api/partner/linked-submissions`,
-        { headers: { Authorization: `Bearer ${session?.access_token || ''}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to load')
@@ -167,7 +169,6 @@ export default function LinkedSubmissions() {
               <PartnerReviewActions
                 submissionId={sub.id}
                 currentStatus={pStatus}
-                token={session?.access_token || ''}
                 onDone={load}
               />
             </div>
@@ -181,11 +182,10 @@ export default function LinkedSubmissions() {
 
 // ── Inline partner action panel ───────────────────────────────────────────────
 function PartnerReviewActions({
-  submissionId, currentStatus, token, onDone,
+  submissionId, currentStatus, onDone,
 }: {
   submissionId: string
   currentStatus: string
-  token: string
   onDone: () => void
 }) {
   const [notes, setNotes]           = useState('')
@@ -205,6 +205,7 @@ function PartnerReviewActions({
     setSubmitting(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
       const res = await fetch(
         `${API_URL}/api/partner/linked-submissions/${submissionId}/review`,
         {

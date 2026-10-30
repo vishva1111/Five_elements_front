@@ -14,6 +14,7 @@ import TreeMap, { hullAround, type LatLng } from '../map/TreeMap'
 import TreeDetailModal from '../tree/TreeHistory'
 import { useToast } from '../ui/Toast'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import {
   DEFAULT_PROJECT_COLOR, PROJECT_COLOR_CHOICES, FENCING_STATUS, conditionColor, formatArea, formatLength,
@@ -36,18 +37,8 @@ export interface ProjectLite {
 const FULL: React.CSSProperties = { width: '100%', minWidth: 0 }
 const ghostBtn = 'pl-btn pl-btn--ghost'
 
-function useAuthed() {
-  const { session } = useAuth()
-  const token = session?.access_token || ''
-  return {
-    token,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-  }
-}
-
 // ── Edit details ─────────────────────────────────────────────────────────────
 export function EditProjectModal({ project, onClose, onSaved, role = 'partner' }: { project: ProjectLite; onClose: () => void; onSaved: () => void; role?: 'partner' | 'admin' }) {
-  const { headers } = useAuthed()
   const toast = useToast()
   const [form, setForm] = useState({
     name: project.name,
@@ -65,6 +56,8 @@ export function EditProjectModal({ project, onClose, onSaved, role = 'partner' }
     setSaving(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       const body: Record<string, unknown> = { name: form.name, location: form.location, category: form.category, description: form.description }
       if (form.totalTrees !== '') body.totalTrees = Number(form.totalTrees)
       const res = await fetch(`${API}/api/${role}/projects/${project.id}`, { method: 'PATCH', headers, body: JSON.stringify(body) })
@@ -122,7 +115,6 @@ export function EditProjectModal({ project, onClose, onSaved, role = 'partner' }
 
 // ── Colour request ───────────────────────────────────────────────────────────
 export function ColorRequestModal({ project, onClose, onSent }: { project: ProjectLite; onClose: () => void; onSent: () => void }) {
-  const { headers } = useAuthed()
   const toast = useToast()
   const current = project.mapColor || DEFAULT_PROJECT_COLOR
   const [color, setColor] = useState(current)
@@ -134,6 +126,8 @@ export function ColorRequestModal({ project, onClose, onSent }: { project: Proje
     setSaving(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       const res = await fetch(`${API}/api/partner/projects/${project.id}/change-requests`, {
         method: 'POST', headers, body: JSON.stringify({ type: 'color', color, reason }),
       })
@@ -197,7 +191,6 @@ export function ColorRequestModal({ project, onClose, onSent }: { project: Proje
 interface TreeDot { id: string; latitude: number; longitude: number }
 
 export function FencingRequestModal({ project, trees, onClose, onSent }: { project: ProjectLite; trees: TreeDot[]; onClose: () => void; onSent: () => void }) {
-  const { headers } = useAuthed()
   const toast = useToast()
   const f0 = project.fencing || {}
   const initial = useMemo(() => ({
@@ -232,6 +225,8 @@ export function FencingRequestModal({ project, trees, onClose, onSent }: { proje
     setSaving(true)
     setError(null)
     try {
+      const token = await getValidAccessToken()
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       const res = await fetch(`${API}/api/partner/projects/${project.id}/change-requests`, {
         method: 'POST', headers,
         body: JSON.stringify({ type: 'fencing', fencing, coordinates: sendRing ? ring : undefined, reason }),
@@ -342,31 +337,33 @@ interface ProjectTree {
 }
 
 export function ProjectTreesModal({ project, onClose, role = 'partner' }: { project: ProjectLite; onClose: () => void; role?: 'partner' | 'admin' }) {
-  const { token } = useAuthed()
   const [trees, setTrees] = useState<ProjectTree[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [q, setQ] = useState('')
 
   useEffect(() => {
-    // The partner list and the admin list name their fields differently; both end up as ProjectTree.
-    const url = role === 'admin'
-      ? `${API}/api/admin/tree-records?with=audit&limit=1000&project_id=${encodeURIComponent(project.id)}`
-      : `${API}/api/partner/trees?project_id=${encodeURIComponent(project.id)}`
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async r => {
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const url = role === 'admin'
+          ? `${API}/api/admin/tree-records?with=audit&limit=1000&project_id=${encodeURIComponent(project.id)}`
+          : `${API}/api/partner/trees?project_id=${encodeURIComponent(project.id)}`
+        const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
         const d = await r.json()
         if (!r.ok) throw new Error(d.error || 'Could not load trees')
         setTrees(role === 'admin'
-          ? (d.records || []).map((r: any) => ({
-              id: r.id, treeCode: r.tree_code, species: r.species, stage: r.stage || undefined,
-              condition: r.latest_audit?.condition || r.tree_condition, healthStatus: r.health_status,
-              latitude: r.latitude, longitude: r.longitude, recordedFor: '', latestAudit: r.latest_audit,
+          ? (d.records || []).map((rec: any) => ({
+              id: rec.id, treeCode: rec.tree_code, species: rec.species, stage: rec.stage || undefined,
+              condition: rec.latest_audit?.condition || rec.tree_condition, healthStatus: rec.health_status,
+              latitude: rec.latitude, longitude: rec.longitude, recordedFor: '', latestAudit: rec.latest_audit,
             }))
           : d.trees || [])
-      })
-      .catch(e => setError(e.message))
-  }, [project.id, token, role])
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Could not load trees')
+      }
+    })()
+  }, [project.id, role])
 
   const condOf = (t: ProjectTree) => t.latestAudit?.condition || t.condition || t.healthStatus
   const shown = (trees || []).filter(t => !q.trim() || [t.treeCode, t.species, t.recordedFor].some(v => (v || '').toLowerCase().includes(q.trim().toLowerCase())))

@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Pagination, { usePagination } from '../../components/ui/Pagination'
 import { useAuth } from '../../contexts/AuthContext'
+import { getValidAccessToken } from '../../services/authTokens'
 import { API_URL as API } from '../../config/api'
 import { formatDate } from '../../components/tree/treeLabels'
 import '../Partner/Partner.css'
@@ -55,7 +56,6 @@ function dueText(iso: string) {
 /** Audit schedule: audits still to come and dead/missing trees. `role` picks a partner's own projects or everyone's. */
 export default function AuditSchedule({ Layout, role }: { Layout: React.ComponentType<LayoutProps>; role: 'partner' | 'admin' }) {
   const { session } = useAuth()
-  const token = session?.access_token || ''
 
   const [tab, setTab] = useState<Tab>('upcoming')
   const [projectId, setProjectId] = useState('')
@@ -68,28 +68,39 @@ export default function AuditSchedule({ Layout, role }: { Layout: React.Componen
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch(`${API}/api/${role}/projects`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => setProjects((d.projects || []).map((p: { id: string; name?: string; title?: string }) => ({ id: p.id, name: p.name || p.title || p.id }))))
-      .catch(() => setProjects([]))
-  }, [token, role])
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/${role}/projects`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
+        setProjects((d.projects || []).map((p: { id: string; name?: string; title?: string }) => ({ id: p.id, name: p.name || p.title || p.id })))
+      } catch {
+        setProjects([])
+      }
+    })()
+  }, [session, role])
 
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
     const qs = projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''
-    fetch(`${API}/api/${role}/audit-schedule${qs}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async r => {
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API}/api/${role}/audit-schedule${qs}`, { headers: { Authorization: `Bearer ${token}` } })
         const d = await r.json()
         if (!r.ok) throw new Error(d.error || 'Could not load the audit schedule')
         setUpcoming(d.upcoming || [])
         setGone(d.deadOrMissing || [])
         setTotal(d.total || 4)
         setMonths(d.intervalMonths || 3)
-      })
-      .catch(e => { setUpcoming([]); setGone([]); setError(e.message) })
-      .finally(() => setLoading(false))
-  }, [projectId, token, role])
+      } catch (e: any) {
+        setUpcoming([]); setGone([]); setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [projectId, session, role])
   useEffect(() => { load() }, [load])
 
   const dueSoon = useMemo(() => upcoming.filter(u => new Date(u.dueAt).getTime() - Date.now() <= 30 * 86400000).length, [upcoming])

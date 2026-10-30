@@ -50,13 +50,19 @@ export default function ProfileModal({ onClose }: { onClose: () => void }) {
 
   // Refresh in the background — e.g. after the organisation was edited in Settings.
   useEffect(() => {
-    if (!user?.id || !session?.access_token) return
     let cancelled = false
-    loadProfile(session.access_token, user.id)
-      .then(d => { if (!cancelled) { setData(d); setError(null) } })
-      .catch(e => { if (!cancelled && !getCachedProfile(user.id)) setError(e.message || 'Could not load profile') })
+    if (!user?.id) return
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const d = await loadProfile(token, user.id)
+        if (!cancelled) { setData(d); setError(null) }
+      } catch (e: any) {
+        if (!cancelled && !getCachedProfile(user.id)) setError(e.message || 'Could not load profile')
+      }
+    })()
     return () => { cancelled = true }
-  }, [user?.id, session?.access_token])
+  }, [user?.id, session])
 
   if (!user) return null
   const account = data?.account
@@ -147,3 +153,4 @@ export default function ProfileModal({ onClose }: { onClose: () => void }) {
     </Modal>
   )
 }
+import { getValidAccessToken } from '../../services/authTokens'

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { API_URL } from '../../config/api'
+import { getValidAccessToken } from '../../services/authTokens'
 import './Certificate.css'
 import IndividualLayout from '../ImpactHome/IndividualLayout'
 
@@ -47,25 +48,28 @@ function PentaSeal({ size = 120 }: { size?: number }) {
 
 function CertificateContent() {
   const { id } = useParams<{ id: string }>()
-  const { session } = useAuth()
   const [cert, setCert]     = useState<CertificateData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]   = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
-    const headers: Record<string, string> = {}
-    if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`
-
-    fetch(`${API_URL}/api/certificate/${id}`, { headers })
-      .then(r => r.json())
-      .then(data => {
+    ;(async () => {
+      try {
+        const token = await getValidAccessToken()
+        const r = await fetch(`${API_URL}/api/certificate/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await r.json()
         if (data.error) throw new Error(data.error)
         setCert(data)
-      })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [id, session])
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Could not load certificate')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [id])
 
   if (loading) {
     return (
