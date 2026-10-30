@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from '../../components/layout/Navbar'
+import Footer from '../../components/layout/Footer'
 import './HowItWorks.css'
 
 // ── Pentagon SVG helper ────────────────────────────────────────────────────────
@@ -229,14 +230,7 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      {/* Footer note */}
-      <footer className="hiw-footer">
-        <span className="hiw-footer__mono">five elements · CARM</span>
-        <span className="hiw-footer__sep">·</span>
-        <Link to="/ledger" className="hiw-footer__link">Public ledger</Link>
-        <span className="hiw-footer__sep">·</span>
-        <Link to="/projects" className="hiw-footer__link">Projects</Link>
-      </footer>
+      <Footer />
     </div>
   )
 }

@@ -94,7 +94,7 @@ export default function Profiles() {
         {/* Grid */}
         {!loading && !error && profiles.length > 0 && (
           <div className="grid-3">
-            {profiles.slice(0, 5).map((profile) => {
+            {profiles.map((profile) => {
               const isOrg = profile.type === 'organisation' || (profile.type as string) === 'Business'
               const initials = getInitials(profile.name)
               const typeLabel = isOrg ? 'Business' : 'Individual'
