@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { ExternalLink, CheckCircle, Search } from 'lucide-react'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
@@ -17,8 +18,18 @@ function funderDisplay(funder: string | null | undefined): string {
 }
 
 export default function Ledger() {
-  const [search, setSearch] = useState('')
+  const location = useLocation()
+  const [search, setSearch] = useState(() => {
+    // Pre-populate search from ?q= query param (e.g. linked from ProjectDetail)
+    return new URLSearchParams(location.search).get('q') ?? ''
+  })
   const { entries, stats, loading, error } = useLedger({ search })
+
+  // Sync if the URL changes while the component is mounted
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get('q') ?? ''
+    setSearch(q)
+  }, [location.search])
 
   return (
     <div className="ledger">

@@ -20,6 +20,7 @@ const Maintenance = lazy(() => import('./pages/Maintenance/Maintenance'))
 
 // ── Core pages ───────────────────────────────────────────────────────────────
 const Landing = lazy(() => import('./pages/Landing/Landing'))
+const HowItWorks = lazy(() => import('./pages/HowItWorks/HowItWorks'))
 const Marketplace = lazy(() => import('./pages/Marketplace/Marketplace'))
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail/ProjectDetail'))
 const Ledger = lazy(() => import('./pages/Ledger/Ledger'))
@@ -113,6 +114,7 @@ export default function App(): React.JSX.Element {
         <Routes>
           {/* ── Landing ── */}
           <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+          <Route path="/how-it-works" element={<PublicRoute><HowItWorks /></PublicRoute>} />
 
           {/* ── Auth ── */}
           <Route path="/login" element={<Login />} />

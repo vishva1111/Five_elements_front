@@ -125,8 +125,25 @@ function TileModal({ tile, onClose }: { tile: ProfileTile; onClose: () => void }
           </div>
 
           <div className="pp-modal__actions">
-            <button className="btn btn-primary btn-sm">Verify on public ledger</button>
-            <Link to="/projects" className="btn btn-outline btn-sm">Project page →</Link>
+            {tile.txHash && /^0x[0-9a-fA-F]{40,}$/.test(tile.txHash) ? (
+              <a
+                href={`https://polygonscan.com/tx/${tile.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary btn-sm"
+              >
+                Verify on public ledger ↗
+              </a>
+            ) : (
+              <Link to="/ledger" className="btn btn-primary btn-sm">
+                View on public ledger
+              </Link>
+            )}
+            {tile.projectId ? (
+              <Link to={`/projects/${tile.projectId}`} className="btn btn-outline btn-sm">Project page →</Link>
+            ) : (
+              <Link to="/projects" className="btn btn-outline btn-sm">Project page →</Link>
+            )}
           </div>
         </div>
       </div>
