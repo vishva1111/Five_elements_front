@@ -1,12 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { fetchLedgerEntries, fetchPlatformStats } from '../services/api'
-import type { LedgerEntry } from '../types'
-
-interface LedgerParams {
-  search?: string
-  limit?: number
-  offset?: number
-}
+import { fetchLedgerEntries, fetchLedgerSummary, fetchPlatformStats } from '../services/api'
+import type { LedgerEntry, LedgerFilters, LedgerSummary } from '../types'
 
 interface PlatformStats {
   treesFunded: number
@@ -14,8 +8,10 @@ interface PlatformStats {
   projectsActive: number
 }
 
-export function useLedger(params: LedgerParams = {}) {
+export function useLedger(params: LedgerFilters = {}) {
   const [entries, setEntries] = useState<LedgerEntry[]>([])
+  const [total, setTotal]     = useState(0)
+  const [summary, setSummary] = useState<LedgerSummary | null>(null)
   const [stats, setStats]     = useState<PlatformStats>({ treesFunded: 0, tCO2eVerified: 0, projectsActive: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
@@ -32,19 +28,25 @@ export function useLedger(params: LedgerParams = {}) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [params.search])
 
+  // Platform totals don't depend on filters — fetch once
+  useEffect(() => {
+    let cancelled = false
+    fetchPlatformStats()
+      .then(s => { if (!cancelled) setStats(s) })
+      .catch(() => { /* header totals are non-critical */ })
+    return () => { cancelled = true }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    Promise.all([
-      fetchLedgerEntries({ ...params, search: debouncedSearch }),
-      fetchPlatformStats(),
-    ])
-      .then(([entriesData, statsData]) => {
+    fetchLedgerEntries({ ...params, search: debouncedSearch })
+      .then(({ data, count }) => {
         if (!cancelled) {
-          setEntries(entriesData.data || [])
-          setStats(statsData)
+          setEntries(data)
+          setTotal(count)
         }
       })
       .catch((err: Error) => {
@@ -55,7 +57,17 @@ export function useLedger(params: LedgerParams = {}) {
       })
 
     return () => { cancelled = true }
-  }, [debouncedSearch])
+  }, [debouncedSearch, params.type, params.project, params.limit, params.offset])
 
-  return { entries, stats, loading, error }
+  // Totals for the current filters — independent of the page being viewed
+  useEffect(() => {
+    let cancelled = false
+    setSummary(null)
+    fetchLedgerSummary({ search: debouncedSearch, type: params.type, project: params.project })
+      .then(s => { if (!cancelled) setSummary(s) })
+      .catch(() => { /* summary strip just stays hidden */ })
+    return () => { cancelled = true }
+  }, [debouncedSearch, params.type, params.project])
+
+  return { entries, total, summary, stats, loading, error, search: debouncedSearch }
 }
