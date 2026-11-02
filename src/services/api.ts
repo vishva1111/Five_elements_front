@@ -1,4 +1,4 @@
-import type { ProjectFilters, ProjectsResponse, Project, LedgerEntry, Profile } from '../types'
+import type { ProjectFilters, ProjectsResponse, Project, LedgerEntry, LedgerFilters, LedgerSummary, Profile } from '../types'
 import { API_URL as BASE_URL } from '../config/api'
 import { getValidAccessToken } from './authTokens'
 
@@ -46,29 +46,44 @@ export async function fetchProjectCategories(): Promise<{ categories: string[] }
 
 // ── Ledger ────────────────────────────────────────────────────────────────────
 
-export async function fetchLedgerEntries(params: { search?: string; limit?: number; offset?: number } = {}): Promise<{ data: LedgerEntry[]; count: number }> {
+// Search, filtering, pagination and funder labels all happen server-side, so
+// results cover every entry, not just the loaded page.
+function ledgerQuery(params: LedgerFilters): URLSearchParams {
   const qs = new URLSearchParams()
-  qs.set('limit', String(params.limit || 200))  // fetch more so client-side search works across all entries
+  if (params.search?.trim()) qs.set('q', params.search.trim())
+  if (params.type)    qs.set('type', params.type)
+  if (params.project) qs.set('project', params.project)
+  return qs
+}
+
+export async function fetchLedgerEntries(params: LedgerFilters = {}): Promise<{ data: LedgerEntry[]; count: number }> {
+  const qs = ledgerQuery(params)
+  qs.set('limit', String(params.limit || 25))
   if (params.offset) qs.set('offset', String(params.offset))
 
   const res = await fetch(`${BASE_URL}/api/ledger?${qs.toString()}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const json = await res.json()
-  const mapped: LedgerEntry[] = json.data || []
+  return { data: json.data || [], count: json.count ?? 0 }
+}
 
-  // Client-side search: filter by project, funder, or entry ID
-  const filtered = params.search
-    ? mapped.filter(r => {
-        const q = params.search!.toLowerCase()
-        return (
-          (r.project || '').toLowerCase().includes(q) ||
-          (r.funder  || '').toLowerCase().includes(q) ||
-          (r.id      || '').toLowerCase().includes(q)
-        )
-      })
-    : mapped
+export async function fetchLedgerSummary(params: LedgerFilters = {}): Promise<LedgerSummary> {
+  const res = await fetch(`${BASE_URL}/api/ledger/summary?${ledgerQuery(params).toString()}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
 
-  return { data: filtered, count: filtered.length }
+export async function fetchLedgerProjects(): Promise<{ id: string; name: string }[]> {
+  const res = await fetch(`${BASE_URL}/api/ledger/projects`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const json = await res.json()
+  return json.data || []
+}
+
+/** Download URL for the CSV export of the current filters (all matching rows, not just this page). */
+export function ledgerExportUrl(params: LedgerFilters = {}): string {
+  const qs = ledgerQuery(params).toString()
+  return `${BASE_URL}/api/ledger/export.csv${qs ? `?${qs}` : ''}`
 }
 
 export async function fetchPlatformStats(): Promise<{ treesFunded: number; tCO2eVerified: number; projectsActive: number }> {

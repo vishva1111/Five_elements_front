@@ -64,15 +64,56 @@ export interface EvidenceEntry {
 }
 
 // ── Ledger ────────────────────────────────────────────────────────────────────
+export type LedgerEntryType = 'planted' | 'funded'
+
+/** Field-captured tree behind a planted entry */
+export interface LedgerTree {
+  species: string | null
+  scientificName: string | null
+  /** physical tag, e.g. "TREE-L0W9ZQ5" */
+  code: string | null
+  photos: string[]
+  lat: number | null
+  lng: number | null
+  condition: string | null
+  heightM: number | null
+  plantedOn: string | null
+}
+
 export interface LedgerEntry {
   id: string
   date: string
+  type: LedgerEntryType
   project: string
+  projectId: string | null
+  projectSlug: string | null
+  projectLocation: string | null
+  partner: string | null
   funder: string
+  funderLabel: string
   trees: number
   tCO2e: number
-  txHash: string
+  /** true for funded rows: tCO₂e is a per-tree estimate made at funding time */
+  estimated: boolean
   verified: boolean
+  verifiedAt: string | null
+  /** planted rows from field captures only */
+  tree: LedgerTree | null
+}
+
+export interface LedgerSummary {
+  treesFunded: number
+  treesPlanted: number
+  tCO2eVerified: number
+  tCO2eEstimated: number
+}
+
+export interface LedgerFilters {
+  search?: string
+  type?: LedgerEntryType | ''
+  project?: string
+  limit?: number
+  offset?: number
 }
 
 // ── Profile ───────────────────────────────────────────────────────────────────
