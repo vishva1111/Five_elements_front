@@ -38,7 +38,10 @@ export default function EvidenceReview() {
   const [error,       setError]       = useState('')
 
   useEffect(() => {
-    if (!id || !session) return
+    // No id means nothing to fetch — stop the skeleton so "not found" shows
+    // instead of loading forever.
+    if (!id) { setLoading(false); return }
+    if (!session) return
     ;(async () => {
       try {
         const token = await getValidAccessToken()
@@ -212,6 +215,31 @@ export default function EvidenceReview() {
 
         {/* Right — review panel */}
         <div>
+          {detail.status !== 'pending_review' ? (
+          // Already decided: read-only. Approving again would add a second ledger entry.
+          <div className="ad-card ad-side-panel">
+            <div className="ad-card__title">Review decision</div>
+            <span className={`ad-badge ad-badge--${detail.status === 'approved' ? 'approved' : detail.status === 'rejected' ? 'rejected' : 'pending'}`} style={{ textTransform: 'capitalize' }}>
+              {detail.status.replace('_', ' ')}
+            </span>
+            <p style={{ fontSize: 13, color: '#6B7B6E', lineHeight: 1.55, margin: '12px 0 0' }}>
+              {detail.status === 'approved'
+                ? 'This evidence is already approved and its ledger entry exists. Corrections are made in Ledger admin.'
+                : 'This evidence has already been reviewed. The partner can upload new evidence for a fresh review.'}
+            </p>
+            {detail.evidenceNotes && (
+              <div style={{ marginTop: 12, padding: '10px 12px', background: '#F5F0EC', borderRadius: 10, fontSize: 12.5, color: '#112121', lineHeight: 1.5 }}>
+                <div className="ad-kv__label">Review notes</div>
+                {detail.evidenceNotes}
+              </div>
+            )}
+            {detail.status === 'approved' && (
+              <button type="button" className="ad-btn ad-btn--ghost" style={{ width: '100%', justifyContent: 'center', marginTop: 14 }} onClick={() => navigate('/admin/ledger')}>
+                Open Ledger admin →
+              </button>
+            )}
+          </div>
+          ) : (
           <div className="ad-card ad-side-panel">
             <div className="ad-card__title">Review decision</div>
 
@@ -266,6 +294,7 @@ export default function EvidenceReview() {
               <strong>Reject</strong> sends the submission back to the partner with your notes.
             </div>
           </div>
+          )}
         </div>
       </div>
     </AdminLayout>

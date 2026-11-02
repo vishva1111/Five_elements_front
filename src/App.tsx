@@ -91,6 +91,7 @@ const FencingRequests = lazy(() => import('./pages/Admin/FencingRequests'))
 const AdminActivity = lazy(() => import('./pages/Admin/ActivityReport'))
 const AdminAuditSchedule = lazy(() => import('./pages/Admin/AuditSchedule'))
 const EvidenceReview = lazy(() => import('./pages/Admin/EvidenceReview'))
+const EvidenceList = lazy(() => import('./pages/Admin/EvidenceList'))
 const PartnerManagement = lazy(() => import('./pages/Admin/PartnerManagement'))
 const UsersAndTenants = lazy(() => import('./pages/Admin/UsersAndTenants'))
 const SubmissionQueue = lazy(() => import('./pages/Admin/SubmissionQueue'))
@@ -213,7 +214,7 @@ export default function App(): React.JSX.Element {
           <Route path="/admin/activity" element={<ProtectedRoute allowedRoles={['admin']}><AdminActivity /></ProtectedRoute>} />
           <Route path="/admin/audit-schedule" element={<ProtectedRoute allowedRoles={['admin']}><AdminAuditSchedule /></ProtectedRoute>} />
           <Route path="/admin/submissions"      element={<ProtectedRoute allowedRoles={['admin']}><SubmissionQueue /></ProtectedRoute>} />
-          <Route path="/admin/evidence"         element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
+          <Route path="/admin/evidence"         element={<ProtectedRoute allowedRoles={['admin']}><EvidenceList /></ProtectedRoute>} />
           <Route path="/admin/evidence/:id"     element={<ProtectedRoute allowedRoles={['admin']}><EvidenceReview /></ProtectedRoute>} />
           <Route path="/admin/partners"         element={<ProtectedRoute allowedRoles={['admin']}><PartnerManagement /></ProtectedRoute>} />
           <Route path="/admin/users"        element={<ProtectedRoute allowedRoles={['admin']}><UsersAndTenants /></ProtectedRoute>} />
