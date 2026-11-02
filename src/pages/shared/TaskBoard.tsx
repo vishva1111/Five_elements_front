@@ -440,7 +440,8 @@ export default function TaskBoard({ Layout, roleLabel, showPlanting = false, sho
             <div style={{ fontSize: 13, marginTop: 4 }}>Create a task, or generate one per tree for a whole project</div>
           </div>
         ) : (
-          <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+          // overflowX auto (not hidden) so narrow screens can scroll to the last columns
+          <div style={{ background: '#fff', borderRadius: 12, overflowX: 'auto', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f8faf8', borderBottom: '2px solid #e8f0e8' }}>

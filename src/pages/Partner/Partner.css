@@ -395,6 +395,110 @@
   background: #FAFAF8;
 }
 
+/* A wide table scrolls sideways inside its own card instead of pushing the
+   whole page wider (which hid the filters and the Actions column). */
+:has(> .pl-table) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pl-table th {
+  white-space: nowrap;
+}
+
+/* ── Tree table (Assign Tree / Tree listing) ─────────────────────────────── */
+.mt-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  background: #EAF3DE;
+  color: #2B5341;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Sized by the card's own width (container query), not the screen — the
+   sidebar can be open, collapsed or hidden, so viewport width says little. */
+.pl-card:has(> .pl-table--trees) {
+  container: trees / inline-size;
+}
+
+.pl-table--trees .mt-cell--num { text-align: right; }
+.pl-table--trees .mt-cell--who { min-width: 150px; }
+.pl-table--trees .mt-cell--species { min-width: 100px; }
+
+/* Laptop: tighten so every column still fits on one screen */
+@container trees (max-width: 1300px) {
+  .pl-table--trees th,
+  .pl-table--trees td { padding-left: 6px; padding-right: 6px; }
+  /* headers may wrap here (e.g. "CO₂ / (kg/yr)") — they cost more width than the data */
+  .pl-table--trees th { white-space: normal; }
+  .pl-table--trees .mt-avatar { display: none; }
+  /* Date is also in the tree's detail view */
+  .pl-table--trees .mt-col-date { display: none; }
+}
+
+/* Narrower than the columns need: every row becomes a compact card with
+   labelled fields, so nothing scrolls sideways or gets cut off */
+@container trees (max-width: 1020px) {
+  .pl-table--trees,
+  .pl-table--trees tbody { display: block; }
+  .pl-table--trees thead { display: none; }
+
+  .pl-table--trees tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+    border: 1px solid #EEE9E1;
+    border-radius: 12px;
+    background: #fff;
+  }
+  .pl-table--trees tr:last-child { margin-bottom: 0; }
+
+  /* .pl-table.pl-table--trees beats the generic ≤640px .pl-table td padding below */
+  .pl-table.pl-table--trees td,
+  .pl-table.pl-table--trees tr:last-child td {
+    display: block;
+    padding: 0;
+    border: none;
+    min-width: 0;
+    text-align: left;
+  }
+  .pl-table--trees tr:hover td { background: transparent; }
+
+  .pl-table--trees td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #9AA79C;
+  }
+
+  /* Tree ID is the card's header line; the checkbox sits at its right */
+  .pl-table--trees .mt-cell--wide[data-label="Tree ID"] { grid-column: 1 / -1; padding-right: 32px; }
+  .pl-table--trees .mt-cell--select { position: absolute; top: 14px; right: 14px; }
+  .pl-table--trees .mt-cell--actions { align-self: end; }
+  .pl-table--trees .mt-col-date { display: block; }
+  .pl-table--trees .mt-avatar { display: inline-flex; }
+}
+
+/* Phone-width card: two fields per line, the task gets its own line */
+@container trees (max-width: 560px) {
+  .pl-table--trees tr { grid-template-columns: 1fr 1fr; }
+  .pl-table--trees .mt-cell--wide { grid-column: 1 / -1; }
+  .pl-table--trees .mt-cell--actions { justify-self: end; }
+}
+
 /* ── Empty state ─────────────────────────────────────────────────────────── */
 .pl-empty {
   text-align: center;

@@ -731,7 +731,8 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
               ))}
             </div>
           ) : (
-            <table className="pl-table">
+            // pl-table--trees: fits the columns on laptops, stacks each row into a card on tablets/phones (Partner.css)
+            <table className={compact ? 'pl-table' : 'pl-table pl-table--trees'}>
               <thead>
                 <tr>
                   {compact ? (
@@ -773,7 +774,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
                       <th>Current task</th>
                     </>
                   )}
-                  <th>Date</th>
+                  <th className="mt-col-date">Date</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -806,7 +807,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
                         </>
                       ) : (
                         <>
-                          <td>
+                          <td className="mt-cell--select">
                             {stageOf(t) === DEFAULT_STAGE ? (
                               <input
                                 type="checkbox"
@@ -819,7 +820,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
                               <input type="checkbox" disabled aria-label={`${codeOf(t)} is already planted`} title="Already planted" style={{ width: 16, height: 16, opacity: 0.35 }} />
                             )}
                           </td>
-                          <td>
+                          <td className="mt-cell--wide" data-label="Tree ID">
                             <button
                               type="button"
                               onClick={() => setDetailId(t.id)}
@@ -834,9 +835,9 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
                               </div>
                             )}
                           </td>
-                          <td>
+                          <td className="mt-cell--who" data-label="Assigned to · Project">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <span style={{ width: 30, height: 30, borderRadius: 15, background: '#EAF3DE', color: '#2B5341', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span className="mt-avatar">
                                 {initials(t.recordedFor)}
                               </span>
                               <div style={{ minWidth: 0 }}>
@@ -845,15 +846,15 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
                               </div>
                             </div>
                           </td>
-                          <td>
+                          <td className="mt-cell--species" data-label="Species">
                             <div style={{ fontWeight: 600, color: '#1C2B22' }}>{t.species}</div>
                             {sci !== '—' && <div style={{ fontSize: 11.5, color: '#9AA79C', marginTop: 1 }}>{sci}</div>}
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{t.quantity}</td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td className="mt-cell--num" data-label="Qty" style={{ fontWeight: 600 }}>{t.quantity}</td>
+                          <td className="mt-cell--num" data-label="CO₂ (kg/yr)">
                             {co2 ?? <span title="This species is not in Action listing — add it there to see its CO₂" style={{ color: '#B5BDB6', cursor: 'help' }}>—</span>}
                           </td>
-                          <td>
+                          <td data-label="Stage">
                             {(() => {
                               const stg = t.stage || DEFAULT_STAGE
                               const c   = STAGE_STYLE[stg] || { bg: '#F2EFEA', fg: '#6B7B6E' }
@@ -874,7 +875,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
                               )
                             })()}
                           </td>
-                          <td>
+                          <td data-label="Status">
                             {(() => {
                               const os = overallStatus(t)
                               return (
@@ -885,7 +886,7 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
                               )
                             })()}
                           </td>
-                          <td>
+                          <td className="mt-cell--wide" data-label="Current task">
                             {t.taskType === 'planting' && t.taskId ? (
                               // Planting is handled here, not on the Tasks page.
                               t.taskStatus === 'completed' ? (
@@ -929,8 +930,8 @@ export default function MyTrees({ title = 'Tree listing', showAdd = false, compa
                           </td>
                         </>
                       )}
-                      <td style={{ color: '#9AA79C', fontSize: 12 }}>{new Date(t.surveyDate || t.submittedAt).toLocaleDateString('en-IN')}</td>
-                      <td>
+                      <td className="mt-col-date" data-label="Date" style={{ color: '#9AA79C', fontSize: 12 }}>{new Date(t.surveyDate || t.submittedAt).toLocaleDateString('en-IN')}</td>
+                      <td className="mt-cell--actions">
                         <div style={{ display: 'flex', gap: 6 }}>
                           {!compact && (
                             <button
@@ -1253,22 +1254,47 @@ function StageMenu({ value, colors, onChange, busy, disabled, blocked }: {
   blocked: string[]
 }) {
   const [open, setOpen] = React.useState(false)
+  // Viewport position for the menu: it is position:fixed so the table's
+  // horizontal-scroll box can't clip it. Opens upward near the bottom edge.
+  const [pos, setPos] = React.useState<{ left: number; top?: number; bottom?: number }>({ left: 0 })
   const ref = React.useRef<HTMLDivElement>(null)
+  const btnRef = React.useRef<HTMLButtonElement>(null)
 
   React.useEffect(() => {
     if (!open) return
-    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
-    const onKey  = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    const onDown  = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    const onKey   = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    // A fixed menu would drift away from its badge on scroll/resize — just close it
+    const onMove  = () => setOpen(false)
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+    window.addEventListener('scroll', onMove, true)
+    window.addEventListener('resize', onMove)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onMove, true)
+      window.removeEventListener('resize', onMove)
+    }
   }, [open])
+
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - 210))
+      setPos(window.innerHeight - r.bottom < 340
+        ? { left, bottom: window.innerHeight - r.top + 6 }
+        : { left, top: r.bottom + 6 })
+    }
+    setOpen(o => !o)
+  }
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={toggle}
         disabled={disabled || busy}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -1284,7 +1310,7 @@ function StageMenu({ value, colors, onChange, busy, disabled, blocked }: {
       </button>
 
       {open && (
-        <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30, minWidth: 190, background: '#fff', borderRadius: 12, boxShadow: '0 12px 32px rgba(17,33,33,0.18)', border: '1px solid #EEE9E1', padding: 6 }}>
+        <div role="menu" style={{ position: 'fixed', ...pos, zIndex: 300, minWidth: 190, maxWidth: 260, background: '#fff', borderRadius: 12, boxShadow: '0 12px 32px rgba(17,33,33,0.18)', border: '1px solid #EEE9E1', padding: 6 }}>
           <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9AA79C', padding: '6px 10px 4px' }}>Move to stage</div>
           {TREE_STAGES.map(st => {
             const c = STAGE_STYLE[st]
